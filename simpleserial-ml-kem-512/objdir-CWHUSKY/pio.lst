@@ -1,0 +1,3825 @@
+   1              	 .cpu cortex-m4
+   2              	 .arch armv7e-m
+   3              	 .fpu softvfp
+   4              	 .eabi_attribute 20,1
+   5              	 .eabi_attribute 21,1
+   6              	 .eabi_attribute 23,3
+   7              	 .eabi_attribute 24,1
+   8              	 .eabi_attribute 25,1
+   9              	 .eabi_attribute 26,1
+  10              	 .eabi_attribute 30,4
+  11              	 .eabi_attribute 34,1
+  12              	 .eabi_attribute 18,4
+  13              	 .file "pio.c"
+  14              	 .text
+  15              	.Ltext0:
+  16              	 .cfi_sections .debug_frame
+  17              	 .file 1 ".././hal//sam4s/pio.c"
+  18              	 .section .text.pio_pull_up,"ax",%progbits
+  19              	 .align 1
+  20              	 .global pio_pull_up
+  21              	 .syntax unified
+  22              	 .thumb
+  23              	 .thumb_func
+  25              	pio_pull_up:
+  26              	.LVL0:
+  27              	.LFB136:
+   1:.././hal//sam4s/pio.c **** /**
+   2:.././hal//sam4s/pio.c ****  * \file
+   3:.././hal//sam4s/pio.c ****  *
+   4:.././hal//sam4s/pio.c ****  * \brief Parallel Input/Output (PIO) Controller driver for SAM.
+   5:.././hal//sam4s/pio.c ****  *
+   6:.././hal//sam4s/pio.c ****  * Copyright (c) 2011-2018 Microchip Technology Inc. and its subsidiaries.
+   7:.././hal//sam4s/pio.c ****  *
+   8:.././hal//sam4s/pio.c ****  * \asf_license_start
+   9:.././hal//sam4s/pio.c ****  *
+  10:.././hal//sam4s/pio.c ****  * \page License
+  11:.././hal//sam4s/pio.c ****  *
+  12:.././hal//sam4s/pio.c ****  * Subject to your compliance with these terms, you may use Microchip
+  13:.././hal//sam4s/pio.c ****  * software and any derivatives exclusively with Microchip products.
+  14:.././hal//sam4s/pio.c ****  * It is your responsibility to comply with third party license terms applicable
+  15:.././hal//sam4s/pio.c ****  * to your use of third party software (including open source software) that
+  16:.././hal//sam4s/pio.c ****  * may accompany Microchip software.
+  17:.././hal//sam4s/pio.c ****  *
+  18:.././hal//sam4s/pio.c ****  * THIS SOFTWARE IS SUPPLIED BY MICROCHIP "AS IS". NO WARRANTIES,
+  19:.././hal//sam4s/pio.c ****  * WHETHER EXPRESS, IMPLIED OR STATUTORY, APPLY TO THIS SOFTWARE,
+  20:.././hal//sam4s/pio.c ****  * INCLUDING ANY IMPLIED WARRANTIES OF NON-INFRINGEMENT, MERCHANTABILITY,
+  21:.././hal//sam4s/pio.c ****  * AND FITNESS FOR A PARTICULAR PURPOSE. IN NO EVENT WILL MICROCHIP BE
+  22:.././hal//sam4s/pio.c ****  * LIABLE FOR ANY INDIRECT, SPECIAL, PUNITIVE, INCIDENTAL OR CONSEQUENTIAL
+  23:.././hal//sam4s/pio.c ****  * LOSS, DAMAGE, COST OR EXPENSE OF ANY KIND WHATSOEVER RELATED TO THE
+  24:.././hal//sam4s/pio.c ****  * SOFTWARE, HOWEVER CAUSED, EVEN IF MICROCHIP HAS BEEN ADVISED OF THE
+  25:.././hal//sam4s/pio.c ****  * POSSIBILITY OR THE DAMAGES ARE FORESEEABLE.  TO THE FULLEST EXTENT
+  26:.././hal//sam4s/pio.c ****  * ALLOWED BY LAW, MICROCHIP'S TOTAL LIABILITY ON ALL CLAIMS IN ANY WAY
+  27:.././hal//sam4s/pio.c ****  * RELATED TO THIS SOFTWARE WILL NOT EXCEED THE AMOUNT OF FEES, IF ANY,
+  28:.././hal//sam4s/pio.c ****  * THAT YOU HAVE PAID DIRECTLY TO MICROCHIP FOR THIS SOFTWARE.
+  29:.././hal//sam4s/pio.c ****  *
+  30:.././hal//sam4s/pio.c ****  * \asf_license_stop
+  31:.././hal//sam4s/pio.c ****  *
+  32:.././hal//sam4s/pio.c ****  */
+  33:.././hal//sam4s/pio.c **** /*
+  34:.././hal//sam4s/pio.c ****  * Support and FAQ: visit <a href="https://www.microchip.com/support/">Microchip Support</a>
+  35:.././hal//sam4s/pio.c ****  */
+  36:.././hal//sam4s/pio.c **** 
+  37:.././hal//sam4s/pio.c **** #include "pio.h"
+  38:.././hal//sam4s/pio.c **** 
+  39:.././hal//sam4s/pio.c **** #ifndef PIO_WPMR_WPKEY_PASSWD
+  40:.././hal//sam4s/pio.c **** #  define PIO_WPMR_WPKEY_PASSWD PIO_WPMR_WPKEY(0x50494Fu)
+  41:.././hal//sam4s/pio.c **** #endif
+  42:.././hal//sam4s/pio.c **** 
+  43:.././hal//sam4s/pio.c **** /**
+  44:.././hal//sam4s/pio.c ****  * \defgroup sam_drivers_pio_group Peripheral Parallel Input/Output (PIO) Controller
+  45:.././hal//sam4s/pio.c ****  *
+  46:.././hal//sam4s/pio.c ****  * \par Purpose
+  47:.././hal//sam4s/pio.c ****  *
+  48:.././hal//sam4s/pio.c ****  * The Parallel Input/Output Controller (PIO) manages up to 32 fully
+  49:.././hal//sam4s/pio.c ****  * programmable input/output lines. Each I/O line may be dedicated as a
+  50:.././hal//sam4s/pio.c ****  * general-purpose I/O or be assigned to a function of an embedded peripheral.
+  51:.././hal//sam4s/pio.c ****  * This assures effective optimization of the pins of a product.
+  52:.././hal//sam4s/pio.c ****  *
+  53:.././hal//sam4s/pio.c ****  * @{
+  54:.././hal//sam4s/pio.c ****  */
+  55:.././hal//sam4s/pio.c **** 
+  56:.././hal//sam4s/pio.c **** #ifndef FREQ_SLOW_CLOCK_EXT
+  57:.././hal//sam4s/pio.c **** /* External slow clock frequency (hz) */
+  58:.././hal//sam4s/pio.c **** #define FREQ_SLOW_CLOCK_EXT 32768
+  59:.././hal//sam4s/pio.c **** #endif
+  60:.././hal//sam4s/pio.c **** 
+  61:.././hal//sam4s/pio.c **** /**
+  62:.././hal//sam4s/pio.c ****  * \brief Configure PIO internal pull-up.
+  63:.././hal//sam4s/pio.c ****  *
+  64:.././hal//sam4s/pio.c ****  * \param p_pio Pointer to a PIO instance.
+  65:.././hal//sam4s/pio.c ****  * \param ul_mask Bitmask of one or more pin(s) to configure.
+  66:.././hal//sam4s/pio.c ****  * \param ul_pull_up_enable Indicates if the pin(s) internal pull-up shall be
+  67:.././hal//sam4s/pio.c ****  * configured.
+  68:.././hal//sam4s/pio.c ****  */
+  69:.././hal//sam4s/pio.c **** void pio_pull_up(Pio *p_pio, const uint32_t ul_mask,
+  70:.././hal//sam4s/pio.c **** 		const uint32_t ul_pull_up_enable)
+  71:.././hal//sam4s/pio.c **** {
+  28              	 .loc 1 71 1 view-0
+  29              	 .cfi_startproc
+  30              	 
+  31              	 
+  32              	 
+  72:.././hal//sam4s/pio.c **** 	/* Enable the pull-up(s) if necessary */
+  73:.././hal//sam4s/pio.c **** 	if (ul_pull_up_enable) {
+  33              	 .loc 1 73 2 view .LVU1
+  34              	 .loc 1 73 5 is_stmt 0 view .LVU2
+  35 0000 0AB1     	 cbz r2,.L2
+  74:.././hal//sam4s/pio.c **** 		p_pio->PIO_PUER = ul_mask;
+  36              	 .loc 1 74 3 is_stmt 1 view .LVU3
+  37              	 .loc 1 74 19 is_stmt 0 view .LVU4
+  38 0002 4166     	 str r1,[r0,#100]
+  39 0004 7047     	 bx lr
+  40              	.L2:
+  75:.././hal//sam4s/pio.c **** 	} else {
+  76:.././hal//sam4s/pio.c **** 		p_pio->PIO_PUDR = ul_mask;
+  41              	 .loc 1 76 3 is_stmt 1 view .LVU5
+  42              	 .loc 1 76 19 is_stmt 0 view .LVU6
+  43 0006 0166     	 str r1,[r0,#96]
+  77:.././hal//sam4s/pio.c **** 	}
+  78:.././hal//sam4s/pio.c **** }
+  44              	 .loc 1 78 1 view .LVU7
+  45 0008 7047     	 bx lr
+  46              	 .cfi_endproc
+  47              	.LFE136:
+  49              	 .section .text.pio_set_debounce_filter,"ax",%progbits
+  50              	 .align 1
+  51              	 .global pio_set_debounce_filter
+  52              	 .syntax unified
+  53              	 .thumb
+  54              	 .thumb_func
+  56              	pio_set_debounce_filter:
+  57              	.LVL1:
+  58              	.LFB137:
+  79:.././hal//sam4s/pio.c **** 
+  80:.././hal//sam4s/pio.c **** /**
+  81:.././hal//sam4s/pio.c ****  * \brief Configure Glitch or Debouncing filter for the specified input(s).
+  82:.././hal//sam4s/pio.c ****  *
+  83:.././hal//sam4s/pio.c ****  * \param p_pio Pointer to a PIO instance.
+  84:.././hal//sam4s/pio.c ****  * \param ul_mask Bitmask of one or more pin(s) to configure.
+  85:.././hal//sam4s/pio.c ****  * \param ul_cut_off Cuts off frequency for debouncing filter.
+  86:.././hal//sam4s/pio.c ****  */
+  87:.././hal//sam4s/pio.c **** void pio_set_debounce_filter(Pio *p_pio, const uint32_t ul_mask,
+  88:.././hal//sam4s/pio.c **** 		const uint32_t ul_cut_off)
+  89:.././hal//sam4s/pio.c **** {
+  59              	 .loc 1 89 1 is_stmt 1 view-0
+  60              	 .cfi_startproc
+  61              	 
+  62              	 
+  63              	 
+  90:.././hal//sam4s/pio.c **** #if (SAM3S || SAM3N || SAM4S || SAM4E || SAM4N || SAM4C || SAMG || SAM4CP || SAM4CM || SAMV71 || SA
+  91:.././hal//sam4s/pio.c **** 	/* Set Debouncing, 0 bit field no effect */
+  92:.././hal//sam4s/pio.c **** 	p_pio->PIO_IFSCER = ul_mask;
+  64              	 .loc 1 92 2 view .LVU9
+  93:.././hal//sam4s/pio.c **** #elif (SAM3XA || SAM3U)
+  94:.././hal//sam4s/pio.c **** 	/* Set Debouncing, 0 bit field no effect */
+  95:.././hal//sam4s/pio.c **** 	p_pio->PIO_DIFSR = ul_mask;
+  96:.././hal//sam4s/pio.c **** #else
+  97:.././hal//sam4s/pio.c **** #error "Unsupported device"
+  98:.././hal//sam4s/pio.c **** #endif
+  99:.././hal//sam4s/pio.c **** 
+ 100:.././hal//sam4s/pio.c **** 	/*
+ 101:.././hal//sam4s/pio.c **** 	 * The debouncing filter can filter a pulse of less than 1/2 Period of a
+ 102:.././hal//sam4s/pio.c **** 	 * programmable Divided Slow Clock:
+ 103:.././hal//sam4s/pio.c **** 	 * Tdiv_slclk = ((DIV+1)*2).Tslow_clock
+ 104:.././hal//sam4s/pio.c **** 	 */
+ 105:.././hal//sam4s/pio.c **** 	p_pio->PIO_SCDR = PIO_SCDR_DIV((FREQ_SLOW_CLOCK_EXT /
+  65              	 .loc 1 105 20 is_stmt 0 view .LVU10
+  66 0000 5200     	 lsls r2,r2,#1
+  67              	.LVL2:
+  68              	 .loc 1 105 20 view .LVU11
+  69 0002 4FF40043 	 mov r3,#32768
+  70 0006 B3FBF2F3 	 udiv r3,r3,r2
+  71 000a 013B     	 subs r3,r3,#1
+  72 000c C3F30D03 	 ubfx r3,r3,#0,#14
+  92:.././hal//sam4s/pio.c **** #elif (SAM3XA || SAM3U)
+  73              	 .loc 1 92 20 view .LVU12
+  74 0010 C0F88410 	 str r1,[r0,#132]
+  75              	 .loc 1 105 2 is_stmt 1 view .LVU13
+  76              	 .loc 1 105 18 is_stmt 0 view .LVU14
+  77 0014 C0F88C30 	 str r3,[r0,#140]
+ 106:.././hal//sam4s/pio.c **** 			(2 * (ul_cut_off))) - 1);
+ 107:.././hal//sam4s/pio.c **** }
+  78              	 .loc 1 107 1 view .LVU15
+  79 0018 7047     	 bx lr
+  80              	 .cfi_endproc
+  81              	.LFE137:
+  83              	 .section .text.pio_set,"ax",%progbits
+  84              	 .align 1
+  85              	 .global pio_set
+  86              	 .syntax unified
+  87              	 .thumb
+  88              	 .thumb_func
+  90              	pio_set:
+  91              	.LVL3:
+  92              	.LFB138:
+ 108:.././hal//sam4s/pio.c **** 
+ 109:.././hal//sam4s/pio.c **** /**
+ 110:.././hal//sam4s/pio.c ****  * \brief Set a high output level on all the PIOs defined in ul_mask.
+ 111:.././hal//sam4s/pio.c ****  * This has no immediate effects on PIOs that are not output, but the PIO
+ 112:.././hal//sam4s/pio.c ****  * controller will save the value if they are changed to outputs.
+ 113:.././hal//sam4s/pio.c ****  *
+ 114:.././hal//sam4s/pio.c ****  * \param p_pio Pointer to a PIO instance.
+ 115:.././hal//sam4s/pio.c ****  * \param ul_mask Bitmask of one or more pin(s) to configure.
+ 116:.././hal//sam4s/pio.c ****  */
+ 117:.././hal//sam4s/pio.c **** void pio_set(Pio *p_pio, const uint32_t ul_mask)
+ 118:.././hal//sam4s/pio.c **** {
+  93              	 .loc 1 118 1 is_stmt 1 view-0
+  94              	 .cfi_startproc
+  95              	 
+  96              	 
+  97              	 
+ 119:.././hal//sam4s/pio.c **** 	p_pio->PIO_SODR = ul_mask;
+  98              	 .loc 1 119 2 view .LVU17
+  99              	 .loc 1 119 18 is_stmt 0 view .LVU18
+ 100 0000 0163     	 str r1,[r0,#48]
+ 120:.././hal//sam4s/pio.c **** }
+ 101              	 .loc 1 120 1 view .LVU19
+ 102 0002 7047     	 bx lr
+ 103              	 .cfi_endproc
+ 104              	.LFE138:
+ 106              	 .section .text.pio_clear,"ax",%progbits
+ 107              	 .align 1
+ 108              	 .global pio_clear
+ 109              	 .syntax unified
+ 110              	 .thumb
+ 111              	 .thumb_func
+ 113              	pio_clear:
+ 114              	.LVL4:
+ 115              	.LFB139:
+ 121:.././hal//sam4s/pio.c **** 
+ 122:.././hal//sam4s/pio.c **** /**
+ 123:.././hal//sam4s/pio.c ****  * \brief Set a low output level on all the PIOs defined in ul_mask.
+ 124:.././hal//sam4s/pio.c ****  * This has no immediate effects on PIOs that are not output, but the PIO
+ 125:.././hal//sam4s/pio.c ****  * controller will save the value if they are changed to outputs.
+ 126:.././hal//sam4s/pio.c ****  *
+ 127:.././hal//sam4s/pio.c ****  * \param p_pio Pointer to a PIO instance.
+ 128:.././hal//sam4s/pio.c ****  * \param ul_mask Bitmask of one or more pin(s) to configure.
+ 129:.././hal//sam4s/pio.c ****  */
+ 130:.././hal//sam4s/pio.c **** void pio_clear(Pio *p_pio, const uint32_t ul_mask)
+ 131:.././hal//sam4s/pio.c **** {
+ 116              	 .loc 1 131 1 is_stmt 1 view-0
+ 117              	 .cfi_startproc
+ 118              	 
+ 119              	 
+ 120              	 
+ 132:.././hal//sam4s/pio.c **** 	p_pio->PIO_CODR = ul_mask;
+ 121              	 .loc 1 132 2 view .LVU21
+ 122              	 .loc 1 132 18 is_stmt 0 view .LVU22
+ 123 0000 4163     	 str r1,[r0,#52]
+ 133:.././hal//sam4s/pio.c **** }
+ 124              	 .loc 1 133 1 view .LVU23
+ 125 0002 7047     	 bx lr
+ 126              	 .cfi_endproc
+ 127              	.LFE139:
+ 129              	 .section .text.pio_get,"ax",%progbits
+ 130              	 .align 1
+ 131              	 .global pio_get
+ 132              	 .syntax unified
+ 133              	 .thumb
+ 134              	 .thumb_func
+ 136              	pio_get:
+ 137              	.LVL5:
+ 138              	.LFB140:
+ 134:.././hal//sam4s/pio.c **** 
+ 135:.././hal//sam4s/pio.c **** /**
+ 136:.././hal//sam4s/pio.c ****  * \brief Return 1 if one or more PIOs of the given Pin instance currently have
+ 137:.././hal//sam4s/pio.c ****  * a high level; otherwise returns 0. This method returns the actual value that
+ 138:.././hal//sam4s/pio.c ****  * is being read on the pin. To return the supposed output value of a pin, use
+ 139:.././hal//sam4s/pio.c ****  * pio_get_output_data_status() instead.
+ 140:.././hal//sam4s/pio.c ****  *
+ 141:.././hal//sam4s/pio.c ****  * \param p_pio Pointer to a PIO instance.
+ 142:.././hal//sam4s/pio.c ****  * \param ul_type PIO type.
+ 143:.././hal//sam4s/pio.c ****  * \param ul_mask Bitmask of one or more pin(s) to configure.
+ 144:.././hal//sam4s/pio.c ****  *
+ 145:.././hal//sam4s/pio.c ****  * \retval 1 at least one PIO currently has a high level.
+ 146:.././hal//sam4s/pio.c ****  * \retval 0 all PIOs have a low level.
+ 147:.././hal//sam4s/pio.c ****  */
+ 148:.././hal//sam4s/pio.c **** uint32_t pio_get(Pio *p_pio, const pio_type_t ul_type,
+ 149:.././hal//sam4s/pio.c **** 		const uint32_t ul_mask)
+ 150:.././hal//sam4s/pio.c **** {
+ 139              	 .loc 1 150 1 is_stmt 1 view-0
+ 140              	 .cfi_startproc
+ 141              	 
+ 142              	 
+ 143              	 
+ 151:.././hal//sam4s/pio.c **** 	uint32_t ul_reg;
+ 144              	 .loc 1 151 2 view .LVU25
+ 152:.././hal//sam4s/pio.c **** 
+ 153:.././hal//sam4s/pio.c **** 	if ((ul_type == PIO_OUTPUT_0) || (ul_type == PIO_OUTPUT_1)) {
+ 145              	 .loc 1 153 2 view .LVU26
+ 146              	 .loc 1 153 5 is_stmt 0 view .LVU27
+ 147 0000 21F00061 	 bic r1,r1,#134217728
+ 148              	.LVL6:
+ 149              	 .loc 1 153 5 view .LVU28
+ 150 0004 B1F1405F 	 cmp r1,#805306368
+ 154:.././hal//sam4s/pio.c **** 		ul_reg = p_pio->PIO_ODSR;
+ 151              	 .loc 1 154 3 is_stmt 1 view .LVU29
+ 152              	 .loc 1 154 10 is_stmt 0 view .LVU30
+ 153 0008 0CBF     	 ite eq
+ 154 000a 836B     	 ldreq r3,[r0,#56]
+ 155              	.LVL7:
+ 155:.././hal//sam4s/pio.c **** 	} else {
+ 156:.././hal//sam4s/pio.c **** 		ul_reg = p_pio->PIO_PDSR;
+ 156              	 .loc 1 156 3 is_stmt 1 view .LVU31
+ 157              	 .loc 1 156 10 is_stmt 0 view .LVU32
+ 158 000c C36B     	 ldrne r3,[r0,#60]
+ 159              	.LVL8:
+ 157:.././hal//sam4s/pio.c **** 	}
+ 158:.././hal//sam4s/pio.c **** 
+ 159:.././hal//sam4s/pio.c **** 	if ((ul_reg & ul_mask) == 0) {
+ 160              	 .loc 1 159 2 is_stmt 1 view .LVU33
+ 161              	 .loc 1 159 5 is_stmt 0 view .LVU34
+ 162 000e 1342     	 tst r3,r2
+ 160:.././hal//sam4s/pio.c **** 		return 0;
+ 161:.././hal//sam4s/pio.c **** 	} else {
+ 162:.././hal//sam4s/pio.c **** 		return 1;
+ 163:.././hal//sam4s/pio.c **** 	}
+ 164:.././hal//sam4s/pio.c **** }
+ 163              	 .loc 1 164 1 view .LVU35
+ 164 0010 14BF     	 ite ne
+ 165 0012 0120     	 movne r0,#1
+ 166              	.LVL9:
+ 167              	 .loc 1 164 1 view .LVU36
+ 168 0014 0020     	 moveq r0,#0
+ 169 0016 7047     	 bx lr
+ 170              	 .cfi_endproc
+ 171              	.LFE140:
+ 173              	 .section .text.pio_set_peripheral,"ax",%progbits
+ 174              	 .align 1
+ 175              	 .global pio_set_peripheral
+ 176              	 .syntax unified
+ 177              	 .thumb
+ 178              	 .thumb_func
+ 180              	pio_set_peripheral:
+ 181              	.LVL10:
+ 182              	.LFB141:
+ 165:.././hal//sam4s/pio.c **** 
+ 166:.././hal//sam4s/pio.c **** /**
+ 167:.././hal//sam4s/pio.c ****  * \brief Configure IO of a PIO controller as being controlled by a specific
+ 168:.././hal//sam4s/pio.c ****  * peripheral.
+ 169:.././hal//sam4s/pio.c ****  *
+ 170:.././hal//sam4s/pio.c ****  * \param p_pio Pointer to a PIO instance.
+ 171:.././hal//sam4s/pio.c ****  * \param ul_type PIO type.
+ 172:.././hal//sam4s/pio.c ****  * \param ul_mask Bitmask of one or more pin(s) to configure.
+ 173:.././hal//sam4s/pio.c ****  */
+ 174:.././hal//sam4s/pio.c **** void pio_set_peripheral(Pio *p_pio, const pio_type_t ul_type,
+ 175:.././hal//sam4s/pio.c **** 		const uint32_t ul_mask)
+ 176:.././hal//sam4s/pio.c **** {
+ 183              	 .loc 1 176 1 is_stmt 1 view-0
+ 184              	 .cfi_startproc
+ 185              	 
+ 186              	 
+ 187              	 
+ 177:.././hal//sam4s/pio.c **** 	uint32_t ul_sr;
+ 188              	 .loc 1 177 2 view .LVU38
+ 178:.././hal//sam4s/pio.c **** 
+ 179:.././hal//sam4s/pio.c **** 	/* Disable interrupts on the pin(s) */
+ 180:.././hal//sam4s/pio.c **** 	p_pio->PIO_IDR = ul_mask;
+ 189              	 .loc 1 180 2 view .LVU39
+ 181:.././hal//sam4s/pio.c **** 
+ 182:.././hal//sam4s/pio.c **** #if (SAM3S || SAM3N || SAM4S || SAM4E || SAM4N || SAM4C || SAMG || SAM4CP || SAM4CM || SAMV71 || SA
+ 183:.././hal//sam4s/pio.c **** 	switch (ul_type) {
+ 190              	 .loc 1 183 2 is_stmt 0 view .LVU40
+ 191 0000 B1F1C05F 	 cmp r1,#402653184
+ 180:.././hal//sam4s/pio.c **** 
+ 192              	 .loc 1 180 17 view .LVU41
+ 193 0004 4264     	 str r2,[r0,#68]
+ 194              	 .loc 1 183 2 is_stmt 1 view .LVU42
+ 195 0006 26D0     	 beq .L11
+ 196 0008 07D8     	 bhi .L12
+ 197 000a B1F1006F 	 cmp r1,#134217728
+ 198 000e 11D0     	 beq .L13
+ 199 0010 B1F1805F 	 cmp r1,#268435456
+ 200 0014 1CD0     	 beq .L14
+ 201 0016 C9B9     	 cbnz r1,.L16
+ 202 0018 7047     	 bx lr
+ 203              	.L12:
+ 204 001a B1F1005F 	 cmp r1,#536870912
+ 205 001e 23D0     	 beq .L17
+ 206 0020 14D3     	 bcc .L16
+ 207 0022 B1F1405F 	 cmp r1,#805306368
+ 208 0026 12D0     	 beq .L10
+ 209 0028 21F08051 	 bic r1,r1,#268435456
+ 210              	.LVL11:
+ 211              	 .loc 1 183 2 is_stmt 0 view .LVU43
+ 212 002c B1F1205F 	 cmp r1,#671088640
+ 213 0030 0CD1     	 bne .L16
+ 214 0032 7047     	 bx lr
+ 215              	.LVL12:
+ 216              	.L13:
+ 184:.././hal//sam4s/pio.c **** 	case PIO_PERIPH_A:
+ 185:.././hal//sam4s/pio.c **** 		ul_sr = p_pio->PIO_ABCDSR[0];
+ 217              	 .loc 1 185 3 is_stmt 1 view .LVU44
+ 218              	 .loc 1 185 9 is_stmt 0 view .LVU45
+ 219 0034 016F     	 ldr r1,[r0,#112]
+ 220              	.LVL13:
+ 186:.././hal//sam4s/pio.c **** 		p_pio->PIO_ABCDSR[0] &= (~ul_mask & ul_sr);
+ 221              	 .loc 1 186 3 is_stmt 1 view .LVU46
+ 222              	 .loc 1 186 20 is_stmt 0 view .LVU47
+ 223 0036 036F     	 ldr r3,[r0,#112]
+ 224              	 .loc 1 186 24 view .LVU48
+ 225 0038 0B40     	 ands r3,r3,r1
+ 226 003a 23EA0203 	 bic r3,r3,r2
+ 227              	.LVL14:
+ 228              	.L29:
+ 187:.././hal//sam4s/pio.c **** 
+ 188:.././hal//sam4s/pio.c **** 		ul_sr = p_pio->PIO_ABCDSR[1];
+ 189:.././hal//sam4s/pio.c **** 		p_pio->PIO_ABCDSR[1] &= (~ul_mask & ul_sr);
+ 190:.././hal//sam4s/pio.c **** 		break;
+ 191:.././hal//sam4s/pio.c **** 	case PIO_PERIPH_B:
+ 192:.././hal//sam4s/pio.c **** 		ul_sr = p_pio->PIO_ABCDSR[0];
+ 193:.././hal//sam4s/pio.c **** 		p_pio->PIO_ABCDSR[0] = (ul_mask | ul_sr);
+ 229              	 .loc 1 193 24 view .LVU49
+ 230 003e 0367     	 str r3,[r0,#112]
+ 194:.././hal//sam4s/pio.c **** 
+ 195:.././hal//sam4s/pio.c **** 		ul_sr = p_pio->PIO_ABCDSR[1];
+ 231              	 .loc 1 195 3 is_stmt 1 view .LVU50
+ 232              	 .loc 1 195 9 is_stmt 0 view .LVU51
+ 233 0040 416F     	 ldr r1,[r0,#116]
+ 234              	.LVL15:
+ 196:.././hal//sam4s/pio.c **** 		p_pio->PIO_ABCDSR[1] &= (~ul_mask & ul_sr);
+ 235              	 .loc 1 196 3 is_stmt 1 view .LVU52
+ 236              	 .loc 1 196 20 is_stmt 0 view .LVU53
+ 237 0042 436F     	 ldr r3,[r0,#116]
+ 238              	 .loc 1 196 24 view .LVU54
+ 239 0044 0B40     	 ands r3,r3,r1
+ 240 0046 23EA0203 	 bic r3,r3,r2
+ 241              	.LVL16:
+ 242              	.L27:
+ 197:.././hal//sam4s/pio.c **** 		break;
+ 198:.././hal//sam4s/pio.c **** #if (!SAMG)
+ 199:.././hal//sam4s/pio.c **** 	case PIO_PERIPH_C:
+ 200:.././hal//sam4s/pio.c **** 		ul_sr = p_pio->PIO_ABCDSR[0];
+ 201:.././hal//sam4s/pio.c **** 		p_pio->PIO_ABCDSR[0] &= (~ul_mask & ul_sr);
+ 202:.././hal//sam4s/pio.c **** 
+ 203:.././hal//sam4s/pio.c **** 		ul_sr = p_pio->PIO_ABCDSR[1];
+ 204:.././hal//sam4s/pio.c **** 		p_pio->PIO_ABCDSR[1] = (ul_mask | ul_sr);
+ 205:.././hal//sam4s/pio.c **** 		break;
+ 206:.././hal//sam4s/pio.c **** 	case PIO_PERIPH_D:
+ 207:.././hal//sam4s/pio.c **** 		ul_sr = p_pio->PIO_ABCDSR[0];
+ 208:.././hal//sam4s/pio.c **** 		p_pio->PIO_ABCDSR[0] = (ul_mask | ul_sr);
+ 209:.././hal//sam4s/pio.c **** 
+ 210:.././hal//sam4s/pio.c **** 		ul_sr = p_pio->PIO_ABCDSR[1];
+ 211:.././hal//sam4s/pio.c **** 		p_pio->PIO_ABCDSR[1] = (ul_mask | ul_sr);
+ 243              	 .loc 1 211 24 view .LVU55
+ 244 004a 4367     	 str r3,[r0,#116]
+ 212:.././hal//sam4s/pio.c **** 		break;
+ 245              	 .loc 1 212 3 is_stmt 1 view .LVU56
+ 246              	.L16:
+ 213:.././hal//sam4s/pio.c **** #endif
+ 214:.././hal//sam4s/pio.c **** 		/* Other types are invalid in this function */
+ 215:.././hal//sam4s/pio.c **** 	case PIO_INPUT:
+ 216:.././hal//sam4s/pio.c **** 	case PIO_OUTPUT_0:
+ 217:.././hal//sam4s/pio.c **** 	case PIO_OUTPUT_1:
+ 218:.././hal//sam4s/pio.c **** 	case PIO_NOT_A_PIN:
+ 219:.././hal//sam4s/pio.c **** 		return;
+ 220:.././hal//sam4s/pio.c **** 	}
+ 221:.././hal//sam4s/pio.c **** #elif (SAM3XA|| SAM3U)
+ 222:.././hal//sam4s/pio.c **** 	switch (ul_type) {
+ 223:.././hal//sam4s/pio.c **** 	case PIO_PERIPH_A:
+ 224:.././hal//sam4s/pio.c **** 		ul_sr = p_pio->PIO_ABSR;
+ 225:.././hal//sam4s/pio.c **** 		p_pio->PIO_ABSR &= (~ul_mask & ul_sr);
+ 226:.././hal//sam4s/pio.c **** 		break;
+ 227:.././hal//sam4s/pio.c **** 
+ 228:.././hal//sam4s/pio.c **** 	case PIO_PERIPH_B:
+ 229:.././hal//sam4s/pio.c **** 		ul_sr = p_pio->PIO_ABSR;
+ 230:.././hal//sam4s/pio.c **** 		p_pio->PIO_ABSR = (ul_mask | ul_sr);
+ 231:.././hal//sam4s/pio.c **** 		break;
+ 232:.././hal//sam4s/pio.c **** 
+ 233:.././hal//sam4s/pio.c **** 		// other types are invalid in this function
+ 234:.././hal//sam4s/pio.c **** 	case PIO_INPUT:
+ 235:.././hal//sam4s/pio.c **** 	case PIO_OUTPUT_0:
+ 236:.././hal//sam4s/pio.c **** 	case PIO_OUTPUT_1:
+ 237:.././hal//sam4s/pio.c **** 	case PIO_NOT_A_PIN:
+ 238:.././hal//sam4s/pio.c **** 		return;
+ 239:.././hal//sam4s/pio.c **** 	}
+ 240:.././hal//sam4s/pio.c **** #else
+ 241:.././hal//sam4s/pio.c **** #error "Unsupported device"
+ 242:.././hal//sam4s/pio.c **** #endif
+ 243:.././hal//sam4s/pio.c **** 
+ 244:.././hal//sam4s/pio.c **** 	/* Remove the pins from under the control of PIO */
+ 245:.././hal//sam4s/pio.c **** 	p_pio->PIO_PDR = ul_mask;
+ 247              	 .loc 1 245 2 view .LVU57
+ 248              	 .loc 1 245 17 is_stmt 0 view .LVU58
+ 249 004c 4260     	 str r2,[r0,#4]
+ 250              	.L10:
+ 246:.././hal//sam4s/pio.c **** }
+ 251              	 .loc 1 246 1 view .LVU59
+ 252 004e 7047     	 bx lr
+ 253              	.LVL17:
+ 254              	.L14:
+ 192:.././hal//sam4s/pio.c **** 		p_pio->PIO_ABCDSR[0] = (ul_mask | ul_sr);
+ 255              	 .loc 1 192 3 is_stmt 1 view .LVU60
+ 192:.././hal//sam4s/pio.c **** 		p_pio->PIO_ABCDSR[0] = (ul_mask | ul_sr);
+ 256              	 .loc 1 192 9 is_stmt 0 view .LVU61
+ 257 0050 036F     	 ldr r3,[r0,#112]
+ 258              	.LVL18:
+ 193:.././hal//sam4s/pio.c **** 
+ 259              	 .loc 1 193 3 is_stmt 1 view .LVU62
+ 193:.././hal//sam4s/pio.c **** 
+ 260              	 .loc 1 193 35 is_stmt 0 view .LVU63
+ 261 0052 1343     	 orrs r3,r3,r2
+ 262              	.LVL19:
+ 193:.././hal//sam4s/pio.c **** 
+ 263              	 .loc 1 193 35 view .LVU64
+ 264 0054 F3E7     	 b .L29
+ 265              	.LVL20:
+ 266              	.L11:
+ 200:.././hal//sam4s/pio.c **** 		p_pio->PIO_ABCDSR[0] &= (~ul_mask & ul_sr);
+ 267              	 .loc 1 200 3 is_stmt 1 view .LVU65
+ 200:.././hal//sam4s/pio.c **** 		p_pio->PIO_ABCDSR[0] &= (~ul_mask & ul_sr);
+ 268              	 .loc 1 200 9 is_stmt 0 view .LVU66
+ 269 0056 016F     	 ldr r1,[r0,#112]
+ 270              	.LVL21:
+ 201:.././hal//sam4s/pio.c **** 
+ 271              	 .loc 1 201 3 is_stmt 1 view .LVU67
+ 201:.././hal//sam4s/pio.c **** 
+ 272              	 .loc 1 201 20 is_stmt 0 view .LVU68
+ 273 0058 036F     	 ldr r3,[r0,#112]
+ 201:.././hal//sam4s/pio.c **** 
+ 274              	 .loc 1 201 24 view .LVU69
+ 275 005a 0B40     	 ands r3,r3,r1
+ 276 005c 23EA0203 	 bic r3,r3,r2
+ 277              	.LVL22:
+ 278              	.L28:
+ 208:.././hal//sam4s/pio.c **** 
+ 279              	 .loc 1 208 24 view .LVU70
+ 280 0060 0367     	 str r3,[r0,#112]
+ 210:.././hal//sam4s/pio.c **** 		p_pio->PIO_ABCDSR[1] = (ul_mask | ul_sr);
+ 281              	 .loc 1 210 3 is_stmt 1 view .LVU71
+ 210:.././hal//sam4s/pio.c **** 		p_pio->PIO_ABCDSR[1] = (ul_mask | ul_sr);
+ 282              	 .loc 1 210 9 is_stmt 0 view .LVU72
+ 283 0062 436F     	 ldr r3,[r0,#116]
+ 284              	.LVL23:
+ 211:.././hal//sam4s/pio.c **** 		break;
+ 285              	 .loc 1 211 3 is_stmt 1 view .LVU73
+ 211:.././hal//sam4s/pio.c **** 		break;
+ 286              	 .loc 1 211 35 is_stmt 0 view .LVU74
+ 287 0064 1343     	 orrs r3,r3,r2
+ 288              	.LVL24:
+ 211:.././hal//sam4s/pio.c **** 		break;
+ 289              	 .loc 1 211 35 view .LVU75
+ 290 0066 F0E7     	 b .L27
+ 291              	.LVL25:
+ 292              	.L17:
+ 207:.././hal//sam4s/pio.c **** 		p_pio->PIO_ABCDSR[0] = (ul_mask | ul_sr);
+ 293              	 .loc 1 207 3 is_stmt 1 view .LVU76
+ 207:.././hal//sam4s/pio.c **** 		p_pio->PIO_ABCDSR[0] = (ul_mask | ul_sr);
+ 294              	 .loc 1 207 9 is_stmt 0 view .LVU77
+ 295 0068 036F     	 ldr r3,[r0,#112]
+ 296              	.LVL26:
+ 208:.././hal//sam4s/pio.c **** 
+ 297              	 .loc 1 208 3 is_stmt 1 view .LVU78
+ 208:.././hal//sam4s/pio.c **** 
+ 298              	 .loc 1 208 35 is_stmt 0 view .LVU79
+ 299 006a 1343     	 orrs r3,r3,r2
+ 300              	.LVL27:
+ 208:.././hal//sam4s/pio.c **** 
+ 301              	 .loc 1 208 35 view .LVU80
+ 302 006c F8E7     	 b .L28
+ 303              	 .cfi_endproc
+ 304              	.LFE141:
+ 306              	 .section .text.pio_set_input,"ax",%progbits
+ 307              	 .align 1
+ 308              	 .global pio_set_input
+ 309              	 .syntax unified
+ 310              	 .thumb
+ 311              	 .thumb_func
+ 313              	pio_set_input:
+ 314              	.LVL28:
+ 315              	.LFB142:
+ 247:.././hal//sam4s/pio.c **** 
+ 248:.././hal//sam4s/pio.c **** /**
+ 249:.././hal//sam4s/pio.c ****  * \brief Configure one or more pin(s) or a PIO controller as inputs.
+ 250:.././hal//sam4s/pio.c ****  * Optionally, the corresponding internal pull-up(s) and glitch filter(s) can
+ 251:.././hal//sam4s/pio.c ****  * be enabled.
+ 252:.././hal//sam4s/pio.c ****  *
+ 253:.././hal//sam4s/pio.c ****  * \param p_pio Pointer to a PIO instance.
+ 254:.././hal//sam4s/pio.c ****  * \param ul_mask Bitmask indicating which pin(s) to configure as input(s).
+ 255:.././hal//sam4s/pio.c ****  * \param ul_attribute PIO attribute(s).
+ 256:.././hal//sam4s/pio.c ****  */
+ 257:.././hal//sam4s/pio.c **** void pio_set_input(Pio *p_pio, const uint32_t ul_mask,
+ 258:.././hal//sam4s/pio.c **** 		const uint32_t ul_attribute)
+ 259:.././hal//sam4s/pio.c **** {
+ 316              	 .loc 1 259 1 is_stmt 1 view-0
+ 317              	 .cfi_startproc
+ 318              	 
+ 319              	 
+ 320              	 
+ 260:.././hal//sam4s/pio.c **** 	pio_disable_interrupt(p_pio, ul_mask);
+ 321              	 .loc 1 260 2 view .LVU82
+ 322              	.LBB42:
+ 323              	.LBI42:
+ 261:.././hal//sam4s/pio.c **** 	pio_pull_up(p_pio, ul_mask, ul_attribute & PIO_PULLUP);
+ 262:.././hal//sam4s/pio.c **** 
+ 263:.././hal//sam4s/pio.c **** 	/* Enable Input Filter if necessary */
+ 264:.././hal//sam4s/pio.c **** 	if (ul_attribute & (PIO_DEGLITCH | PIO_DEBOUNCE)) {
+ 265:.././hal//sam4s/pio.c **** 		p_pio->PIO_IFER = ul_mask;
+ 266:.././hal//sam4s/pio.c **** 	} else {
+ 267:.././hal//sam4s/pio.c **** 		p_pio->PIO_IFDR = ul_mask;
+ 268:.././hal//sam4s/pio.c **** 	}
+ 269:.././hal//sam4s/pio.c **** 
+ 270:.././hal//sam4s/pio.c **** #if (SAM3S || SAM3N || SAM4S || SAM4E || SAM4N || SAM4C || SAMG || SAM4CP || SAM4CM || SAMV71 || SA
+ 271:.././hal//sam4s/pio.c **** 	/* Enable de-glitch or de-bounce if necessary */
+ 272:.././hal//sam4s/pio.c **** 	if (ul_attribute & PIO_DEGLITCH) {
+ 273:.././hal//sam4s/pio.c **** 		p_pio->PIO_IFSCDR = ul_mask;
+ 274:.././hal//sam4s/pio.c **** 	} else {
+ 275:.././hal//sam4s/pio.c **** 		if (ul_attribute & PIO_DEBOUNCE) {
+ 276:.././hal//sam4s/pio.c **** 			p_pio->PIO_IFSCER = ul_mask;
+ 277:.././hal//sam4s/pio.c **** 		}
+ 278:.././hal//sam4s/pio.c **** 	}
+ 279:.././hal//sam4s/pio.c **** #elif (SAM3XA|| SAM3U)
+ 280:.././hal//sam4s/pio.c **** 	/* Enable de-glitch or de-bounce if necessary */
+ 281:.././hal//sam4s/pio.c **** 	if (ul_attribute & PIO_DEGLITCH) {
+ 282:.././hal//sam4s/pio.c **** 		p_pio->PIO_SCIFSR = ul_mask;
+ 283:.././hal//sam4s/pio.c **** 	} else {
+ 284:.././hal//sam4s/pio.c **** 		if (ul_attribute & PIO_DEBOUNCE) {
+ 285:.././hal//sam4s/pio.c **** 			p_pio->PIO_DIFSR = ul_mask;
+ 286:.././hal//sam4s/pio.c **** 		}
+ 287:.././hal//sam4s/pio.c **** 	}
+ 288:.././hal//sam4s/pio.c **** #else
+ 289:.././hal//sam4s/pio.c **** #error "Unsupported device"
+ 290:.././hal//sam4s/pio.c **** #endif
+ 291:.././hal//sam4s/pio.c **** 
+ 292:.././hal//sam4s/pio.c **** 	/* Configure pin as input */
+ 293:.././hal//sam4s/pio.c **** 	p_pio->PIO_ODR = ul_mask;
+ 294:.././hal//sam4s/pio.c **** 	p_pio->PIO_PER = ul_mask;
+ 295:.././hal//sam4s/pio.c **** }
+ 296:.././hal//sam4s/pio.c **** 
+ 297:.././hal//sam4s/pio.c **** /**
+ 298:.././hal//sam4s/pio.c ****  * \brief Configure one or more pin(s) of a PIO controller as outputs, with
+ 299:.././hal//sam4s/pio.c ****  * the given default value. Optionally, the multi-drive feature can be enabled
+ 300:.././hal//sam4s/pio.c ****  * on the pin(s).
+ 301:.././hal//sam4s/pio.c ****  *
+ 302:.././hal//sam4s/pio.c ****  * \param p_pio Pointer to a PIO instance.
+ 303:.././hal//sam4s/pio.c ****  * \param ul_mask Bitmask indicating which pin(s) to configure.
+ 304:.././hal//sam4s/pio.c ****  * \param ul_default_level Default level on the pin(s).
+ 305:.././hal//sam4s/pio.c ****  * \param ul_multidrive_enable Indicates if the pin(s) shall be configured as
+ 306:.././hal//sam4s/pio.c ****  * open-drain.
+ 307:.././hal//sam4s/pio.c ****  * \param ul_pull_up_enable Indicates if the pin shall have its pull-up
+ 308:.././hal//sam4s/pio.c ****  * activated.
+ 309:.././hal//sam4s/pio.c ****  */
+ 310:.././hal//sam4s/pio.c **** void pio_set_output(Pio *p_pio, const uint32_t ul_mask,
+ 311:.././hal//sam4s/pio.c **** 		const uint32_t ul_default_level,
+ 312:.././hal//sam4s/pio.c **** 		const uint32_t ul_multidrive_enable,
+ 313:.././hal//sam4s/pio.c **** 		const uint32_t ul_pull_up_enable)
+ 314:.././hal//sam4s/pio.c **** {
+ 315:.././hal//sam4s/pio.c **** 	pio_disable_interrupt(p_pio, ul_mask);
+ 316:.././hal//sam4s/pio.c **** 	pio_pull_up(p_pio, ul_mask, ul_pull_up_enable);
+ 317:.././hal//sam4s/pio.c **** 
+ 318:.././hal//sam4s/pio.c **** 	/* Enable multi-drive if necessary */
+ 319:.././hal//sam4s/pio.c **** 	if (ul_multidrive_enable) {
+ 320:.././hal//sam4s/pio.c **** 		p_pio->PIO_MDER = ul_mask;
+ 321:.././hal//sam4s/pio.c **** 	} else {
+ 322:.././hal//sam4s/pio.c **** 		p_pio->PIO_MDDR = ul_mask;
+ 323:.././hal//sam4s/pio.c **** 	}
+ 324:.././hal//sam4s/pio.c **** 
+ 325:.././hal//sam4s/pio.c **** 	/* Set default value */
+ 326:.././hal//sam4s/pio.c **** 	if (ul_default_level) {
+ 327:.././hal//sam4s/pio.c **** 		p_pio->PIO_SODR = ul_mask;
+ 328:.././hal//sam4s/pio.c **** 	} else {
+ 329:.././hal//sam4s/pio.c **** 		p_pio->PIO_CODR = ul_mask;
+ 330:.././hal//sam4s/pio.c **** 	}
+ 331:.././hal//sam4s/pio.c **** 
+ 332:.././hal//sam4s/pio.c **** 	/* Configure pin(s) as output(s) */
+ 333:.././hal//sam4s/pio.c **** 	p_pio->PIO_OER = ul_mask;
+ 334:.././hal//sam4s/pio.c **** 	p_pio->PIO_PER = ul_mask;
+ 335:.././hal//sam4s/pio.c **** }
+ 336:.././hal//sam4s/pio.c **** 
+ 337:.././hal//sam4s/pio.c **** /**
+ 338:.././hal//sam4s/pio.c ****  * \brief Perform complete pin(s) configuration; general attributes and PIO init
+ 339:.././hal//sam4s/pio.c ****  * if necessary.
+ 340:.././hal//sam4s/pio.c ****  *
+ 341:.././hal//sam4s/pio.c ****  * \param p_pio Pointer to a PIO instance.
+ 342:.././hal//sam4s/pio.c ****  * \param ul_type PIO type.
+ 343:.././hal//sam4s/pio.c ****  * \param ul_mask Bitmask of one or more pin(s) to configure.
+ 344:.././hal//sam4s/pio.c ****  * \param ul_attribute Pins attributes.
+ 345:.././hal//sam4s/pio.c ****  *
+ 346:.././hal//sam4s/pio.c ****  * \return Whether the pin(s) have been configured properly.
+ 347:.././hal//sam4s/pio.c ****  */
+ 348:.././hal//sam4s/pio.c **** uint32_t pio_configure(Pio *p_pio, const pio_type_t ul_type,
+ 349:.././hal//sam4s/pio.c **** 		const uint32_t ul_mask, const uint32_t ul_attribute)
+ 350:.././hal//sam4s/pio.c **** {
+ 351:.././hal//sam4s/pio.c **** 	/* Configure pins */
+ 352:.././hal//sam4s/pio.c **** 	switch (ul_type) {
+ 353:.././hal//sam4s/pio.c **** 	case PIO_PERIPH_A:
+ 354:.././hal//sam4s/pio.c **** 	case PIO_PERIPH_B:
+ 355:.././hal//sam4s/pio.c **** #if (SAM3S || SAM3N || SAM4S || SAM4E || SAM4N || SAM4C || SAM4CP || SAM4CM || SAMV71 || SAMV70 || 
+ 356:.././hal//sam4s/pio.c **** 	case PIO_PERIPH_C:
+ 357:.././hal//sam4s/pio.c **** 	case PIO_PERIPH_D:
+ 358:.././hal//sam4s/pio.c **** #endif
+ 359:.././hal//sam4s/pio.c **** 		pio_set_peripheral(p_pio, ul_type, ul_mask);
+ 360:.././hal//sam4s/pio.c **** 		pio_pull_up(p_pio, ul_mask, (ul_attribute & PIO_PULLUP));
+ 361:.././hal//sam4s/pio.c **** 		break;
+ 362:.././hal//sam4s/pio.c **** 
+ 363:.././hal//sam4s/pio.c **** 	case PIO_INPUT:
+ 364:.././hal//sam4s/pio.c **** 		pio_set_input(p_pio, ul_mask, ul_attribute);
+ 365:.././hal//sam4s/pio.c **** 		break;
+ 366:.././hal//sam4s/pio.c **** 
+ 367:.././hal//sam4s/pio.c **** 	case PIO_OUTPUT_0:
+ 368:.././hal//sam4s/pio.c **** 	case PIO_OUTPUT_1:
+ 369:.././hal//sam4s/pio.c **** 		pio_set_output(p_pio, ul_mask, (ul_type == PIO_OUTPUT_1),
+ 370:.././hal//sam4s/pio.c **** 				(ul_attribute & PIO_OPENDRAIN) ? 1 : 0,
+ 371:.././hal//sam4s/pio.c **** 				(ul_attribute & PIO_PULLUP) ? 1 : 0);
+ 372:.././hal//sam4s/pio.c **** 		break;
+ 373:.././hal//sam4s/pio.c **** 
+ 374:.././hal//sam4s/pio.c **** 	default:
+ 375:.././hal//sam4s/pio.c **** 		return 0;
+ 376:.././hal//sam4s/pio.c **** 	}
+ 377:.././hal//sam4s/pio.c **** 
+ 378:.././hal//sam4s/pio.c **** 	return 1;
+ 379:.././hal//sam4s/pio.c **** }
+ 380:.././hal//sam4s/pio.c **** 
+ 381:.././hal//sam4s/pio.c **** /**
+ 382:.././hal//sam4s/pio.c ****  * \brief Return 1 if one or more PIOs of the given Pin are configured to
+ 383:.././hal//sam4s/pio.c ****  * output a high level (even if they are not output).
+ 384:.././hal//sam4s/pio.c ****  * To get the actual value of the pin, use PIO_Get() instead.
+ 385:.././hal//sam4s/pio.c ****  *
+ 386:.././hal//sam4s/pio.c ****  * \param p_pio Pointer to a PIO instance.
+ 387:.././hal//sam4s/pio.c ****  * \param ul_mask Bitmask of one or more pin(s).
+ 388:.././hal//sam4s/pio.c ****  *
+ 389:.././hal//sam4s/pio.c ****  * \retval 1 At least one PIO is configured to output a high level.
+ 390:.././hal//sam4s/pio.c ****  * \retval 0 All PIOs are configured to output a low level.
+ 391:.././hal//sam4s/pio.c ****  */
+ 392:.././hal//sam4s/pio.c **** uint32_t pio_get_output_data_status(const Pio *p_pio,
+ 393:.././hal//sam4s/pio.c **** 		const uint32_t ul_mask)
+ 394:.././hal//sam4s/pio.c **** {
+ 395:.././hal//sam4s/pio.c **** 	if ((p_pio->PIO_ODSR & ul_mask) == 0) {
+ 396:.././hal//sam4s/pio.c **** 		return 0;
+ 397:.././hal//sam4s/pio.c **** 	} else {
+ 398:.././hal//sam4s/pio.c **** 		return 1;
+ 399:.././hal//sam4s/pio.c **** 	}
+ 400:.././hal//sam4s/pio.c **** }
+ 401:.././hal//sam4s/pio.c **** 
+ 402:.././hal//sam4s/pio.c **** /**
+ 403:.././hal//sam4s/pio.c ****  * \brief Configure PIO pin multi-driver.
+ 404:.././hal//sam4s/pio.c ****  *
+ 405:.././hal//sam4s/pio.c ****  * \param p_pio Pointer to a PIO instance.
+ 406:.././hal//sam4s/pio.c ****  * \param ul_mask Bitmask of one or more pin(s) to configure.
+ 407:.././hal//sam4s/pio.c ****  * \param ul_multi_driver_enable Indicates if the pin(s) multi-driver shall be
+ 408:.././hal//sam4s/pio.c ****  * configured.
+ 409:.././hal//sam4s/pio.c ****  */
+ 410:.././hal//sam4s/pio.c **** void pio_set_multi_driver(Pio *p_pio, const uint32_t ul_mask,
+ 411:.././hal//sam4s/pio.c **** 		const uint32_t ul_multi_driver_enable)
+ 412:.././hal//sam4s/pio.c **** {
+ 413:.././hal//sam4s/pio.c **** 	/* Enable the multi-driver if necessary */
+ 414:.././hal//sam4s/pio.c **** 	if (ul_multi_driver_enable) {
+ 415:.././hal//sam4s/pio.c **** 		p_pio->PIO_MDER = ul_mask;
+ 416:.././hal//sam4s/pio.c **** 	} else {
+ 417:.././hal//sam4s/pio.c **** 		p_pio->PIO_MDDR = ul_mask;
+ 418:.././hal//sam4s/pio.c **** 	}
+ 419:.././hal//sam4s/pio.c **** }
+ 420:.././hal//sam4s/pio.c **** 
+ 421:.././hal//sam4s/pio.c **** /**
+ 422:.././hal//sam4s/pio.c ****  * \brief Get multi-driver status.
+ 423:.././hal//sam4s/pio.c ****  *
+ 424:.././hal//sam4s/pio.c ****  * \param p_pio Pointer to a PIO instance.
+ 425:.././hal//sam4s/pio.c ****  *
+ 426:.././hal//sam4s/pio.c ****  * \return The multi-driver mask value.
+ 427:.././hal//sam4s/pio.c ****  */
+ 428:.././hal//sam4s/pio.c **** uint32_t pio_get_multi_driver_status(const Pio *p_pio)
+ 429:.././hal//sam4s/pio.c **** {
+ 430:.././hal//sam4s/pio.c **** 	return p_pio->PIO_MDSR;
+ 431:.././hal//sam4s/pio.c **** }
+ 432:.././hal//sam4s/pio.c **** 
+ 433:.././hal//sam4s/pio.c **** 
+ 434:.././hal//sam4s/pio.c **** #if (SAM3S || SAM3N || SAM4S || SAM4E || SAM4N || SAM4C || SAMG || SAM4CP || SAM4CM || SAMV71 || SA
+ 435:.././hal//sam4s/pio.c **** /**
+ 436:.././hal//sam4s/pio.c ****  * \brief Configure PIO pin internal pull-down.
+ 437:.././hal//sam4s/pio.c ****  *
+ 438:.././hal//sam4s/pio.c ****  * \param p_pio Pointer to a PIO instance.
+ 439:.././hal//sam4s/pio.c ****  * \param ul_mask Bitmask of one or more pin(s) to configure.
+ 440:.././hal//sam4s/pio.c ****  * \param ul_pull_down_enable Indicates if the pin(s) internal pull-down shall
+ 441:.././hal//sam4s/pio.c ****  * be configured.
+ 442:.././hal//sam4s/pio.c ****  */
+ 443:.././hal//sam4s/pio.c **** void pio_pull_down(Pio *p_pio, const uint32_t ul_mask,
+ 444:.././hal//sam4s/pio.c **** 		const uint32_t ul_pull_down_enable)
+ 445:.././hal//sam4s/pio.c **** {
+ 446:.././hal//sam4s/pio.c **** 	/* Enable the pull-down if necessary */
+ 447:.././hal//sam4s/pio.c **** 	if (ul_pull_down_enable) {
+ 448:.././hal//sam4s/pio.c **** 		p_pio->PIO_PPDER = ul_mask;
+ 449:.././hal//sam4s/pio.c **** 	} else {
+ 450:.././hal//sam4s/pio.c **** 		p_pio->PIO_PPDDR = ul_mask;
+ 451:.././hal//sam4s/pio.c **** 	}
+ 452:.././hal//sam4s/pio.c **** }
+ 453:.././hal//sam4s/pio.c **** #endif
+ 454:.././hal//sam4s/pio.c **** 
+ 455:.././hal//sam4s/pio.c **** /**
+ 456:.././hal//sam4s/pio.c ****  * \brief Enable PIO output write for synchronous data output.
+ 457:.././hal//sam4s/pio.c ****  *
+ 458:.././hal//sam4s/pio.c ****  * \param p_pio Pointer to a PIO instance.
+ 459:.././hal//sam4s/pio.c ****  * \param ul_mask Bitmask of one or more pin(s) to configure.
+ 460:.././hal//sam4s/pio.c ****  */
+ 461:.././hal//sam4s/pio.c **** void pio_enable_output_write(Pio *p_pio, const uint32_t ul_mask)
+ 462:.././hal//sam4s/pio.c **** {
+ 463:.././hal//sam4s/pio.c **** 	p_pio->PIO_OWER = ul_mask;
+ 464:.././hal//sam4s/pio.c **** }
+ 465:.././hal//sam4s/pio.c **** 
+ 466:.././hal//sam4s/pio.c **** /**
+ 467:.././hal//sam4s/pio.c ****  * \brief Disable PIO output write.
+ 468:.././hal//sam4s/pio.c ****  *
+ 469:.././hal//sam4s/pio.c ****  * \param p_pio Pointer to a PIO instance.
+ 470:.././hal//sam4s/pio.c ****  * \param ul_mask Bitmask of one or more pin(s) to configure.
+ 471:.././hal//sam4s/pio.c ****  */
+ 472:.././hal//sam4s/pio.c **** void pio_disable_output_write(Pio *p_pio, const uint32_t ul_mask)
+ 473:.././hal//sam4s/pio.c **** {
+ 474:.././hal//sam4s/pio.c **** 	p_pio->PIO_OWDR = ul_mask;
+ 475:.././hal//sam4s/pio.c **** }
+ 476:.././hal//sam4s/pio.c **** 
+ 477:.././hal//sam4s/pio.c **** /**
+ 478:.././hal//sam4s/pio.c ****  * \brief Read PIO output write status.
+ 479:.././hal//sam4s/pio.c ****  *
+ 480:.././hal//sam4s/pio.c ****  * \param p_pio Pointer to a PIO instance.
+ 481:.././hal//sam4s/pio.c ****  *
+ 482:.././hal//sam4s/pio.c ****  * \return The output write mask value.
+ 483:.././hal//sam4s/pio.c ****  */
+ 484:.././hal//sam4s/pio.c **** uint32_t pio_get_output_write_status(const Pio *p_pio)
+ 485:.././hal//sam4s/pio.c **** {
+ 486:.././hal//sam4s/pio.c **** 	return p_pio->PIO_OWSR;
+ 487:.././hal//sam4s/pio.c **** }
+ 488:.././hal//sam4s/pio.c **** 
+ 489:.././hal//sam4s/pio.c **** /**
+ 490:.././hal//sam4s/pio.c ****  * \brief Synchronously write on output pins.
+ 491:.././hal//sam4s/pio.c ****  * \note Only bits unmasked by PIO_OWSR (Output Write Status Register) are
+ 492:.././hal//sam4s/pio.c ****  * written.
+ 493:.././hal//sam4s/pio.c ****  *
+ 494:.././hal//sam4s/pio.c ****  * \param p_pio Pointer to a PIO instance.
+ 495:.././hal//sam4s/pio.c ****  * \param ul_mask Bitmask of one or more pin(s) to configure.
+ 496:.././hal//sam4s/pio.c ****  */
+ 497:.././hal//sam4s/pio.c **** void pio_sync_output_write(Pio *p_pio, const uint32_t ul_mask)
+ 498:.././hal//sam4s/pio.c **** {
+ 499:.././hal//sam4s/pio.c **** 	p_pio->PIO_ODSR = ul_mask;
+ 500:.././hal//sam4s/pio.c **** }
+ 501:.././hal//sam4s/pio.c **** 
+ 502:.././hal//sam4s/pio.c **** #if (SAM3S || SAM3N || SAM4S || SAM4E || SAM4N || SAM4C || SAMG || SAM4CP || SAM4CM || SAMV71 || SA
+ 503:.././hal//sam4s/pio.c **** /**
+ 504:.././hal//sam4s/pio.c ****  * \brief Configure PIO pin schmitt trigger. By default the Schmitt trigger is
+ 505:.././hal//sam4s/pio.c ****  * active.
+ 506:.././hal//sam4s/pio.c ****  * Disabling the Schmitt Trigger is requested when using the QTouch Library.
+ 507:.././hal//sam4s/pio.c ****  *
+ 508:.././hal//sam4s/pio.c ****  * \param p_pio Pointer to a PIO instance.
+ 509:.././hal//sam4s/pio.c ****  * \param ul_mask Bitmask of one or more pin(s) to configure.
+ 510:.././hal//sam4s/pio.c ****  */
+ 511:.././hal//sam4s/pio.c **** void pio_set_schmitt_trigger(Pio *p_pio, const uint32_t ul_mask)
+ 512:.././hal//sam4s/pio.c **** {
+ 513:.././hal//sam4s/pio.c **** 	p_pio->PIO_SCHMITT = ul_mask;
+ 514:.././hal//sam4s/pio.c **** }
+ 515:.././hal//sam4s/pio.c **** 
+ 516:.././hal//sam4s/pio.c **** /**
+ 517:.././hal//sam4s/pio.c ****  * \brief Get PIO pin schmitt trigger status.
+ 518:.././hal//sam4s/pio.c ****  *
+ 519:.././hal//sam4s/pio.c ****  * \param p_pio Pointer to a PIO instance.
+ 520:.././hal//sam4s/pio.c ****  *
+ 521:.././hal//sam4s/pio.c ****  * \return The schmitt trigger mask value.
+ 522:.././hal//sam4s/pio.c ****  */
+ 523:.././hal//sam4s/pio.c **** uint32_t pio_get_schmitt_trigger(const Pio *p_pio)
+ 524:.././hal//sam4s/pio.c **** {
+ 525:.././hal//sam4s/pio.c **** 	return p_pio->PIO_SCHMITT;
+ 526:.././hal//sam4s/pio.c **** }
+ 527:.././hal//sam4s/pio.c **** #endif
+ 528:.././hal//sam4s/pio.c **** 
+ 529:.././hal//sam4s/pio.c **** /**
+ 530:.././hal//sam4s/pio.c ****  * \brief Configure the given interrupt source.
+ 531:.././hal//sam4s/pio.c ****  * Interrupt can be configured to trigger on rising edge, falling edge,
+ 532:.././hal//sam4s/pio.c ****  * high level, low level or simply on level change.
+ 533:.././hal//sam4s/pio.c ****  *
+ 534:.././hal//sam4s/pio.c ****  * \param p_pio Pointer to a PIO instance.
+ 535:.././hal//sam4s/pio.c ****  * \param ul_mask Interrupt source bit map.
+ 536:.././hal//sam4s/pio.c ****  * \param ul_attr Interrupt source attributes.
+ 537:.././hal//sam4s/pio.c ****  */
+ 538:.././hal//sam4s/pio.c **** void pio_configure_interrupt(Pio *p_pio, const uint32_t ul_mask,
+ 539:.././hal//sam4s/pio.c **** 		const uint32_t ul_attr)
+ 540:.././hal//sam4s/pio.c **** {
+ 541:.././hal//sam4s/pio.c **** 	/* Configure additional interrupt mode registers. */
+ 542:.././hal//sam4s/pio.c **** 	if (ul_attr & PIO_IT_AIME) {
+ 543:.././hal//sam4s/pio.c **** 		/* Enable additional interrupt mode. */
+ 544:.././hal//sam4s/pio.c **** 		p_pio->PIO_AIMER = ul_mask;
+ 545:.././hal//sam4s/pio.c **** 
+ 546:.././hal//sam4s/pio.c **** 		/* If bit field of the selected pin is 1, set as
+ 547:.././hal//sam4s/pio.c **** 		   Rising Edge/High level detection event. */
+ 548:.././hal//sam4s/pio.c **** 		if (ul_attr & PIO_IT_RE_OR_HL) {
+ 549:.././hal//sam4s/pio.c **** 			/* Rising Edge or High Level */
+ 550:.././hal//sam4s/pio.c **** 			p_pio->PIO_REHLSR = ul_mask;
+ 551:.././hal//sam4s/pio.c **** 		} else {
+ 552:.././hal//sam4s/pio.c **** 			/* Falling Edge or Low Level */
+ 553:.././hal//sam4s/pio.c **** 			p_pio->PIO_FELLSR = ul_mask;
+ 554:.././hal//sam4s/pio.c **** 		}
+ 555:.././hal//sam4s/pio.c **** 
+ 556:.././hal//sam4s/pio.c **** 		/* If bit field of the selected pin is 1, set as
+ 557:.././hal//sam4s/pio.c **** 		   edge detection source. */
+ 558:.././hal//sam4s/pio.c **** 		if (ul_attr & PIO_IT_EDGE) {
+ 559:.././hal//sam4s/pio.c **** 			/* Edge select */
+ 560:.././hal//sam4s/pio.c **** 			p_pio->PIO_ESR = ul_mask;
+ 561:.././hal//sam4s/pio.c **** 		} else {
+ 562:.././hal//sam4s/pio.c **** 			/* Level select */
+ 563:.././hal//sam4s/pio.c **** 			p_pio->PIO_LSR = ul_mask;
+ 564:.././hal//sam4s/pio.c **** 		}
+ 565:.././hal//sam4s/pio.c **** 	} else {
+ 566:.././hal//sam4s/pio.c **** 		/* Disable additional interrupt mode. */
+ 567:.././hal//sam4s/pio.c **** 		p_pio->PIO_AIMDR = ul_mask;
+ 568:.././hal//sam4s/pio.c **** 	}
+ 569:.././hal//sam4s/pio.c **** }
+ 570:.././hal//sam4s/pio.c **** 
+ 571:.././hal//sam4s/pio.c **** /**
+ 572:.././hal//sam4s/pio.c ****  * \brief Enable the given interrupt source.
+ 573:.././hal//sam4s/pio.c ****  * The PIO must be configured as an NVIC interrupt source as well.
+ 574:.././hal//sam4s/pio.c ****  *
+ 575:.././hal//sam4s/pio.c ****  * \param p_pio Pointer to a PIO instance.
+ 576:.././hal//sam4s/pio.c ****  * \param ul_mask Interrupt sources bit map.
+ 577:.././hal//sam4s/pio.c ****  */
+ 578:.././hal//sam4s/pio.c **** void pio_enable_interrupt(Pio *p_pio, const uint32_t ul_mask)
+ 579:.././hal//sam4s/pio.c **** {
+ 580:.././hal//sam4s/pio.c **** 	p_pio->PIO_IER = ul_mask;
+ 581:.././hal//sam4s/pio.c **** }
+ 582:.././hal//sam4s/pio.c **** 
+ 583:.././hal//sam4s/pio.c **** /**
+ 584:.././hal//sam4s/pio.c ****  * \brief Disable a given interrupt source, with no added side effects.
+ 585:.././hal//sam4s/pio.c ****  *
+ 586:.././hal//sam4s/pio.c ****  * \param p_pio Pointer to a PIO instance.
+ 587:.././hal//sam4s/pio.c ****  * \param ul_mask Interrupt sources bit map.
+ 588:.././hal//sam4s/pio.c ****  */
+ 589:.././hal//sam4s/pio.c **** void pio_disable_interrupt(Pio *p_pio, const uint32_t ul_mask)
+ 324              	 .loc 1 589 6 view .LVU83
+ 325              	.LBB43:
+ 590:.././hal//sam4s/pio.c **** {
+ 591:.././hal//sam4s/pio.c **** 	p_pio->PIO_IDR = ul_mask;
+ 326              	 .loc 1 591 2 view .LVU84
+ 327              	.LBE43:
+ 328              	.LBE42:
+ 329              	.LBB45:
+ 330              	.LBB46:
+  73:.././hal//sam4s/pio.c **** 		p_pio->PIO_PUER = ul_mask;
+ 331              	 .loc 1 73 5 is_stmt 0 view .LVU85
+ 332 0000 D307     	 lsls r3,r2,#31
+ 333              	.LBE46:
+ 334              	.LBE45:
+ 335              	.LBB48:
+ 336              	.LBB44:
+ 337              	 .loc 1 591 17 view .LVU86
+ 338 0002 4164     	 str r1,[r0,#68]
+ 339              	.LVL29:
+ 340              	 .loc 1 591 17 view .LVU87
+ 341              	.LBE44:
+ 342              	.LBE48:
+ 261:.././hal//sam4s/pio.c **** 	pio_pull_up(p_pio, ul_mask, ul_attribute & PIO_PULLUP);
+ 343              	 .loc 1 261 2 is_stmt 1 view .LVU88
+ 344              	.LBB49:
+ 345              	.LBI45:
+  69:.././hal//sam4s/pio.c **** 		const uint32_t ul_pull_up_enable)
+ 346              	 .loc 1 69 6 view .LVU89
+ 347              	.LBB47:
+  73:.././hal//sam4s/pio.c **** 		p_pio->PIO_PUER = ul_mask;
+ 348              	 .loc 1 73 2 view .LVU90
+  74:.././hal//sam4s/pio.c **** 	} else {
+ 349              	 .loc 1 74 3 view .LVU91
+  74:.././hal//sam4s/pio.c **** 	} else {
+ 350              	 .loc 1 74 19 is_stmt 0 view .LVU92
+ 351 0004 4CBF     	 ite mi
+ 352 0006 4166     	 strmi r1,[r0,#100]
+  76:.././hal//sam4s/pio.c **** 	}
+ 353              	 .loc 1 76 3 is_stmt 1 view .LVU93
+  76:.././hal//sam4s/pio.c **** 	}
+ 354              	 .loc 1 76 19 is_stmt 0 view .LVU94
+ 355 0008 0166     	 strpl r1,[r0,#96]
+ 356              	.LVL30:
+  76:.././hal//sam4s/pio.c **** 	}
+ 357              	 .loc 1 76 19 view .LVU95
+ 358              	.LBE47:
+ 359              	.LBE49:
+ 264:.././hal//sam4s/pio.c **** 		p_pio->PIO_IFER = ul_mask;
+ 360              	 .loc 1 264 2 is_stmt 1 view .LVU96
+ 264:.././hal//sam4s/pio.c **** 		p_pio->PIO_IFER = ul_mask;
+ 361              	 .loc 1 264 5 is_stmt 0 view .LVU97
+ 362 000a 12F00A0F 	 tst r2,#10
+ 363 000e 07D0     	 beq .L33
+ 265:.././hal//sam4s/pio.c **** 	} else {
+ 364              	 .loc 1 265 3 is_stmt 1 view .LVU98
+ 272:.././hal//sam4s/pio.c **** 		p_pio->PIO_IFSCDR = ul_mask;
+ 365              	 .loc 1 272 5 is_stmt 0 view .LVU99
+ 366 0010 9307     	 lsls r3,r2,#30
+ 265:.././hal//sam4s/pio.c **** 	} else {
+ 367              	 .loc 1 265 19 view .LVU100
+ 368 0012 0162     	 str r1,[r0,#32]
+ 272:.././hal//sam4s/pio.c **** 		p_pio->PIO_IFSCDR = ul_mask;
+ 369              	 .loc 1 272 2 is_stmt 1 view .LVU101
+ 272:.././hal//sam4s/pio.c **** 		p_pio->PIO_IFSCDR = ul_mask;
+ 370              	 .loc 1 272 5 is_stmt 0 view .LVU102
+ 371 0014 08D4     	 bmi .L34
+ 275:.././hal//sam4s/pio.c **** 			p_pio->PIO_IFSCER = ul_mask;
+ 372              	 .loc 1 275 3 is_stmt 1 view .LVU103
+ 275:.././hal//sam4s/pio.c **** 			p_pio->PIO_IFSCER = ul_mask;
+ 373              	 .loc 1 275 6 is_stmt 0 view .LVU104
+ 374 0016 1307     	 lsls r3,r2,#28
+ 276:.././hal//sam4s/pio.c **** 		}
+ 375              	 .loc 1 276 4 is_stmt 1 view .LVU105
+ 276:.././hal//sam4s/pio.c **** 		}
+ 376              	 .loc 1 276 22 is_stmt 0 view .LVU106
+ 377 0018 48BF     	 it mi
+ 378 001a C0F88410 	 strmi r1,[r0,#132]
+ 379 001e 00E0     	 b .L36
+ 380              	.L33:
+ 267:.././hal//sam4s/pio.c **** 	}
+ 381              	 .loc 1 267 3 is_stmt 1 view .LVU107
+ 267:.././hal//sam4s/pio.c **** 	}
+ 382              	 .loc 1 267 19 is_stmt 0 view .LVU108
+ 383 0020 4162     	 str r1,[r0,#36]
+ 272:.././hal//sam4s/pio.c **** 		p_pio->PIO_IFSCDR = ul_mask;
+ 384              	 .loc 1 272 2 is_stmt 1 view .LVU109
+ 275:.././hal//sam4s/pio.c **** 			p_pio->PIO_IFSCER = ul_mask;
+ 385              	 .loc 1 275 3 view .LVU110
+ 386              	.L36:
+ 293:.././hal//sam4s/pio.c **** 	p_pio->PIO_PER = ul_mask;
+ 387              	 .loc 1 293 2 view .LVU111
+ 293:.././hal//sam4s/pio.c **** 	p_pio->PIO_PER = ul_mask;
+ 388              	 .loc 1 293 17 is_stmt 0 view .LVU112
+ 389 0022 4161     	 str r1,[r0,#20]
+ 294:.././hal//sam4s/pio.c **** }
+ 390              	 .loc 1 294 2 is_stmt 1 view .LVU113
+ 294:.././hal//sam4s/pio.c **** }
+ 391              	 .loc 1 294 17 is_stmt 0 view .LVU114
+ 392 0024 0160     	 str r1,[r0]
+ 295:.././hal//sam4s/pio.c **** 
+ 393              	 .loc 1 295 1 view .LVU115
+ 394 0026 7047     	 bx lr
+ 395              	.L34:
+ 273:.././hal//sam4s/pio.c **** 	} else {
+ 396              	 .loc 1 273 3 is_stmt 1 view .LVU116
+ 273:.././hal//sam4s/pio.c **** 	} else {
+ 397              	 .loc 1 273 21 is_stmt 0 view .LVU117
+ 398 0028 C0F88010 	 str r1,[r0,#128]
+ 399 002c F9E7     	 b .L36
+ 400              	 .cfi_endproc
+ 401              	.LFE142:
+ 403              	 .section .text.pio_set_output,"ax",%progbits
+ 404              	 .align 1
+ 405              	 .global pio_set_output
+ 406              	 .syntax unified
+ 407              	 .thumb
+ 408              	 .thumb_func
+ 410              	pio_set_output:
+ 411              	.LVL31:
+ 412              	.LFB143:
+ 314:.././hal//sam4s/pio.c **** 	pio_disable_interrupt(p_pio, ul_mask);
+ 413              	 .loc 1 314 1 is_stmt 1 view-0
+ 414              	 .cfi_startproc
+ 415              	 
+ 416              	 
+ 315:.././hal//sam4s/pio.c **** 	pio_pull_up(p_pio, ul_mask, ul_pull_up_enable);
+ 417              	 .loc 1 315 2 view .LVU119
+ 418              	.LBB50:
+ 419              	.LBI50:
+ 589:.././hal//sam4s/pio.c **** {
+ 420              	 .loc 1 589 6 view .LVU120
+ 421              	.LBB51:
+ 422              	 .loc 1 591 2 view .LVU121
+ 423              	.LBE51:
+ 424              	.LBE50:
+ 314:.././hal//sam4s/pio.c **** 	pio_disable_interrupt(p_pio, ul_mask);
+ 425              	 .loc 1 314 1 is_stmt 0 view .LVU122
+ 426 0000 10B5     	 push {r4,lr}
+ 427              	.LCFI0:
+ 428              	 .cfi_def_cfa_offset 8
+ 429              	 .cfi_offset 4,-8
+ 430              	 .cfi_offset 14,-4
+ 314:.././hal//sam4s/pio.c **** 	pio_disable_interrupt(p_pio, ul_mask);
+ 431              	 .loc 1 314 1 view .LVU123
+ 432 0002 029C     	 ldr r4,[sp,#8]
+ 433              	.LBB53:
+ 434              	.LBB52:
+ 435              	 .loc 1 591 17 view .LVU124
+ 436 0004 4164     	 str r1,[r0,#68]
+ 437              	.LVL32:
+ 438              	 .loc 1 591 17 view .LVU125
+ 439              	.LBE52:
+ 440              	.LBE53:
+ 316:.././hal//sam4s/pio.c **** 
+ 441              	 .loc 1 316 2 is_stmt 1 view .LVU126
+ 442              	.LBB54:
+ 443              	.LBI54:
+  69:.././hal//sam4s/pio.c **** 		const uint32_t ul_pull_up_enable)
+ 444              	 .loc 1 69 6 view .LVU127
+ 445              	.LBB55:
+  73:.././hal//sam4s/pio.c **** 		p_pio->PIO_PUER = ul_mask;
+ 446              	 .loc 1 73 2 view .LVU128
+  73:.././hal//sam4s/pio.c **** 		p_pio->PIO_PUER = ul_mask;
+ 447              	 .loc 1 73 5 is_stmt 0 view .LVU129
+ 448 0006 3CB1     	 cbz r4,.L42
+  74:.././hal//sam4s/pio.c **** 	} else {
+ 449              	 .loc 1 74 3 is_stmt 1 view .LVU130
+  74:.././hal//sam4s/pio.c **** 	} else {
+ 450              	 .loc 1 74 19 is_stmt 0 view .LVU131
+ 451 0008 4166     	 str r1,[r0,#100]
+ 452              	.L43:
+ 453              	.LVL33:
+  74:.././hal//sam4s/pio.c **** 	} else {
+ 454              	 .loc 1 74 19 view .LVU132
+ 455              	.LBE55:
+ 456              	.LBE54:
+ 319:.././hal//sam4s/pio.c **** 		p_pio->PIO_MDER = ul_mask;
+ 457              	 .loc 1 319 2 is_stmt 1 view .LVU133
+ 319:.././hal//sam4s/pio.c **** 		p_pio->PIO_MDER = ul_mask;
+ 458              	 .loc 1 319 5 is_stmt 0 view .LVU134
+ 459 000a 3BB1     	 cbz r3,.L44
+ 320:.././hal//sam4s/pio.c **** 	} else {
+ 460              	 .loc 1 320 3 is_stmt 1 view .LVU135
+ 320:.././hal//sam4s/pio.c **** 	} else {
+ 461              	 .loc 1 320 19 is_stmt 0 view .LVU136
+ 462 000c 0165     	 str r1,[r0,#80]
+ 463              	.L45:
+ 326:.././hal//sam4s/pio.c **** 		p_pio->PIO_SODR = ul_mask;
+ 464              	 .loc 1 326 2 is_stmt 1 view .LVU137
+ 326:.././hal//sam4s/pio.c **** 		p_pio->PIO_SODR = ul_mask;
+ 465              	 .loc 1 326 5 is_stmt 0 view .LVU138
+ 466 000e 3AB1     	 cbz r2,.L46
+ 327:.././hal//sam4s/pio.c **** 	} else {
+ 467              	 .loc 1 327 3 is_stmt 1 view .LVU139
+ 327:.././hal//sam4s/pio.c **** 	} else {
+ 468              	 .loc 1 327 19 is_stmt 0 view .LVU140
+ 469 0010 0163     	 str r1,[r0,#48]
+ 470              	.L47:
+ 333:.././hal//sam4s/pio.c **** 	p_pio->PIO_PER = ul_mask;
+ 471              	 .loc 1 333 2 is_stmt 1 view .LVU141
+ 333:.././hal//sam4s/pio.c **** 	p_pio->PIO_PER = ul_mask;
+ 472              	 .loc 1 333 17 is_stmt 0 view .LVU142
+ 473 0012 0161     	 str r1,[r0,#16]
+ 334:.././hal//sam4s/pio.c **** }
+ 474              	 .loc 1 334 2 is_stmt 1 view .LVU143
+ 334:.././hal//sam4s/pio.c **** }
+ 475              	 .loc 1 334 17 is_stmt 0 view .LVU144
+ 476 0014 0160     	 str r1,[r0]
+ 335:.././hal//sam4s/pio.c **** 
+ 477              	 .loc 1 335 1 view .LVU145
+ 478 0016 10BD     	 pop {r4,pc}
+ 479              	.LVL34:
+ 480              	.L42:
+ 481              	.LBB57:
+ 482              	.LBB56:
+  76:.././hal//sam4s/pio.c **** 	}
+ 483              	 .loc 1 76 3 is_stmt 1 view .LVU146
+  76:.././hal//sam4s/pio.c **** 	}
+ 484              	 .loc 1 76 19 is_stmt 0 view .LVU147
+ 485 0018 0166     	 str r1,[r0,#96]
+ 486 001a F6E7     	 b .L43
+ 487              	.LVL35:
+ 488              	.L44:
+  76:.././hal//sam4s/pio.c **** 	}
+ 489              	 .loc 1 76 19 view .LVU148
+ 490              	.LBE56:
+ 491              	.LBE57:
+ 322:.././hal//sam4s/pio.c **** 	}
+ 492              	 .loc 1 322 3 is_stmt 1 view .LVU149
+ 322:.././hal//sam4s/pio.c **** 	}
+ 493              	 .loc 1 322 19 is_stmt 0 view .LVU150
+ 494 001c 4165     	 str r1,[r0,#84]
+ 495 001e F6E7     	 b .L45
+ 496              	.L46:
+ 329:.././hal//sam4s/pio.c **** 	}
+ 497              	 .loc 1 329 3 is_stmt 1 view .LVU151
+ 329:.././hal//sam4s/pio.c **** 	}
+ 498              	 .loc 1 329 19 is_stmt 0 view .LVU152
+ 499 0020 4163     	 str r1,[r0,#52]
+ 500 0022 F6E7     	 b .L47
+ 501              	 .cfi_endproc
+ 502              	.LFE143:
+ 504              	 .section .text.pio_configure,"ax",%progbits
+ 505              	 .align 1
+ 506              	 .global pio_configure
+ 507              	 .syntax unified
+ 508              	 .thumb
+ 509              	 .thumb_func
+ 511              	pio_configure:
+ 512              	.LVL36:
+ 513              	.LFB144:
+ 350:.././hal//sam4s/pio.c **** 	/* Configure pins */
+ 514              	 .loc 1 350 1 is_stmt 1 view-0
+ 515              	 .cfi_startproc
+ 516              	 
+ 517              	 
+ 352:.././hal//sam4s/pio.c **** 	case PIO_PERIPH_A:
+ 518              	 .loc 1 352 2 view .LVU154
+ 519 0000 B1F1205F 	 cmp r1,#671088640
+ 350:.././hal//sam4s/pio.c **** 	/* Configure pins */
+ 520              	 .loc 1 350 1 is_stmt 0 view .LVU155
+ 521 0004 73B5     	 push {r0,r1,r4,r5,r6,lr}
+ 522              	.LCFI1:
+ 523              	 .cfi_def_cfa_offset 24
+ 524              	 .cfi_offset 4,-16
+ 525              	 .cfi_offset 5,-12
+ 526              	 .cfi_offset 6,-8
+ 527              	 .cfi_offset 14,-4
+ 350:.././hal//sam4s/pio.c **** 	/* Configure pins */
+ 528              	 .loc 1 350 1 view .LVU156
+ 529 0006 0646     	 mov r6,r0
+ 530 0008 1446     	 mov r4,r2
+ 531 000a 1D46     	 mov r5,r3
+ 352:.././hal//sam4s/pio.c **** 	case PIO_PERIPH_A:
+ 532              	 .loc 1 352 2 view .LVU157
+ 533 000c 2CD0     	 beq .L49
+ 534 000e 0FD8     	 bhi .L50
+ 535 0010 B1F1C05F 	 cmp r1,#402653184
+ 536 0014 1ED0     	 beq .L51
+ 537 0016 08D8     	 bhi .L52
+ 538 0018 B1F1006F 	 cmp r1,#134217728
+ 539 001c 1AD0     	 beq .L51
+ 540 001e B1F1805F 	 cmp r1,#268435456
+ 541              	.L71:
+ 542 0022 17D0     	 beq .L51
+ 543              	.LVL37:
+ 544              	.L69:
+ 352:.././hal//sam4s/pio.c **** 	case PIO_PERIPH_A:
+ 545              	 .loc 1 352 2 view .LVU158
+ 546 0024 0020     	 movs r0,#0
+ 547              	.LVL38:
+ 548              	.L48:
+ 379:.././hal//sam4s/pio.c **** 
+ 549              	 .loc 1 379 1 view .LVU159
+ 550 0026 02B0     	 add sp,sp,#8
+ 551              	.LCFI2:
+ 552              	 .cfi_remember_state
+ 553              	 .cfi_def_cfa_offset 16
+ 554              	 
+ 555 0028 70BD     	 pop {r4,r5,r6,pc}
+ 556              	.LVL39:
+ 557              	.L52:
+ 558              	.LCFI3:
+ 559              	 .cfi_restore_state
+ 352:.././hal//sam4s/pio.c **** 	case PIO_PERIPH_A:
+ 560              	 .loc 1 352 2 view .LVU160
+ 561 002a B1F1005F 	 cmp r1,#536870912
+ 562 002e F8E7     	 b .L71
+ 563              	.L50:
+ 352:.././hal//sam4s/pio.c **** 	case PIO_PERIPH_A:
+ 564              	 .loc 1 352 2 view .LVU161
+ 565 0030 21F00063 	 bic r3,r1,#134217728
+ 566              	.LVL40:
+ 352:.././hal//sam4s/pio.c **** 	case PIO_PERIPH_A:
+ 567              	 .loc 1 352 2 view .LVU162
+ 568 0034 B3F1405F 	 cmp r3,#805306368
+ 569 0038 F4D1     	 bne .L69
+ 369:.././hal//sam4s/pio.c **** 				(ul_attribute & PIO_OPENDRAIN) ? 1 : 0,
+ 570              	 .loc 1 369 3 is_stmt 1 view .LVU163
+ 571 003a 01F14841 	 add r1,r1,#-939524096
+ 572              	.LVL41:
+ 369:.././hal//sam4s/pio.c **** 				(ul_attribute & PIO_OPENDRAIN) ? 1 : 0,
+ 573              	 .loc 1 369 3 is_stmt 0 view .LVU164
+ 574 003e 05F00103 	 and r3,r5,#1
+ 575 0042 4A42     	 rsbs r2,r1,#0
+ 576              	.LVL42:
+ 369:.././hal//sam4s/pio.c **** 				(ul_attribute & PIO_OPENDRAIN) ? 1 : 0,
+ 577              	 .loc 1 369 3 view .LVU165
+ 578 0044 0093     	 str r3,[sp]
+ 579 0046 4A41     	 adcs r2,r2,r1
+ 580 0048 C5F38003 	 ubfx r3,r5,#2,#1
+ 581 004c 2146     	 mov r1,r4
+ 582              	.LVL43:
+ 369:.././hal//sam4s/pio.c **** 				(ul_attribute & PIO_OPENDRAIN) ? 1 : 0,
+ 583              	 .loc 1 369 3 view .LVU166
+ 584 004e 094C     	 ldr r4,.L72
+ 585              	.LVL44:
+ 369:.././hal//sam4s/pio.c **** 				(ul_attribute & PIO_OPENDRAIN) ? 1 : 0,
+ 586              	 .loc 1 369 3 view .LVU167
+ 587 0050 A047     	 blx r4
+ 588              	.LVL45:
+ 372:.././hal//sam4s/pio.c **** 
+ 589              	 .loc 1 372 3 is_stmt 1 view .LVU168
+ 590 0052 07E0     	 b .L56
+ 591              	.LVL46:
+ 592              	.L51:
+ 359:.././hal//sam4s/pio.c **** 		pio_pull_up(p_pio, ul_mask, (ul_attribute & PIO_PULLUP));
+ 593              	 .loc 1 359 3 view .LVU169
+ 594 0054 3046     	 mov r0,r6
+ 595              	.LVL47:
+ 359:.././hal//sam4s/pio.c **** 		pio_pull_up(p_pio, ul_mask, (ul_attribute & PIO_PULLUP));
+ 596              	 .loc 1 359 3 is_stmt 0 view .LVU170
+ 597 0056 084B     	 ldr r3,.L72+4
+ 598              	.LVL48:
+ 359:.././hal//sam4s/pio.c **** 		pio_pull_up(p_pio, ul_mask, (ul_attribute & PIO_PULLUP));
+ 599              	 .loc 1 359 3 view .LVU171
+ 600 0058 2246     	 mov r2,r4
+ 601              	.LVL49:
+ 359:.././hal//sam4s/pio.c **** 		pio_pull_up(p_pio, ul_mask, (ul_attribute & PIO_PULLUP));
+ 602              	 .loc 1 359 3 view .LVU172
+ 603 005a 9847     	 blx r3
+ 604              	.LVL50:
+ 360:.././hal//sam4s/pio.c **** 		break;
+ 605              	 .loc 1 360 3 is_stmt 1 view .LVU173
+ 606              	.LBB58:
+ 607              	.LBI58:
+  69:.././hal//sam4s/pio.c **** 		const uint32_t ul_pull_up_enable)
+ 608              	 .loc 1 69 6 view .LVU174
+ 609              	.LBB59:
+  73:.././hal//sam4s/pio.c **** 		p_pio->PIO_PUER = ul_mask;
+ 610              	 .loc 1 73 2 view .LVU175
+  73:.././hal//sam4s/pio.c **** 		p_pio->PIO_PUER = ul_mask;
+ 611              	 .loc 1 73 5 is_stmt 0 view .LVU176
+ 612 005c E807     	 lsls r0,r5,#31
+ 613              	.LVL51:
+  74:.././hal//sam4s/pio.c **** 	} else {
+ 614              	 .loc 1 74 3 is_stmt 1 view .LVU177
+  74:.././hal//sam4s/pio.c **** 	} else {
+ 615              	 .loc 1 74 19 is_stmt 0 view .LVU178
+ 616 005e 4CBF     	 ite mi
+ 617 0060 7466     	 strmi r4,[r6,#100]
+  76:.././hal//sam4s/pio.c **** 	}
+ 618              	 .loc 1 76 3 is_stmt 1 view .LVU179
+  76:.././hal//sam4s/pio.c **** 	}
+ 619              	 .loc 1 76 19 is_stmt 0 view .LVU180
+ 620 0062 3466     	 strpl r4,[r6,#96]
+ 621              	.LVL52:
+ 622              	.L56:
+  76:.././hal//sam4s/pio.c **** 	}
+ 623              	 .loc 1 76 19 view .LVU181
+ 624              	.LBE59:
+ 625              	.LBE58:
+ 378:.././hal//sam4s/pio.c **** }
+ 626              	 .loc 1 378 9 view .LVU182
+ 627 0064 0120     	 movs r0,#1
+ 628 0066 DEE7     	 b .L48
+ 629              	.LVL53:
+ 630              	.L49:
+ 364:.././hal//sam4s/pio.c **** 		break;
+ 631              	 .loc 1 364 3 is_stmt 1 view .LVU183
+ 632 0068 1A46     	 mov r2,r3
+ 633              	.LVL54:
+ 364:.././hal//sam4s/pio.c **** 		break;
+ 634              	 .loc 1 364 3 is_stmt 0 view .LVU184
+ 635 006a 2146     	 mov r1,r4
+ 636              	.LVL55:
+ 364:.././hal//sam4s/pio.c **** 		break;
+ 637              	 .loc 1 364 3 view .LVU185
+ 638 006c 034B     	 ldr r3,.L72+8
+ 639              	.LVL56:
+ 364:.././hal//sam4s/pio.c **** 		break;
+ 640              	 .loc 1 364 3 view .LVU186
+ 641 006e 9847     	 blx r3
+ 642              	.LVL57:
+ 365:.././hal//sam4s/pio.c **** 
+ 643              	 .loc 1 365 3 is_stmt 1 view .LVU187
+ 644 0070 F8E7     	 b .L56
+ 645              	.L73:
+ 646 0072 00BF     	 .align 2
+ 647              	.L72:
+ 648 0074 00000000 	 .word pio_set_output
+ 649 0078 00000000 	 .word pio_set_peripheral
+ 650 007c 00000000 	 .word pio_set_input
+ 651              	 .cfi_endproc
+ 652              	.LFE144:
+ 654              	 .section .text.pio_get_output_data_status,"ax",%progbits
+ 655              	 .align 1
+ 656              	 .global pio_get_output_data_status
+ 657              	 .syntax unified
+ 658              	 .thumb
+ 659              	 .thumb_func
+ 661              	pio_get_output_data_status:
+ 662              	.LVL58:
+ 663              	.LFB145:
+ 394:.././hal//sam4s/pio.c **** 	if ((p_pio->PIO_ODSR & ul_mask) == 0) {
+ 664              	 .loc 1 394 1 view-0
+ 665              	 .cfi_startproc
+ 666              	 
+ 667              	 
+ 668              	 
+ 395:.././hal//sam4s/pio.c **** 		return 0;
+ 669              	 .loc 1 395 2 view .LVU189
+ 395:.././hal//sam4s/pio.c **** 		return 0;
+ 670              	 .loc 1 395 12 is_stmt 0 view .LVU190
+ 671 0000 836B     	 ldr r3,[r0,#56]
+ 395:.././hal//sam4s/pio.c **** 		return 0;
+ 672              	 .loc 1 395 5 view .LVU191
+ 673 0002 0B42     	 tst r3,r1
+ 400:.././hal//sam4s/pio.c **** 
+ 674              	 .loc 1 400 1 view .LVU192
+ 675 0004 14BF     	 ite ne
+ 676 0006 0120     	 movne r0,#1
+ 677              	.LVL59:
+ 400:.././hal//sam4s/pio.c **** 
+ 678              	 .loc 1 400 1 view .LVU193
+ 679 0008 0020     	 moveq r0,#0
+ 680 000a 7047     	 bx lr
+ 681              	 .cfi_endproc
+ 682              	.LFE145:
+ 684              	 .section .text.pio_set_multi_driver,"ax",%progbits
+ 685              	 .align 1
+ 686              	 .global pio_set_multi_driver
+ 687              	 .syntax unified
+ 688              	 .thumb
+ 689              	 .thumb_func
+ 691              	pio_set_multi_driver:
+ 692              	.LVL60:
+ 693              	.LFB146:
+ 412:.././hal//sam4s/pio.c **** 	/* Enable the multi-driver if necessary */
+ 694              	 .loc 1 412 1 is_stmt 1 view-0
+ 695              	 .cfi_startproc
+ 696              	 
+ 697              	 
+ 698              	 
+ 414:.././hal//sam4s/pio.c **** 		p_pio->PIO_MDER = ul_mask;
+ 699              	 .loc 1 414 2 view .LVU195
+ 414:.././hal//sam4s/pio.c **** 		p_pio->PIO_MDER = ul_mask;
+ 700              	 .loc 1 414 5 is_stmt 0 view .LVU196
+ 701 0000 0AB1     	 cbz r2,.L76
+ 415:.././hal//sam4s/pio.c **** 	} else {
+ 702              	 .loc 1 415 3 is_stmt 1 view .LVU197
+ 415:.././hal//sam4s/pio.c **** 	} else {
+ 703              	 .loc 1 415 19 is_stmt 0 view .LVU198
+ 704 0002 0165     	 str r1,[r0,#80]
+ 705 0004 7047     	 bx lr
+ 706              	.L76:
+ 417:.././hal//sam4s/pio.c **** 	}
+ 707              	 .loc 1 417 3 is_stmt 1 view .LVU199
+ 417:.././hal//sam4s/pio.c **** 	}
+ 708              	 .loc 1 417 19 is_stmt 0 view .LVU200
+ 709 0006 4165     	 str r1,[r0,#84]
+ 419:.././hal//sam4s/pio.c **** 
+ 710              	 .loc 1 419 1 view .LVU201
+ 711 0008 7047     	 bx lr
+ 712              	 .cfi_endproc
+ 713              	.LFE146:
+ 715              	 .section .text.pio_get_multi_driver_status,"ax",%progbits
+ 716              	 .align 1
+ 717              	 .global pio_get_multi_driver_status
+ 718              	 .syntax unified
+ 719              	 .thumb
+ 720              	 .thumb_func
+ 722              	pio_get_multi_driver_status:
+ 723              	.LVL61:
+ 724              	.LFB147:
+ 429:.././hal//sam4s/pio.c **** 	return p_pio->PIO_MDSR;
+ 725              	 .loc 1 429 1 is_stmt 1 view-0
+ 726              	 .cfi_startproc
+ 727              	 
+ 728              	 
+ 729              	 
+ 430:.././hal//sam4s/pio.c **** }
+ 730              	 .loc 1 430 2 view .LVU203
+ 430:.././hal//sam4s/pio.c **** }
+ 731              	 .loc 1 430 14 is_stmt 0 view .LVU204
+ 732 0000 806D     	 ldr r0,[r0,#88]
+ 733              	.LVL62:
+ 431:.././hal//sam4s/pio.c **** 
+ 734              	 .loc 1 431 1 view .LVU205
+ 735 0002 7047     	 bx lr
+ 736              	 .cfi_endproc
+ 737              	.LFE147:
+ 739              	 .section .text.pio_pull_down,"ax",%progbits
+ 740              	 .align 1
+ 741              	 .global pio_pull_down
+ 742              	 .syntax unified
+ 743              	 .thumb
+ 744              	 .thumb_func
+ 746              	pio_pull_down:
+ 747              	.LVL63:
+ 748              	.LFB148:
+ 445:.././hal//sam4s/pio.c **** 	/* Enable the pull-down if necessary */
+ 749              	 .loc 1 445 1 is_stmt 1 view-0
+ 750              	 .cfi_startproc
+ 751              	 
+ 752              	 
+ 753              	 
+ 447:.././hal//sam4s/pio.c **** 		p_pio->PIO_PPDER = ul_mask;
+ 754              	 .loc 1 447 2 view .LVU207
+ 447:.././hal//sam4s/pio.c **** 		p_pio->PIO_PPDER = ul_mask;
+ 755              	 .loc 1 447 5 is_stmt 0 view .LVU208
+ 756 0000 12B1     	 cbz r2,.L80
+ 448:.././hal//sam4s/pio.c **** 	} else {
+ 757              	 .loc 1 448 3 is_stmt 1 view .LVU209
+ 448:.././hal//sam4s/pio.c **** 	} else {
+ 758              	 .loc 1 448 20 is_stmt 0 view .LVU210
+ 759 0002 C0F89410 	 str r1,[r0,#148]
+ 760 0006 7047     	 bx lr
+ 761              	.L80:
+ 450:.././hal//sam4s/pio.c **** 	}
+ 762              	 .loc 1 450 3 is_stmt 1 view .LVU211
+ 450:.././hal//sam4s/pio.c **** 	}
+ 763              	 .loc 1 450 20 is_stmt 0 view .LVU212
+ 764 0008 C0F89010 	 str r1,[r0,#144]
+ 452:.././hal//sam4s/pio.c **** #endif
+ 765              	 .loc 1 452 1 view .LVU213
+ 766 000c 7047     	 bx lr
+ 767              	 .cfi_endproc
+ 768              	.LFE148:
+ 770              	 .section .text.pio_enable_output_write,"ax",%progbits
+ 771              	 .align 1
+ 772              	 .global pio_enable_output_write
+ 773              	 .syntax unified
+ 774              	 .thumb
+ 775              	 .thumb_func
+ 777              	pio_enable_output_write:
+ 778              	.LVL64:
+ 779              	.LFB149:
+ 462:.././hal//sam4s/pio.c **** 	p_pio->PIO_OWER = ul_mask;
+ 780              	 .loc 1 462 1 is_stmt 1 view-0
+ 781              	 .cfi_startproc
+ 782              	 
+ 783              	 
+ 784              	 
+ 463:.././hal//sam4s/pio.c **** }
+ 785              	 .loc 1 463 2 view .LVU215
+ 463:.././hal//sam4s/pio.c **** }
+ 786              	 .loc 1 463 18 is_stmt 0 view .LVU216
+ 787 0000 C0F8A010 	 str r1,[r0,#160]
+ 464:.././hal//sam4s/pio.c **** 
+ 788              	 .loc 1 464 1 view .LVU217
+ 789 0004 7047     	 bx lr
+ 790              	 .cfi_endproc
+ 791              	.LFE149:
+ 793              	 .section .text.pio_disable_output_write,"ax",%progbits
+ 794              	 .align 1
+ 795              	 .global pio_disable_output_write
+ 796              	 .syntax unified
+ 797              	 .thumb
+ 798              	 .thumb_func
+ 800              	pio_disable_output_write:
+ 801              	.LVL65:
+ 802              	.LFB150:
+ 473:.././hal//sam4s/pio.c **** 	p_pio->PIO_OWDR = ul_mask;
+ 803              	 .loc 1 473 1 is_stmt 1 view-0
+ 804              	 .cfi_startproc
+ 805              	 
+ 806              	 
+ 807              	 
+ 474:.././hal//sam4s/pio.c **** }
+ 808              	 .loc 1 474 2 view .LVU219
+ 474:.././hal//sam4s/pio.c **** }
+ 809              	 .loc 1 474 18 is_stmt 0 view .LVU220
+ 810 0000 C0F8A410 	 str r1,[r0,#164]
+ 475:.././hal//sam4s/pio.c **** 
+ 811              	 .loc 1 475 1 view .LVU221
+ 812 0004 7047     	 bx lr
+ 813              	 .cfi_endproc
+ 814              	.LFE150:
+ 816              	 .section .text.pio_get_output_write_status,"ax",%progbits
+ 817              	 .align 1
+ 818              	 .global pio_get_output_write_status
+ 819              	 .syntax unified
+ 820              	 .thumb
+ 821              	 .thumb_func
+ 823              	pio_get_output_write_status:
+ 824              	.LVL66:
+ 825              	.LFB151:
+ 485:.././hal//sam4s/pio.c **** 	return p_pio->PIO_OWSR;
+ 826              	 .loc 1 485 1 is_stmt 1 view-0
+ 827              	 .cfi_startproc
+ 828              	 
+ 829              	 
+ 830              	 
+ 486:.././hal//sam4s/pio.c **** }
+ 831              	 .loc 1 486 2 view .LVU223
+ 486:.././hal//sam4s/pio.c **** }
+ 832              	 .loc 1 486 14 is_stmt 0 view .LVU224
+ 833 0000 D0F8A800 	 ldr r0,[r0,#168]
+ 834              	.LVL67:
+ 487:.././hal//sam4s/pio.c **** 
+ 835              	 .loc 1 487 1 view .LVU225
+ 836 0004 7047     	 bx lr
+ 837              	 .cfi_endproc
+ 838              	.LFE151:
+ 840              	 .section .text.pio_sync_output_write,"ax",%progbits
+ 841              	 .align 1
+ 842              	 .global pio_sync_output_write
+ 843              	 .syntax unified
+ 844              	 .thumb
+ 845              	 .thumb_func
+ 847              	pio_sync_output_write:
+ 848              	.LVL68:
+ 849              	.LFB152:
+ 498:.././hal//sam4s/pio.c **** 	p_pio->PIO_ODSR = ul_mask;
+ 850              	 .loc 1 498 1 is_stmt 1 view-0
+ 851              	 .cfi_startproc
+ 852              	 
+ 853              	 
+ 854              	 
+ 499:.././hal//sam4s/pio.c **** }
+ 855              	 .loc 1 499 2 view .LVU227
+ 499:.././hal//sam4s/pio.c **** }
+ 856              	 .loc 1 499 18 is_stmt 0 view .LVU228
+ 857 0000 8163     	 str r1,[r0,#56]
+ 500:.././hal//sam4s/pio.c **** 
+ 858              	 .loc 1 500 1 view .LVU229
+ 859 0002 7047     	 bx lr
+ 860              	 .cfi_endproc
+ 861              	.LFE152:
+ 863              	 .section .text.pio_set_schmitt_trigger,"ax",%progbits
+ 864              	 .align 1
+ 865              	 .global pio_set_schmitt_trigger
+ 866              	 .syntax unified
+ 867              	 .thumb
+ 868              	 .thumb_func
+ 870              	pio_set_schmitt_trigger:
+ 871              	.LVL69:
+ 872              	.LFB153:
+ 512:.././hal//sam4s/pio.c **** 	p_pio->PIO_SCHMITT = ul_mask;
+ 873              	 .loc 1 512 1 is_stmt 1 view-0
+ 874              	 .cfi_startproc
+ 875              	 
+ 876              	 
+ 877              	 
+ 513:.././hal//sam4s/pio.c **** }
+ 878              	 .loc 1 513 2 view .LVU231
+ 513:.././hal//sam4s/pio.c **** }
+ 879              	 .loc 1 513 21 is_stmt 0 view .LVU232
+ 880 0000 C0F80011 	 str r1,[r0,#256]
+ 514:.././hal//sam4s/pio.c **** 
+ 881              	 .loc 1 514 1 view .LVU233
+ 882 0004 7047     	 bx lr
+ 883              	 .cfi_endproc
+ 884              	.LFE153:
+ 886              	 .section .text.pio_get_schmitt_trigger,"ax",%progbits
+ 887              	 .align 1
+ 888              	 .global pio_get_schmitt_trigger
+ 889              	 .syntax unified
+ 890              	 .thumb
+ 891              	 .thumb_func
+ 893              	pio_get_schmitt_trigger:
+ 894              	.LVL70:
+ 895              	.LFB154:
+ 524:.././hal//sam4s/pio.c **** 	return p_pio->PIO_SCHMITT;
+ 896              	 .loc 1 524 1 is_stmt 1 view-0
+ 897              	 .cfi_startproc
+ 898              	 
+ 899              	 
+ 900              	 
+ 525:.././hal//sam4s/pio.c **** }
+ 901              	 .loc 1 525 2 view .LVU235
+ 525:.././hal//sam4s/pio.c **** }
+ 902              	 .loc 1 525 14 is_stmt 0 view .LVU236
+ 903 0000 D0F80001 	 ldr r0,[r0,#256]
+ 904              	.LVL71:
+ 526:.././hal//sam4s/pio.c **** #endif
+ 905              	 .loc 1 526 1 view .LVU237
+ 906 0004 7047     	 bx lr
+ 907              	 .cfi_endproc
+ 908              	.LFE154:
+ 910              	 .section .text.pio_configure_interrupt,"ax",%progbits
+ 911              	 .align 1
+ 912              	 .global pio_configure_interrupt
+ 913              	 .syntax unified
+ 914              	 .thumb
+ 915              	 .thumb_func
+ 917              	pio_configure_interrupt:
+ 918              	.LVL72:
+ 919              	.LFB155:
+ 540:.././hal//sam4s/pio.c **** 	/* Configure additional interrupt mode registers. */
+ 920              	 .loc 1 540 1 is_stmt 1 view-0
+ 921              	 .cfi_startproc
+ 922              	 
+ 923              	 
+ 924              	 
+ 542:.././hal//sam4s/pio.c **** 		/* Enable additional interrupt mode. */
+ 925              	 .loc 1 542 2 view .LVU239
+ 542:.././hal//sam4s/pio.c **** 		/* Enable additional interrupt mode. */
+ 926              	 .loc 1 542 5 is_stmt 0 view .LVU240
+ 927 0000 D306     	 lsls r3,r2,#27
+ 928 0002 0ED5     	 bpl .L89
+ 544:.././hal//sam4s/pio.c **** 
+ 929              	 .loc 1 544 3 is_stmt 1 view .LVU241
+ 548:.././hal//sam4s/pio.c **** 			/* Rising Edge or High Level */
+ 930              	 .loc 1 548 6 is_stmt 0 view .LVU242
+ 931 0004 9306     	 lsls r3,r2,#26
+ 544:.././hal//sam4s/pio.c **** 
+ 932              	 .loc 1 544 20 view .LVU243
+ 933 0006 C0F8B010 	 str r1,[r0,#176]
+ 548:.././hal//sam4s/pio.c **** 			/* Rising Edge or High Level */
+ 934              	 .loc 1 548 3 is_stmt 1 view .LVU244
+ 550:.././hal//sam4s/pio.c **** 		} else {
+ 935              	 .loc 1 550 4 view .LVU245
+ 550:.././hal//sam4s/pio.c **** 		} else {
+ 936              	 .loc 1 550 22 is_stmt 0 view .LVU246
+ 937 000a 4CBF     	 ite mi
+ 938 000c C0F8D410 	 strmi r1,[r0,#212]
+ 553:.././hal//sam4s/pio.c **** 		}
+ 939              	 .loc 1 553 4 is_stmt 1 view .LVU247
+ 553:.././hal//sam4s/pio.c **** 		}
+ 940              	 .loc 1 553 22 is_stmt 0 view .LVU248
+ 941 0010 C0F8D010 	 strpl r1,[r0,#208]
+ 558:.././hal//sam4s/pio.c **** 			/* Edge select */
+ 942              	 .loc 1 558 3 is_stmt 1 view .LVU249
+ 558:.././hal//sam4s/pio.c **** 			/* Edge select */
+ 943              	 .loc 1 558 6 is_stmt 0 view .LVU250
+ 944 0014 5306     	 lsls r3,r2,#25
+ 560:.././hal//sam4s/pio.c **** 		} else {
+ 945              	 .loc 1 560 4 is_stmt 1 view .LVU251
+ 560:.././hal//sam4s/pio.c **** 		} else {
+ 946              	 .loc 1 560 19 is_stmt 0 view .LVU252
+ 947 0016 4CBF     	 ite mi
+ 948 0018 C0F8C010 	 strmi r1,[r0,#192]
+ 563:.././hal//sam4s/pio.c **** 		}
+ 949              	 .loc 1 563 4 is_stmt 1 view .LVU253
+ 563:.././hal//sam4s/pio.c **** 		}
+ 950              	 .loc 1 563 19 is_stmt 0 view .LVU254
+ 951 001c C0F8C410 	 strpl r1,[r0,#196]
+ 952 0020 7047     	 bx lr
+ 953              	.L89:
+ 567:.././hal//sam4s/pio.c **** 	}
+ 954              	 .loc 1 567 3 is_stmt 1 view .LVU255
+ 567:.././hal//sam4s/pio.c **** 	}
+ 955              	 .loc 1 567 20 is_stmt 0 view .LVU256
+ 956 0022 C0F8B410 	 str r1,[r0,#180]
+ 569:.././hal//sam4s/pio.c **** 
+ 957              	 .loc 1 569 1 view .LVU257
+ 958 0026 7047     	 bx lr
+ 959              	 .cfi_endproc
+ 960              	.LFE155:
+ 962              	 .section .text.pio_enable_interrupt,"ax",%progbits
+ 963              	 .align 1
+ 964              	 .global pio_enable_interrupt
+ 965              	 .syntax unified
+ 966              	 .thumb
+ 967              	 .thumb_func
+ 969              	pio_enable_interrupt:
+ 970              	.LVL73:
+ 971              	.LFB156:
+ 579:.././hal//sam4s/pio.c **** 	p_pio->PIO_IER = ul_mask;
+ 972              	 .loc 1 579 1 is_stmt 1 view-0
+ 973              	 .cfi_startproc
+ 974              	 
+ 975              	 
+ 976              	 
+ 580:.././hal//sam4s/pio.c **** }
+ 977              	 .loc 1 580 2 view .LVU259
+ 580:.././hal//sam4s/pio.c **** }
+ 978              	 .loc 1 580 17 is_stmt 0 view .LVU260
+ 979 0000 0164     	 str r1,[r0,#64]
+ 581:.././hal//sam4s/pio.c **** 
+ 980              	 .loc 1 581 1 view .LVU261
+ 981 0002 7047     	 bx lr
+ 982              	 .cfi_endproc
+ 983              	.LFE156:
+ 985              	 .section .text.pio_disable_interrupt,"ax",%progbits
+ 986              	 .align 1
+ 987              	 .global pio_disable_interrupt
+ 988              	 .syntax unified
+ 989              	 .thumb
+ 990              	 .thumb_func
+ 992              	pio_disable_interrupt:
+ 993              	.LVL74:
+ 994              	.LFB157:
+ 590:.././hal//sam4s/pio.c **** 	p_pio->PIO_IDR = ul_mask;
+ 995              	 .loc 1 590 1 is_stmt 1 view-0
+ 996              	 .cfi_startproc
+ 997              	 
+ 998              	 
+ 999              	 
+ 1000              	 .loc 1 591 2 view .LVU263
+ 1001              	 .loc 1 591 17 is_stmt 0 view .LVU264
+ 1002 0000 4164     	 str r1,[r0,#68]
+ 592:.././hal//sam4s/pio.c **** }
+ 1003              	 .loc 1 592 1 view .LVU265
+ 1004 0002 7047     	 bx lr
+ 1005              	 .cfi_endproc
+ 1006              	.LFE157:
+ 1008              	 .section .text.pio_get_interrupt_status,"ax",%progbits
+ 1009              	 .align 1
+ 1010              	 .global pio_get_interrupt_status
+ 1011              	 .syntax unified
+ 1012              	 .thumb
+ 1013              	 .thumb_func
+ 1015              	pio_get_interrupt_status:
+ 1016              	.LVL75:
+ 1017              	.LFB158:
+ 593:.././hal//sam4s/pio.c **** 
+ 594:.././hal//sam4s/pio.c **** /**
+ 595:.././hal//sam4s/pio.c ****  * \brief Read and clear PIO interrupt status.
+ 596:.././hal//sam4s/pio.c ****  *
+ 597:.././hal//sam4s/pio.c ****  * \param p_pio Pointer to a PIO instance.
+ 598:.././hal//sam4s/pio.c ****  *
+ 599:.././hal//sam4s/pio.c ****  * \return The interrupt status value.
+ 600:.././hal//sam4s/pio.c ****  */
+ 601:.././hal//sam4s/pio.c **** uint32_t pio_get_interrupt_status(const Pio *p_pio)
+ 602:.././hal//sam4s/pio.c **** {
+ 1018              	 .loc 1 602 1 is_stmt 1 view-0
+ 1019              	 .cfi_startproc
+ 1020              	 
+ 1021              	 
+ 1022              	 
+ 603:.././hal//sam4s/pio.c **** 	return p_pio->PIO_ISR;
+ 1023              	 .loc 1 603 2 view .LVU267
+ 1024              	 .loc 1 603 14 is_stmt 0 view .LVU268
+ 1025 0000 C06C     	 ldr r0,[r0,#76]
+ 1026              	.LVL76:
+ 604:.././hal//sam4s/pio.c **** }
+ 1027              	 .loc 1 604 1 view .LVU269
+ 1028 0002 7047     	 bx lr
+ 1029              	 .cfi_endproc
+ 1030              	.LFE158:
+ 1032              	 .section .text.pio_get_interrupt_mask,"ax",%progbits
+ 1033              	 .align 1
+ 1034              	 .global pio_get_interrupt_mask
+ 1035              	 .syntax unified
+ 1036              	 .thumb
+ 1037              	 .thumb_func
+ 1039              	pio_get_interrupt_mask:
+ 1040              	.LVL77:
+ 1041              	.LFB159:
+ 605:.././hal//sam4s/pio.c **** 
+ 606:.././hal//sam4s/pio.c **** /**
+ 607:.././hal//sam4s/pio.c ****  * \brief Read PIO interrupt mask.
+ 608:.././hal//sam4s/pio.c ****  *
+ 609:.././hal//sam4s/pio.c ****  * \param p_pio Pointer to a PIO instance.
+ 610:.././hal//sam4s/pio.c ****  *
+ 611:.././hal//sam4s/pio.c ****  * \return The interrupt mask value.
+ 612:.././hal//sam4s/pio.c ****  */
+ 613:.././hal//sam4s/pio.c **** uint32_t pio_get_interrupt_mask(const Pio *p_pio)
+ 614:.././hal//sam4s/pio.c **** {
+ 1042              	 .loc 1 614 1 is_stmt 1 view-0
+ 1043              	 .cfi_startproc
+ 1044              	 
+ 1045              	 
+ 1046              	 
+ 615:.././hal//sam4s/pio.c **** 	return p_pio->PIO_IMR;
+ 1047              	 .loc 1 615 2 view .LVU271
+ 1048              	 .loc 1 615 14 is_stmt 0 view .LVU272
+ 1049 0000 806C     	 ldr r0,[r0,#72]
+ 1050              	.LVL78:
+ 616:.././hal//sam4s/pio.c **** }
+ 1051              	 .loc 1 616 1 view .LVU273
+ 1052 0002 7047     	 bx lr
+ 1053              	 .cfi_endproc
+ 1054              	.LFE159:
+ 1056              	 .section .text.pio_set_additional_interrupt_mode,"ax",%progbits
+ 1057              	 .align 1
+ 1058              	 .global pio_set_additional_interrupt_mode
+ 1059              	 .syntax unified
+ 1060              	 .thumb
+ 1061              	 .thumb_func
+ 1063              	pio_set_additional_interrupt_mode:
+ 1064              	.LFB191:
+ 1065              	 .cfi_startproc
+ 617:.././hal//sam4s/pio.c **** 
+ 618:.././hal//sam4s/pio.c **** /**
+ 619:.././hal//sam4s/pio.c ****  * \brief Set additional interrupt mode.
+ 620:.././hal//sam4s/pio.c ****  *
+ 621:.././hal//sam4s/pio.c ****  * \param p_pio Pointer to a PIO instance.
+ 622:.././hal//sam4s/pio.c ****  * \param ul_mask Interrupt sources bit map.
+ 623:.././hal//sam4s/pio.c ****  * \param ul_attribute Pin(s) attributes.
+ 624:.././hal//sam4s/pio.c ****  */
+ 625:.././hal//sam4s/pio.c **** void pio_set_additional_interrupt_mode(Pio *p_pio,
+ 1066              	 .loc 1 625 6 is_stmt 1 view-0
+ 1067              	 
+ 1068              	 
+ 1069              	 
+ 1070 0000 004B     	 ldr r3,.L99
+ 1071 0002 1847     	 bx r3
+ 1072              	.L100:
+ 1073              	 .align 2
+ 1074              	.L99:
+ 1075 0004 00000000 	 .word pio_configure_interrupt
+ 1076              	 .cfi_endproc
+ 1077              	.LFE191:
+ 1079              	 .section .text.pio_set_writeprotect,"ax",%progbits
+ 1080              	 .align 1
+ 1081              	 .global pio_set_writeprotect
+ 1082              	 .syntax unified
+ 1083              	 .thumb
+ 1084              	 .thumb_func
+ 1086              	pio_set_writeprotect:
+ 1087              	.LVL79:
+ 1088              	.LFB161:
+ 626:.././hal//sam4s/pio.c **** 		const uint32_t ul_mask, const uint32_t ul_attribute)
+ 627:.././hal//sam4s/pio.c **** {
+ 628:.././hal//sam4s/pio.c **** 	/* Enables additional interrupt mode if needed */
+ 629:.././hal//sam4s/pio.c **** 	if (ul_attribute & PIO_IT_AIME) {
+ 630:.././hal//sam4s/pio.c **** 		/* Enables additional interrupt mode */
+ 631:.././hal//sam4s/pio.c **** 		p_pio->PIO_AIMER = ul_mask;
+ 632:.././hal//sam4s/pio.c **** 
+ 633:.././hal//sam4s/pio.c **** 		/* Configures the Polarity of the event detection */
+ 634:.././hal//sam4s/pio.c **** 		/* (Rising/Falling Edge or High/Low Level) */
+ 635:.././hal//sam4s/pio.c **** 		if (ul_attribute & PIO_IT_RE_OR_HL) {
+ 636:.././hal//sam4s/pio.c **** 			/* Rising Edge or High Level */
+ 637:.././hal//sam4s/pio.c **** 			p_pio->PIO_REHLSR = ul_mask;
+ 638:.././hal//sam4s/pio.c **** 		} else {
+ 639:.././hal//sam4s/pio.c **** 			/* Falling Edge or Low Level */
+ 640:.././hal//sam4s/pio.c **** 			p_pio->PIO_FELLSR = ul_mask;
+ 641:.././hal//sam4s/pio.c **** 		}
+ 642:.././hal//sam4s/pio.c **** 
+ 643:.././hal//sam4s/pio.c **** 		/* Configures the type of event detection (Edge or Level) */
+ 644:.././hal//sam4s/pio.c **** 		if (ul_attribute & PIO_IT_EDGE) {
+ 645:.././hal//sam4s/pio.c **** 			/* Edge select */
+ 646:.././hal//sam4s/pio.c **** 			p_pio->PIO_ESR = ul_mask;
+ 647:.././hal//sam4s/pio.c **** 		} else {
+ 648:.././hal//sam4s/pio.c **** 			/* Level select */
+ 649:.././hal//sam4s/pio.c **** 			p_pio->PIO_LSR = ul_mask;
+ 650:.././hal//sam4s/pio.c **** 		}
+ 651:.././hal//sam4s/pio.c **** 	} else {
+ 652:.././hal//sam4s/pio.c **** 		/* Disable additional interrupt mode */
+ 653:.././hal//sam4s/pio.c **** 		p_pio->PIO_AIMDR = ul_mask;
+ 654:.././hal//sam4s/pio.c **** 	}
+ 655:.././hal//sam4s/pio.c **** }
+ 656:.././hal//sam4s/pio.c **** 
+ 657:.././hal//sam4s/pio.c **** #ifndef PIO_WPMR_WPKEY_PASSWD
+ 658:.././hal//sam4s/pio.c **** #define PIO_WPMR_WPKEY_PASSWD    PIO_WPMR_WPKEY(0x50494FU)
+ 659:.././hal//sam4s/pio.c **** #endif
+ 660:.././hal//sam4s/pio.c **** 
+ 661:.././hal//sam4s/pio.c **** /**
+ 662:.././hal//sam4s/pio.c ****  * \brief Enable or disable write protect of PIO registers.
+ 663:.././hal//sam4s/pio.c ****  *
+ 664:.././hal//sam4s/pio.c ****  * \param p_pio Pointer to a PIO instance.
+ 665:.././hal//sam4s/pio.c ****  * \param ul_enable 1 to enable, 0 to disable.
+ 666:.././hal//sam4s/pio.c ****  */
+ 667:.././hal//sam4s/pio.c **** void pio_set_writeprotect(Pio *p_pio, const uint32_t ul_enable)
+ 668:.././hal//sam4s/pio.c **** {
+ 1089              	 .loc 1 668 1 view-0
+ 1090              	 .cfi_startproc
+ 1091              	 
+ 1092              	 
+ 1093              	 
+ 669:.././hal//sam4s/pio.c **** 	p_pio->PIO_WPMR = PIO_WPMR_WPKEY_PASSWD | (ul_enable & PIO_WPMR_WPEN);
+ 1094              	 .loc 1 669 2 view .LVU276
+ 1095              	 .loc 1 669 42 is_stmt 0 view .LVU277
+ 1096 0000 034B     	 ldr r3,.L102
+ 1097              	 .loc 1 669 55 view .LVU278
+ 1098 0002 01F00101 	 and r1,r1,#1
+ 1099              	.LVL80:
+ 1100              	 .loc 1 669 42 view .LVU279
+ 1101 0006 0B43     	 orrs r3,r3,r1
+ 1102              	 .loc 1 669 18 view .LVU280
+ 1103 0008 C0F8E430 	 str r3,[r0,#228]
+ 670:.././hal//sam4s/pio.c **** }
+ 1104              	 .loc 1 670 1 view .LVU281
+ 1105 000c 7047     	 bx lr
+ 1106              	.L103:
+ 1107 000e 00BF     	 .align 2
+ 1108              	.L102:
+ 1109 0010 004F4950 	 .word 1346981632
+ 1110              	 .cfi_endproc
+ 1111              	.LFE161:
+ 1113              	 .section .text.pio_get_writeprotect_status,"ax",%progbits
+ 1114              	 .align 1
+ 1115              	 .global pio_get_writeprotect_status
+ 1116              	 .syntax unified
+ 1117              	 .thumb
+ 1118              	 .thumb_func
+ 1120              	pio_get_writeprotect_status:
+ 1121              	.LVL81:
+ 1122              	.LFB162:
+ 671:.././hal//sam4s/pio.c **** 
+ 672:.././hal//sam4s/pio.c **** /**
+ 673:.././hal//sam4s/pio.c ****  * \brief Read write protect status.
+ 674:.././hal//sam4s/pio.c ****  *
+ 675:.././hal//sam4s/pio.c ****  * \param p_pio Pointer to a PIO instance.
+ 676:.././hal//sam4s/pio.c ****  *
+ 677:.././hal//sam4s/pio.c ****  * \return Return write protect status.
+ 678:.././hal//sam4s/pio.c ****  */
+ 679:.././hal//sam4s/pio.c **** uint32_t pio_get_writeprotect_status(const Pio *p_pio)
+ 680:.././hal//sam4s/pio.c **** {
+ 1123              	 .loc 1 680 1 is_stmt 1 view-0
+ 1124              	 .cfi_startproc
+ 1125              	 
+ 1126              	 
+ 1127              	 
+ 681:.././hal//sam4s/pio.c **** 	return p_pio->PIO_WPSR;
+ 1128              	 .loc 1 681 2 view .LVU283
+ 1129              	 .loc 1 681 14 is_stmt 0 view .LVU284
+ 1130 0000 D0F8E800 	 ldr r0,[r0,#232]
+ 1131              	.LVL82:
+ 682:.././hal//sam4s/pio.c **** }
+ 1132              	 .loc 1 682 1 view .LVU285
+ 1133 0004 7047     	 bx lr
+ 1134              	 .cfi_endproc
+ 1135              	.LFE162:
+ 1137              	 .section .text.pio_get_pin_value,"ax",%progbits
+ 1138              	 .align 1
+ 1139              	 .global pio_get_pin_value
+ 1140              	 .syntax unified
+ 1141              	 .thumb
+ 1142              	 .thumb_func
+ 1144              	pio_get_pin_value:
+ 1145              	.LVL83:
+ 1146              	.LFB163:
+ 683:.././hal//sam4s/pio.c **** 
+ 684:.././hal//sam4s/pio.c **** /**
+ 685:.././hal//sam4s/pio.c ****  * \brief Return the value of a pin.
+ 686:.././hal//sam4s/pio.c ****  *
+ 687:.././hal//sam4s/pio.c ****  * \param ul_pin The pin number.
+ 688:.././hal//sam4s/pio.c ****  *
+ 689:.././hal//sam4s/pio.c ****  * \return The pin value.
+ 690:.././hal//sam4s/pio.c ****  *
+ 691:.././hal//sam4s/pio.c ****  * \note If pin is output: a pull-up or pull-down could hide the actual value.
+ 692:.././hal//sam4s/pio.c ****  *       The function \ref pio_get can be called to get the actual pin output
+ 693:.././hal//sam4s/pio.c ****  *       level.
+ 694:.././hal//sam4s/pio.c ****  * \note If pin is input: PIOx must be clocked to sample the signal.
+ 695:.././hal//sam4s/pio.c ****  *       See PMC driver.
+ 696:.././hal//sam4s/pio.c ****  */
+ 697:.././hal//sam4s/pio.c **** uint32_t pio_get_pin_value(uint32_t ul_pin)
+ 698:.././hal//sam4s/pio.c **** {
+ 1147              	 .loc 1 698 1 is_stmt 1 view-0
+ 1148              	 .cfi_startproc
+ 1149              	 
+ 1150              	 
+ 1151              	 
+ 699:.././hal//sam4s/pio.c **** 	Pio *p_pio = pio_get_pin_group(ul_pin);
+ 1152              	 .loc 1 699 2 view .LVU287
+ 1153              	.LBB60:
+ 1154              	.LBI60:
+ 700:.././hal//sam4s/pio.c **** 
+ 701:.././hal//sam4s/pio.c **** 	return (p_pio->PIO_PDSR >> (ul_pin & 0x1F)) & 1;
+ 702:.././hal//sam4s/pio.c **** }
+ 703:.././hal//sam4s/pio.c **** 
+ 704:.././hal//sam4s/pio.c **** /**
+ 705:.././hal//sam4s/pio.c ****  * \brief Drive a GPIO pin to 1.
+ 706:.././hal//sam4s/pio.c ****  *
+ 707:.././hal//sam4s/pio.c ****  * \param ul_pin The pin index.
+ 708:.././hal//sam4s/pio.c ****  *
+ 709:.././hal//sam4s/pio.c ****  * \note The function \ref pio_configure_pin must be called beforehand.
+ 710:.././hal//sam4s/pio.c ****  */
+ 711:.././hal//sam4s/pio.c **** void pio_set_pin_high(uint32_t ul_pin)
+ 712:.././hal//sam4s/pio.c **** {
+ 713:.././hal//sam4s/pio.c **** 	Pio *p_pio = pio_get_pin_group(ul_pin);
+ 714:.././hal//sam4s/pio.c **** 
+ 715:.././hal//sam4s/pio.c **** 	/* Value to be driven on the I/O line: 1. */
+ 716:.././hal//sam4s/pio.c **** 	p_pio->PIO_SODR = 1 << (ul_pin & 0x1F);
+ 717:.././hal//sam4s/pio.c **** }
+ 718:.././hal//sam4s/pio.c **** 
+ 719:.././hal//sam4s/pio.c **** /**
+ 720:.././hal//sam4s/pio.c ****  * \brief Drive a GPIO pin to 0.
+ 721:.././hal//sam4s/pio.c ****  *
+ 722:.././hal//sam4s/pio.c ****  * \param ul_pin The pin index.
+ 723:.././hal//sam4s/pio.c ****  *
+ 724:.././hal//sam4s/pio.c ****  * \note The function \ref pio_configure_pin must be called before.
+ 725:.././hal//sam4s/pio.c ****  */
+ 726:.././hal//sam4s/pio.c **** void pio_set_pin_low(uint32_t ul_pin)
+ 727:.././hal//sam4s/pio.c **** {
+ 728:.././hal//sam4s/pio.c **** 	Pio *p_pio = pio_get_pin_group(ul_pin);
+ 729:.././hal//sam4s/pio.c **** 
+ 730:.././hal//sam4s/pio.c **** 	/* Value to be driven on the I/O line: 0. */
+ 731:.././hal//sam4s/pio.c **** 	p_pio->PIO_CODR = 1 << (ul_pin & 0x1F);
+ 732:.././hal//sam4s/pio.c **** }
+ 733:.././hal//sam4s/pio.c **** 
+ 734:.././hal//sam4s/pio.c **** /**
+ 735:.././hal//sam4s/pio.c ****  * \brief Toggle a GPIO pin.
+ 736:.././hal//sam4s/pio.c ****  *
+ 737:.././hal//sam4s/pio.c ****  * \param ul_pin The pin index.
+ 738:.././hal//sam4s/pio.c ****  *
+ 739:.././hal//sam4s/pio.c ****  * \note The function \ref pio_configure_pin must be called before.
+ 740:.././hal//sam4s/pio.c ****  */
+ 741:.././hal//sam4s/pio.c **** void pio_toggle_pin(uint32_t ul_pin)
+ 742:.././hal//sam4s/pio.c **** {
+ 743:.././hal//sam4s/pio.c **** 	Pio *p_pio = pio_get_pin_group(ul_pin);
+ 744:.././hal//sam4s/pio.c **** 
+ 745:.././hal//sam4s/pio.c **** 	if (p_pio->PIO_ODSR & (1 << (ul_pin & 0x1F))) {
+ 746:.././hal//sam4s/pio.c **** 		/* Value to be driven on the I/O line: 0. */
+ 747:.././hal//sam4s/pio.c **** 		p_pio->PIO_CODR = 1 << (ul_pin & 0x1F);
+ 748:.././hal//sam4s/pio.c **** 	} else {
+ 749:.././hal//sam4s/pio.c **** 		/* Value to be driven on the I/O line: 1. */
+ 750:.././hal//sam4s/pio.c **** 		p_pio->PIO_SODR = 1 << (ul_pin & 0x1F);
+ 751:.././hal//sam4s/pio.c **** 	}
+ 752:.././hal//sam4s/pio.c **** }
+ 753:.././hal//sam4s/pio.c **** 
+ 754:.././hal//sam4s/pio.c **** /**
+ 755:.././hal//sam4s/pio.c ****  * \brief Perform complete pin(s) configuration; general attributes and PIO init
+ 756:.././hal//sam4s/pio.c ****  * if necessary.
+ 757:.././hal//sam4s/pio.c ****  *
+ 758:.././hal//sam4s/pio.c ****  * \param ul_pin The pin index.
+ 759:.././hal//sam4s/pio.c ****  * \param ul_flags Pins attributes.
+ 760:.././hal//sam4s/pio.c ****  *
+ 761:.././hal//sam4s/pio.c ****  * \return Whether the pin(s) have been configured properly.
+ 762:.././hal//sam4s/pio.c ****  */
+ 763:.././hal//sam4s/pio.c **** uint32_t pio_configure_pin(uint32_t ul_pin, const uint32_t ul_flags)
+ 764:.././hal//sam4s/pio.c **** {
+ 765:.././hal//sam4s/pio.c **** 	Pio *p_pio = pio_get_pin_group(ul_pin);
+ 766:.././hal//sam4s/pio.c **** 
+ 767:.././hal//sam4s/pio.c **** 	/* Configure pins */
+ 768:.././hal//sam4s/pio.c **** 	switch (ul_flags & PIO_TYPE_Msk) {
+ 769:.././hal//sam4s/pio.c **** 	case PIO_TYPE_PIO_PERIPH_A:
+ 770:.././hal//sam4s/pio.c **** 		pio_set_peripheral(p_pio, PIO_PERIPH_A, (1 << (ul_pin & 0x1F)));
+ 771:.././hal//sam4s/pio.c **** 		pio_pull_up(p_pio, (1 << (ul_pin & 0x1F)),
+ 772:.././hal//sam4s/pio.c **** 				(ul_flags & PIO_PULLUP));
+ 773:.././hal//sam4s/pio.c **** 		break;
+ 774:.././hal//sam4s/pio.c **** 	case PIO_TYPE_PIO_PERIPH_B:
+ 775:.././hal//sam4s/pio.c **** 		pio_set_peripheral(p_pio, PIO_PERIPH_B, (1 << (ul_pin & 0x1F)));
+ 776:.././hal//sam4s/pio.c **** 		pio_pull_up(p_pio, (1 << (ul_pin & 0x1F)),
+ 777:.././hal//sam4s/pio.c **** 				(ul_flags & PIO_PULLUP));
+ 778:.././hal//sam4s/pio.c **** 		break;
+ 779:.././hal//sam4s/pio.c **** #if (SAM3S || SAM3N || SAM4S || SAM4E || SAM4N || SAM4C || SAM4CP || SAM4CM || SAMV71 || SAMV70 || 
+ 780:.././hal//sam4s/pio.c **** 	case PIO_TYPE_PIO_PERIPH_C:
+ 781:.././hal//sam4s/pio.c **** 		pio_set_peripheral(p_pio, PIO_PERIPH_C, (1 << (ul_pin & 0x1F)));
+ 782:.././hal//sam4s/pio.c **** 		pio_pull_up(p_pio, (1 << (ul_pin & 0x1F)),
+ 783:.././hal//sam4s/pio.c **** 				(ul_flags & PIO_PULLUP));
+ 784:.././hal//sam4s/pio.c **** 		break;
+ 785:.././hal//sam4s/pio.c **** 	case PIO_TYPE_PIO_PERIPH_D:
+ 786:.././hal//sam4s/pio.c **** 		pio_set_peripheral(p_pio, PIO_PERIPH_D, (1 << (ul_pin & 0x1F)));
+ 787:.././hal//sam4s/pio.c **** 		pio_pull_up(p_pio, (1 << (ul_pin & 0x1F)),
+ 788:.././hal//sam4s/pio.c **** 				(ul_flags & PIO_PULLUP));
+ 789:.././hal//sam4s/pio.c **** 		break;
+ 790:.././hal//sam4s/pio.c **** #endif
+ 791:.././hal//sam4s/pio.c **** 
+ 792:.././hal//sam4s/pio.c **** 	case PIO_TYPE_PIO_INPUT:
+ 793:.././hal//sam4s/pio.c **** 		pio_set_input(p_pio, (1 << (ul_pin & 0x1F)), ul_flags);
+ 794:.././hal//sam4s/pio.c **** 		break;
+ 795:.././hal//sam4s/pio.c **** 
+ 796:.././hal//sam4s/pio.c **** 	case PIO_TYPE_PIO_OUTPUT_0:
+ 797:.././hal//sam4s/pio.c **** 	case PIO_TYPE_PIO_OUTPUT_1:
+ 798:.././hal//sam4s/pio.c **** 		pio_set_output(p_pio, (1 << (ul_pin & 0x1F)),
+ 799:.././hal//sam4s/pio.c **** 				((ul_flags & PIO_TYPE_PIO_OUTPUT_1)
+ 800:.././hal//sam4s/pio.c **** 				== PIO_TYPE_PIO_OUTPUT_1) ? 1 : 0,
+ 801:.././hal//sam4s/pio.c **** 				(ul_flags & PIO_OPENDRAIN) ? 1 : 0,
+ 802:.././hal//sam4s/pio.c **** 				(ul_flags & PIO_PULLUP) ? 1 : 0);
+ 803:.././hal//sam4s/pio.c **** 		break;
+ 804:.././hal//sam4s/pio.c **** 
+ 805:.././hal//sam4s/pio.c **** 	default:
+ 806:.././hal//sam4s/pio.c **** 		return 0;
+ 807:.././hal//sam4s/pio.c **** 	}
+ 808:.././hal//sam4s/pio.c **** 
+ 809:.././hal//sam4s/pio.c **** 	return 1;
+ 810:.././hal//sam4s/pio.c **** }
+ 811:.././hal//sam4s/pio.c **** 
+ 812:.././hal//sam4s/pio.c **** /**
+ 813:.././hal//sam4s/pio.c ****  * \brief Drive a GPIO port to 1.
+ 814:.././hal//sam4s/pio.c ****  *
+ 815:.././hal//sam4s/pio.c ****  * \param p_pio Base address of the PIO port.
+ 816:.././hal//sam4s/pio.c ****  * \param ul_mask Bitmask of one or more pin(s) to toggle.
+ 817:.././hal//sam4s/pio.c ****  */
+ 818:.././hal//sam4s/pio.c **** void pio_set_pin_group_high(Pio *p_pio, uint32_t ul_mask)
+ 819:.././hal//sam4s/pio.c **** {
+ 820:.././hal//sam4s/pio.c **** 	/* Value to be driven on the I/O line: 1. */
+ 821:.././hal//sam4s/pio.c **** 	p_pio->PIO_SODR = ul_mask;
+ 822:.././hal//sam4s/pio.c **** }
+ 823:.././hal//sam4s/pio.c **** 
+ 824:.././hal//sam4s/pio.c **** /**
+ 825:.././hal//sam4s/pio.c ****  * \brief Drive a GPIO port to 0.
+ 826:.././hal//sam4s/pio.c ****  *
+ 827:.././hal//sam4s/pio.c ****  * \param p_pio Base address of the PIO port.
+ 828:.././hal//sam4s/pio.c ****  * \param ul_mask Bitmask of one or more pin(s) to toggle.
+ 829:.././hal//sam4s/pio.c ****  */
+ 830:.././hal//sam4s/pio.c **** void pio_set_pin_group_low(Pio *p_pio, uint32_t ul_mask)
+ 831:.././hal//sam4s/pio.c **** {
+ 832:.././hal//sam4s/pio.c **** 	/* Value to be driven on the I/O line: 0. */
+ 833:.././hal//sam4s/pio.c **** 	p_pio->PIO_CODR = ul_mask;
+ 834:.././hal//sam4s/pio.c **** }
+ 835:.././hal//sam4s/pio.c **** 
+ 836:.././hal//sam4s/pio.c **** /**
+ 837:.././hal//sam4s/pio.c ****  * \brief Toggle a GPIO group.
+ 838:.././hal//sam4s/pio.c ****  *
+ 839:.././hal//sam4s/pio.c ****  * \param p_pio Pointer to a PIO instance.
+ 840:.././hal//sam4s/pio.c ****  * \param ul_mask Bitmask of one or more pin(s) to configure.
+ 841:.././hal//sam4s/pio.c ****  */
+ 842:.././hal//sam4s/pio.c **** void pio_toggle_pin_group(Pio *p_pio, uint32_t ul_mask)
+ 843:.././hal//sam4s/pio.c **** {
+ 844:.././hal//sam4s/pio.c **** 	if (p_pio->PIO_ODSR & ul_mask) {
+ 845:.././hal//sam4s/pio.c **** 		/* Value to be driven on the I/O line: 0. */
+ 846:.././hal//sam4s/pio.c **** 		p_pio->PIO_CODR = ul_mask;
+ 847:.././hal//sam4s/pio.c **** 	} else {
+ 848:.././hal//sam4s/pio.c **** 		/* Value to be driven on the I/O line: 1. */
+ 849:.././hal//sam4s/pio.c **** 		p_pio->PIO_SODR = ul_mask;
+ 850:.././hal//sam4s/pio.c **** 	}
+ 851:.././hal//sam4s/pio.c **** }
+ 852:.././hal//sam4s/pio.c **** 
+ 853:.././hal//sam4s/pio.c **** /**
+ 854:.././hal//sam4s/pio.c ****  * \brief Perform complete pin(s) configuration; general attributes and PIO init
+ 855:.././hal//sam4s/pio.c ****  * if necessary.
+ 856:.././hal//sam4s/pio.c ****  *
+ 857:.././hal//sam4s/pio.c ****  * \param p_pio Pointer to a PIO instance.
+ 858:.././hal//sam4s/pio.c ****  * \param ul_mask Bitmask of one or more pin(s) to configure.
+ 859:.././hal//sam4s/pio.c ****  * \param ul_flags Pin(s) attributes.
+ 860:.././hal//sam4s/pio.c ****  *
+ 861:.././hal//sam4s/pio.c ****  * \return Whether the pin(s) have been configured properly.
+ 862:.././hal//sam4s/pio.c ****  */
+ 863:.././hal//sam4s/pio.c **** uint32_t pio_configure_pin_group(Pio *p_pio,
+ 864:.././hal//sam4s/pio.c **** 		uint32_t ul_mask, const uint32_t ul_flags)
+ 865:.././hal//sam4s/pio.c **** {
+ 866:.././hal//sam4s/pio.c **** 	/* Configure pins */
+ 867:.././hal//sam4s/pio.c **** 	switch (ul_flags & PIO_TYPE_Msk) {
+ 868:.././hal//sam4s/pio.c **** 	case PIO_TYPE_PIO_PERIPH_A:
+ 869:.././hal//sam4s/pio.c **** 		pio_set_peripheral(p_pio, PIO_PERIPH_A, ul_mask);
+ 870:.././hal//sam4s/pio.c **** 		pio_pull_up(p_pio, ul_mask, (ul_flags & PIO_PULLUP));
+ 871:.././hal//sam4s/pio.c **** 		break;
+ 872:.././hal//sam4s/pio.c **** 	case PIO_TYPE_PIO_PERIPH_B:
+ 873:.././hal//sam4s/pio.c **** 		pio_set_peripheral(p_pio, PIO_PERIPH_B, ul_mask);
+ 874:.././hal//sam4s/pio.c **** 		pio_pull_up(p_pio, ul_mask, (ul_flags & PIO_PULLUP));
+ 875:.././hal//sam4s/pio.c **** 		break;
+ 876:.././hal//sam4s/pio.c **** #if (SAM3S || SAM3N || SAM4S || SAM4E || SAM4N || SAM4C || SAM4CP || SAM4CM || SAMV71 || SAMV70 || 
+ 877:.././hal//sam4s/pio.c **** 	case PIO_TYPE_PIO_PERIPH_C:
+ 878:.././hal//sam4s/pio.c **** 		pio_set_peripheral(p_pio, PIO_PERIPH_C, ul_mask);
+ 879:.././hal//sam4s/pio.c **** 		pio_pull_up(p_pio, ul_mask, (ul_flags & PIO_PULLUP));
+ 880:.././hal//sam4s/pio.c **** 		break;
+ 881:.././hal//sam4s/pio.c **** 	case PIO_TYPE_PIO_PERIPH_D:
+ 882:.././hal//sam4s/pio.c **** 		pio_set_peripheral(p_pio, PIO_PERIPH_D, ul_mask);
+ 883:.././hal//sam4s/pio.c **** 		pio_pull_up(p_pio, ul_mask, (ul_flags & PIO_PULLUP));
+ 884:.././hal//sam4s/pio.c **** 		break;
+ 885:.././hal//sam4s/pio.c **** #endif
+ 886:.././hal//sam4s/pio.c **** 
+ 887:.././hal//sam4s/pio.c **** 	case PIO_TYPE_PIO_INPUT:
+ 888:.././hal//sam4s/pio.c **** 		pio_set_input(p_pio, ul_mask, ul_flags);
+ 889:.././hal//sam4s/pio.c **** 		break;
+ 890:.././hal//sam4s/pio.c **** 
+ 891:.././hal//sam4s/pio.c **** 	case PIO_TYPE_PIO_OUTPUT_0:
+ 892:.././hal//sam4s/pio.c **** 	case PIO_TYPE_PIO_OUTPUT_1:
+ 893:.././hal//sam4s/pio.c **** 		pio_set_output(p_pio, ul_mask,
+ 894:.././hal//sam4s/pio.c **** 				((ul_flags & PIO_TYPE_PIO_OUTPUT_1)
+ 895:.././hal//sam4s/pio.c **** 				== PIO_TYPE_PIO_OUTPUT_1) ? 1 : 0,
+ 896:.././hal//sam4s/pio.c **** 				(ul_flags & PIO_OPENDRAIN) ? 1 : 0,
+ 897:.././hal//sam4s/pio.c **** 				(ul_flags & PIO_PULLUP) ? 1 : 0);
+ 898:.././hal//sam4s/pio.c **** 		break;
+ 899:.././hal//sam4s/pio.c **** 
+ 900:.././hal//sam4s/pio.c **** 	default:
+ 901:.././hal//sam4s/pio.c **** 		return 0;
+ 902:.././hal//sam4s/pio.c **** 	}
+ 903:.././hal//sam4s/pio.c **** 
+ 904:.././hal//sam4s/pio.c **** 	return 1;
+ 905:.././hal//sam4s/pio.c **** }
+ 906:.././hal//sam4s/pio.c **** 
+ 907:.././hal//sam4s/pio.c **** /**
+ 908:.././hal//sam4s/pio.c ****  * \brief Enable interrupt for a GPIO pin.
+ 909:.././hal//sam4s/pio.c ****  *
+ 910:.././hal//sam4s/pio.c ****  * \param ul_pin The pin index.
+ 911:.././hal//sam4s/pio.c ****  *
+ 912:.././hal//sam4s/pio.c ****  * \note The function \ref gpio_configure_pin must be called before.
+ 913:.././hal//sam4s/pio.c ****  */
+ 914:.././hal//sam4s/pio.c **** void pio_enable_pin_interrupt(uint32_t ul_pin)
+ 915:.././hal//sam4s/pio.c **** {
+ 916:.././hal//sam4s/pio.c **** 	Pio *p_pio = pio_get_pin_group(ul_pin);
+ 917:.././hal//sam4s/pio.c **** 
+ 918:.././hal//sam4s/pio.c **** 	p_pio->PIO_IER = 1 << (ul_pin & 0x1F);
+ 919:.././hal//sam4s/pio.c **** }
+ 920:.././hal//sam4s/pio.c **** 
+ 921:.././hal//sam4s/pio.c **** 
+ 922:.././hal//sam4s/pio.c **** /**
+ 923:.././hal//sam4s/pio.c ****  * \brief Disable interrupt for a GPIO pin.
+ 924:.././hal//sam4s/pio.c ****  *
+ 925:.././hal//sam4s/pio.c ****  * \param ul_pin The pin index.
+ 926:.././hal//sam4s/pio.c ****  *
+ 927:.././hal//sam4s/pio.c ****  * \note The function \ref gpio_configure_pin must be called before.
+ 928:.././hal//sam4s/pio.c ****  */
+ 929:.././hal//sam4s/pio.c **** void pio_disable_pin_interrupt(uint32_t ul_pin)
+ 930:.././hal//sam4s/pio.c **** {
+ 931:.././hal//sam4s/pio.c **** 	Pio *p_pio = pio_get_pin_group(ul_pin);
+ 932:.././hal//sam4s/pio.c **** 
+ 933:.././hal//sam4s/pio.c **** 	p_pio->PIO_IDR = 1 << (ul_pin & 0x1F);
+ 934:.././hal//sam4s/pio.c **** }
+ 935:.././hal//sam4s/pio.c **** 
+ 936:.././hal//sam4s/pio.c **** 
+ 937:.././hal//sam4s/pio.c **** /**
+ 938:.././hal//sam4s/pio.c ****  * \brief Return GPIO port for a GPIO pin.
+ 939:.././hal//sam4s/pio.c ****  *
+ 940:.././hal//sam4s/pio.c ****  * \param ul_pin The pin index.
+ 941:.././hal//sam4s/pio.c ****  *
+ 942:.././hal//sam4s/pio.c ****  * \return Pointer to \ref Pio struct for GPIO port.
+ 943:.././hal//sam4s/pio.c ****  */
+ 944:.././hal//sam4s/pio.c **** Pio *pio_get_pin_group(uint32_t ul_pin)
+ 1155              	 .loc 1 944 6 view .LVU288
+ 1156              	.LBB61:
+ 945:.././hal//sam4s/pio.c **** {
+ 946:.././hal//sam4s/pio.c **** 	Pio *p_pio;
+ 1157              	 .loc 1 946 2 view .LVU289
+ 947:.././hal//sam4s/pio.c **** 
+ 948:.././hal//sam4s/pio.c **** #if (SAM4C || SAM4CP)
+ 949:.././hal//sam4s/pio.c **** #  ifdef ID_PIOD
+ 950:.././hal//sam4s/pio.c **** 	if (ul_pin > PIO_PC9_IDX) {
+ 951:.././hal//sam4s/pio.c **** 		p_pio = PIOD;
+ 952:.././hal//sam4s/pio.c **** 	} else if (ul_pin > PIO_PB31_IDX) {
+ 953:.././hal//sam4s/pio.c **** #  else
+ 954:.././hal//sam4s/pio.c **** 	if  (ul_pin > PIO_PB31_IDX) {
+ 955:.././hal//sam4s/pio.c **** #  endif
+ 956:.././hal//sam4s/pio.c **** 		p_pio = PIOC;
+ 957:.././hal//sam4s/pio.c **** 	} else {
+ 958:.././hal//sam4s/pio.c **** 		p_pio = (Pio *)((uint32_t)PIOA + (PIO_DELTA * (ul_pin >> 5)));
+ 959:.././hal//sam4s/pio.c **** 	}
+ 960:.././hal//sam4s/pio.c **** #elif (SAM4CM)
+ 961:.././hal//sam4s/pio.c **** 	if (ul_pin > PIO_PB21_IDX) {
+ 962:.././hal//sam4s/pio.c **** 		p_pio = PIOC;
+ 963:.././hal//sam4s/pio.c **** 	} else {
+ 964:.././hal//sam4s/pio.c **** 		p_pio = (Pio *)((uint32_t)PIOA + (PIO_DELTA * (ul_pin >> 5)));
+ 965:.././hal//sam4s/pio.c **** 	}
+ 966:.././hal//sam4s/pio.c **** #else
+ 967:.././hal//sam4s/pio.c **** 	p_pio = (Pio *)((uint32_t)PIOA + (PIO_DELTA * (ul_pin >> 5)));
+ 1158              	 .loc 1 967 2 view .LVU290
+ 1159              	 .loc 1 967 56 is_stmt 0 view .LVU291
+ 1160 0000 4309     	 lsrs r3,r0,#5
+ 1161              	 .loc 1 967 33 view .LVU292
+ 1162 0002 03F50013 	 add r3,r3,#2097152
+ 1163 0006 03F20773 	 addw r3,r3,#1799
+ 1164 000a 5B02     	 lsls r3,r3,#9
+ 1165              	.LVL84:
+ 968:.././hal//sam4s/pio.c **** #endif
+ 969:.././hal//sam4s/pio.c **** 	return p_pio;
+ 1166              	 .loc 1 969 2 is_stmt 1 view .LVU293
+ 1167              	 .loc 1 969 2 is_stmt 0 view .LVU294
+ 1168              	.LBE61:
+ 1169              	.LBE60:
+ 701:.././hal//sam4s/pio.c **** }
+ 1170              	 .loc 1 701 2 is_stmt 1 view .LVU295
+ 701:.././hal//sam4s/pio.c **** }
+ 1171              	 .loc 1 701 37 is_stmt 0 view .LVU296
+ 1172 000c 00F01F00 	 and r0,r0,#31
+ 1173              	.LVL85:
+ 701:.././hal//sam4s/pio.c **** }
+ 1174              	 .loc 1 701 15 view .LVU297
+ 1175 0010 DB6B     	 ldr r3,[r3,#60]
+ 1176              	.LVL86:
+ 701:.././hal//sam4s/pio.c **** }
+ 1177              	 .loc 1 701 26 view .LVU298
+ 1178 0012 23FA00F0 	 lsr r0,r3,r0
+ 702:.././hal//sam4s/pio.c **** 
+ 1179              	 .loc 1 702 1 view .LVU299
+ 1180 0016 00F00100 	 and r0,r0,#1
+ 1181 001a 7047     	 bx lr
+ 1182              	 .cfi_endproc
+ 1183              	.LFE163:
+ 1185              	 .section .text.pio_set_pin_high,"ax",%progbits
+ 1186              	 .align 1
+ 1187              	 .global pio_set_pin_high
+ 1188              	 .syntax unified
+ 1189              	 .thumb
+ 1190              	 .thumb_func
+ 1192              	pio_set_pin_high:
+ 1193              	.LVL87:
+ 1194              	.LFB164:
+ 712:.././hal//sam4s/pio.c **** 	Pio *p_pio = pio_get_pin_group(ul_pin);
+ 1195              	 .loc 1 712 1 is_stmt 1 view-0
+ 1196              	 .cfi_startproc
+ 1197              	 
+ 1198              	 
+ 1199              	 
+ 713:.././hal//sam4s/pio.c **** 
+ 1200              	 .loc 1 713 2 view .LVU301
+ 1201              	.LBB62:
+ 1202              	.LBI62:
+ 944:.././hal//sam4s/pio.c **** {
+ 1203              	 .loc 1 944 6 view .LVU302
+ 1204              	.LBB63:
+ 946:.././hal//sam4s/pio.c **** 
+ 1205              	 .loc 1 946 2 view .LVU303
+ 967:.././hal//sam4s/pio.c **** #endif
+ 1206              	 .loc 1 967 2 view .LVU304
+ 967:.././hal//sam4s/pio.c **** #endif
+ 1207              	 .loc 1 967 56 is_stmt 0 view .LVU305
+ 1208 0000 4309     	 lsrs r3,r0,#5
+ 967:.././hal//sam4s/pio.c **** #endif
+ 1209              	 .loc 1 967 33 view .LVU306
+ 1210 0002 03F50013 	 add r3,r3,#2097152
+ 1211 0006 03F20773 	 addw r3,r3,#1799
+ 1212 000a 5B02     	 lsls r3,r3,#9
+ 1213              	.LVL88:
+ 1214              	 .loc 1 969 2 is_stmt 1 view .LVU307
+ 1215              	 .loc 1 969 2 is_stmt 0 view .LVU308
+ 1216              	.LBE63:
+ 1217              	.LBE62:
+ 716:.././hal//sam4s/pio.c **** }
+ 1218              	 .loc 1 716 2 is_stmt 1 view .LVU309
+ 716:.././hal//sam4s/pio.c **** }
+ 1219              	 .loc 1 716 33 is_stmt 0 view .LVU310
+ 1220 000c 00F01F00 	 and r0,r0,#31
+ 1221              	.LVL89:
+ 716:.././hal//sam4s/pio.c **** }
+ 1222              	 .loc 1 716 22 view .LVU311
+ 1223 0010 0122     	 movs r2,#1
+ 1224 0012 8240     	 lsls r2,r2,r0
+ 716:.././hal//sam4s/pio.c **** }
+ 1225              	 .loc 1 716 18 view .LVU312
+ 1226 0014 1A63     	 str r2,[r3,#48]
+ 717:.././hal//sam4s/pio.c **** 
+ 1227              	 .loc 1 717 1 view .LVU313
+ 1228 0016 7047     	 bx lr
+ 1229              	 .cfi_endproc
+ 1230              	.LFE164:
+ 1232              	 .section .text.pio_set_pin_low,"ax",%progbits
+ 1233              	 .align 1
+ 1234              	 .global pio_set_pin_low
+ 1235              	 .syntax unified
+ 1236              	 .thumb
+ 1237              	 .thumb_func
+ 1239              	pio_set_pin_low:
+ 1240              	.LVL90:
+ 1241              	.LFB165:
+ 727:.././hal//sam4s/pio.c **** 	Pio *p_pio = pio_get_pin_group(ul_pin);
+ 1242              	 .loc 1 727 1 is_stmt 1 view-0
+ 1243              	 .cfi_startproc
+ 1244              	 
+ 1245              	 
+ 1246              	 
+ 728:.././hal//sam4s/pio.c **** 
+ 1247              	 .loc 1 728 2 view .LVU315
+ 1248              	.LBB64:
+ 1249              	.LBI64:
+ 944:.././hal//sam4s/pio.c **** {
+ 1250              	 .loc 1 944 6 view .LVU316
+ 1251              	.LBB65:
+ 946:.././hal//sam4s/pio.c **** 
+ 1252              	 .loc 1 946 2 view .LVU317
+ 967:.././hal//sam4s/pio.c **** #endif
+ 1253              	 .loc 1 967 2 view .LVU318
+ 967:.././hal//sam4s/pio.c **** #endif
+ 1254              	 .loc 1 967 56 is_stmt 0 view .LVU319
+ 1255 0000 4309     	 lsrs r3,r0,#5
+ 967:.././hal//sam4s/pio.c **** #endif
+ 1256              	 .loc 1 967 33 view .LVU320
+ 1257 0002 03F50013 	 add r3,r3,#2097152
+ 1258 0006 03F20773 	 addw r3,r3,#1799
+ 1259 000a 5B02     	 lsls r3,r3,#9
+ 1260              	.LVL91:
+ 1261              	 .loc 1 969 2 is_stmt 1 view .LVU321
+ 1262              	 .loc 1 969 2 is_stmt 0 view .LVU322
+ 1263              	.LBE65:
+ 1264              	.LBE64:
+ 731:.././hal//sam4s/pio.c **** }
+ 1265              	 .loc 1 731 2 is_stmt 1 view .LVU323
+ 731:.././hal//sam4s/pio.c **** }
+ 1266              	 .loc 1 731 33 is_stmt 0 view .LVU324
+ 1267 000c 00F01F00 	 and r0,r0,#31
+ 1268              	.LVL92:
+ 731:.././hal//sam4s/pio.c **** }
+ 1269              	 .loc 1 731 22 view .LVU325
+ 1270 0010 0122     	 movs r2,#1
+ 1271 0012 8240     	 lsls r2,r2,r0
+ 731:.././hal//sam4s/pio.c **** }
+ 1272              	 .loc 1 731 18 view .LVU326
+ 1273 0014 5A63     	 str r2,[r3,#52]
+ 732:.././hal//sam4s/pio.c **** 
+ 1274              	 .loc 1 732 1 view .LVU327
+ 1275 0016 7047     	 bx lr
+ 1276              	 .cfi_endproc
+ 1277              	.LFE165:
+ 1279              	 .section .text.pio_toggle_pin,"ax",%progbits
+ 1280              	 .align 1
+ 1281              	 .global pio_toggle_pin
+ 1282              	 .syntax unified
+ 1283              	 .thumb
+ 1284              	 .thumb_func
+ 1286              	pio_toggle_pin:
+ 1287              	.LVL93:
+ 1288              	.LFB166:
+ 742:.././hal//sam4s/pio.c **** 	Pio *p_pio = pio_get_pin_group(ul_pin);
+ 1289              	 .loc 1 742 1 is_stmt 1 view-0
+ 1290              	 .cfi_startproc
+ 1291              	 
+ 1292              	 
+ 1293              	 
+ 743:.././hal//sam4s/pio.c **** 
+ 1294              	 .loc 1 743 2 view .LVU329
+ 1295              	.LBB66:
+ 1296              	.LBI66:
+ 944:.././hal//sam4s/pio.c **** {
+ 1297              	 .loc 1 944 6 view .LVU330
+ 1298              	.LBB67:
+ 946:.././hal//sam4s/pio.c **** 
+ 1299              	 .loc 1 946 2 view .LVU331
+ 967:.././hal//sam4s/pio.c **** #endif
+ 1300              	 .loc 1 967 2 view .LVU332
+ 967:.././hal//sam4s/pio.c **** #endif
+ 1301              	 .loc 1 967 56 is_stmt 0 view .LVU333
+ 1302 0000 4309     	 lsrs r3,r0,#5
+ 967:.././hal//sam4s/pio.c **** #endif
+ 1303              	 .loc 1 967 33 view .LVU334
+ 1304 0002 03F50013 	 add r3,r3,#2097152
+ 1305 0006 03F20773 	 addw r3,r3,#1799
+ 1306 000a 5B02     	 lsls r3,r3,#9
+ 1307              	.LVL94:
+ 1308              	 .loc 1 969 2 is_stmt 1 view .LVU335
+ 1309              	 .loc 1 969 2 is_stmt 0 view .LVU336
+ 1310              	.LBE67:
+ 1311              	.LBE66:
+ 745:.././hal//sam4s/pio.c **** 		/* Value to be driven on the I/O line: 0. */
+ 1312              	 .loc 1 745 2 is_stmt 1 view .LVU337
+ 745:.././hal//sam4s/pio.c **** 		/* Value to be driven on the I/O line: 0. */
+ 1313              	 .loc 1 745 38 is_stmt 0 view .LVU338
+ 1314 000c 00F01F00 	 and r0,r0,#31
+ 1315              	.LVL95:
+ 745:.././hal//sam4s/pio.c **** 		/* Value to be driven on the I/O line: 0. */
+ 1316              	 .loc 1 745 11 view .LVU339
+ 1317 0010 996B     	 ldr r1,[r3,#56]
+ 745:.././hal//sam4s/pio.c **** 		/* Value to be driven on the I/O line: 0. */
+ 1318              	 .loc 1 745 27 view .LVU340
+ 1319 0012 0122     	 movs r2,#1
+ 1320 0014 8240     	 lsls r2,r2,r0
+ 745:.././hal//sam4s/pio.c **** 		/* Value to be driven on the I/O line: 0. */
+ 1321              	 .loc 1 745 5 view .LVU341
+ 1322 0016 1142     	 tst r1,r2
+ 747:.././hal//sam4s/pio.c **** 	} else {
+ 1323              	 .loc 1 747 3 is_stmt 1 view .LVU342
+ 747:.././hal//sam4s/pio.c **** 	} else {
+ 1324              	 .loc 1 747 19 is_stmt 0 view .LVU343
+ 1325 0018 14BF     	 ite ne
+ 1326 001a 5A63     	 strne r2,[r3,#52]
+ 750:.././hal//sam4s/pio.c **** 	}
+ 1327              	 .loc 1 750 3 is_stmt 1 view .LVU344
+ 750:.././hal//sam4s/pio.c **** 	}
+ 1328              	 .loc 1 750 19 is_stmt 0 view .LVU345
+ 1329 001c 1A63     	 streq r2,[r3,#48]
+ 752:.././hal//sam4s/pio.c **** 
+ 1330              	 .loc 1 752 1 view .LVU346
+ 1331 001e 7047     	 bx lr
+ 1332              	 .cfi_endproc
+ 1333              	.LFE166:
+ 1335              	 .section .text.pio_configure_pin,"ax",%progbits
+ 1336              	 .align 1
+ 1337              	 .global pio_configure_pin
+ 1338              	 .syntax unified
+ 1339              	 .thumb
+ 1340              	 .thumb_func
+ 1342              	pio_configure_pin:
+ 1343              	.LVL96:
+ 1344              	.LFB167:
+ 764:.././hal//sam4s/pio.c **** 	Pio *p_pio = pio_get_pin_group(ul_pin);
+ 1345              	 .loc 1 764 1 is_stmt 1 view-0
+ 1346              	 .cfi_startproc
+ 1347              	 
+ 1348              	 
+ 765:.././hal//sam4s/pio.c **** 
+ 1349              	 .loc 1 765 2 view .LVU348
+ 1350              	.LBB68:
+ 1351              	.LBI68:
+ 944:.././hal//sam4s/pio.c **** {
+ 1352              	 .loc 1 944 6 view .LVU349
+ 1353              	.LBB69:
+ 946:.././hal//sam4s/pio.c **** 
+ 1354              	 .loc 1 946 2 view .LVU350
+ 967:.././hal//sam4s/pio.c **** #endif
+ 1355              	 .loc 1 967 2 view .LVU351
+ 1356              	.LBE69:
+ 1357              	.LBE68:
+ 764:.././hal//sam4s/pio.c **** 	Pio *p_pio = pio_get_pin_group(ul_pin);
+ 1358              	 .loc 1 764 1 is_stmt 0 view .LVU352
+ 1359 0000 37B5     	 push {r0,r1,r2,r4,r5,lr}
+ 1360              	.LCFI4:
+ 1361              	 .cfi_def_cfa_offset 24
+ 1362              	 .cfi_offset 4,-12
+ 1363              	 .cfi_offset 5,-8
+ 1364              	 .cfi_offset 14,-4
+ 764:.././hal//sam4s/pio.c **** 	Pio *p_pio = pio_get_pin_group(ul_pin);
+ 1365              	 .loc 1 764 1 view .LVU353
+ 1366 0002 0446     	 mov r4,r0
+ 1367              	.LBB74:
+ 1368              	.LBB70:
+ 967:.././hal//sam4s/pio.c **** #endif
+ 1369              	 .loc 1 967 56 view .LVU354
+ 1370 0004 4009     	 lsrs r0,r0,#5
+ 1371              	.LVL97:
+ 967:.././hal//sam4s/pio.c **** #endif
+ 1372              	 .loc 1 967 56 view .LVU355
+ 1373              	.LBE70:
+ 1374              	.LBE74:
+ 764:.././hal//sam4s/pio.c **** 	Pio *p_pio = pio_get_pin_group(ul_pin);
+ 1375              	 .loc 1 764 1 view .LVU356
+ 1376 0006 0D46     	 mov r5,r1
+ 1377              	.LBB75:
+ 1378              	.LBB71:
+ 967:.././hal//sam4s/pio.c **** #endif
+ 1379              	 .loc 1 967 33 view .LVU357
+ 1380 0008 00F50010 	 add r0,r0,#2097152
+ 1381              	.LBE71:
+ 1382              	.LBE75:
+ 768:.././hal//sam4s/pio.c **** 	case PIO_TYPE_PIO_PERIPH_A:
+ 1383              	 .loc 1 768 19 view .LVU358
+ 1384 000c 01F0F041 	 and r1,r1,#2013265920
+ 1385              	.LVL98:
+ 1386              	.LBB76:
+ 1387              	.LBB72:
+ 967:.././hal//sam4s/pio.c **** #endif
+ 1388              	 .loc 1 967 33 view .LVU359
+ 1389 0010 00F20770 	 addw r0,r0,#1799
+ 1390              	.LBE72:
+ 1391              	.LBE76:
+ 768:.././hal//sam4s/pio.c **** 	case PIO_TYPE_PIO_PERIPH_A:
+ 1392              	 .loc 1 768 2 view .LVU360
+ 1393 0014 B1F1005F 	 cmp r1,#536870912
+ 1394              	.LBB77:
+ 1395              	.LBB73:
+ 967:.././hal//sam4s/pio.c **** #endif
+ 1396              	 .loc 1 967 33 view .LVU361
+ 1397 0018 4FEA4020 	 lsl r0,r0,#9
+ 1398              	.LVL99:
+ 1399              	 .loc 1 969 2 is_stmt 1 view .LVU362
+ 1400              	 .loc 1 969 2 is_stmt 0 view .LVU363
+ 1401              	.LBE73:
+ 1402              	.LBE77:
+ 768:.././hal//sam4s/pio.c **** 	case PIO_TYPE_PIO_PERIPH_A:
+ 1403              	 .loc 1 768 2 is_stmt 1 view .LVU364
+ 1404 001c 1FD0     	 beq .L112
+ 1405 001e 0BD8     	 bhi .L113
+ 1406 0020 B1F1805F 	 cmp r1,#268435456
+ 1407 0024 1BD0     	 beq .L112
+ 1408 0026 B1F1C05F 	 cmp r1,#402653184
+ 1409 002a 18D0     	 beq .L112
+ 1410 002c B1F1006F 	 cmp r1,#134217728
+ 1411 0030 15D0     	 beq .L112
+ 1412              	.L128:
+ 1413 0032 0020     	 movs r0,#0
+ 1414              	.LVL100:
+ 1415              	.L111:
+ 810:.././hal//sam4s/pio.c **** 
+ 1416              	 .loc 1 810 1 is_stmt 0 view .LVU365
+ 1417 0034 03B0     	 add sp,sp,#12
+ 1418              	.LCFI5:
+ 1419              	 .cfi_remember_state
+ 1420              	 .cfi_def_cfa_offset 12
+ 1421              	 
+ 1422 0036 30BD     	 pop {r4,r5,pc}
+ 1423              	.LVL101:
+ 1424              	.L113:
+ 1425              	.LCFI6:
+ 1426              	 .cfi_restore_state
+ 768:.././hal//sam4s/pio.c **** 	case PIO_TYPE_PIO_PERIPH_A:
+ 1427              	 .loc 1 768 2 view .LVU366
+ 1428 0038 05F0E043 	 and r3,r5,#1879048192
+ 1429 003c B3F1405F 	 cmp r3,#805306368
+ 1430 0040 17D0     	 beq .L118
+ 1431 0042 B1F1205F 	 cmp r1,#671088640
+ 1432 0046 F4D1     	 bne .L128
+ 793:.././hal//sam4s/pio.c **** 		break;
+ 1433              	 .loc 1 793 3 is_stmt 1 view .LVU367
+ 793:.././hal//sam4s/pio.c **** 		break;
+ 1434              	 .loc 1 793 38 is_stmt 0 view .LVU368
+ 1435 0048 04F01F04 	 and r4,r4,#31
+ 1436              	.LVL102:
+ 793:.././hal//sam4s/pio.c **** 		break;
+ 1437              	 .loc 1 793 3 view .LVU369
+ 1438 004c 0121     	 movs r1,#1
+ 1439 004e 124B     	 ldr r3,.L131
+ 1440 0050 2A46     	 mov r2,r5
+ 1441 0052 A140     	 lsls r1,r1,r4
+ 1442 0054 9847     	 blx r3
+ 1443              	.LVL103:
+ 794:.././hal//sam4s/pio.c **** 
+ 1444              	 .loc 1 794 3 is_stmt 1 view .LVU370
+ 1445 0056 00E0     	 b .L121
+ 1446              	.LVL104:
+ 1447              	.L120:
+ 1448              	.LBB78:
+ 1449              	.LBB79:
+  76:.././hal//sam4s/pio.c **** 	}
+ 1450              	 .loc 1 76 3 view .LVU371
+  76:.././hal//sam4s/pio.c **** 	}
+ 1451              	 .loc 1 76 19 is_stmt 0 view .LVU372
+ 1452 0058 0266     	 str r2,[r0,#96]
+ 1453              	.LVL105:
+ 1454              	.L121:
+  76:.././hal//sam4s/pio.c **** 	}
+ 1455              	 .loc 1 76 19 view .LVU373
+ 1456              	.LBE79:
+ 1457              	.LBE78:
+ 809:.././hal//sam4s/pio.c **** }
+ 1458              	 .loc 1 809 9 view .LVU374
+ 1459 005a 0120     	 movs r0,#1
+ 1460              	.LVL106:
+ 809:.././hal//sam4s/pio.c **** }
+ 1461              	 .loc 1 809 9 view .LVU375
+ 1462 005c EAE7     	 b .L111
+ 1463              	.LVL107:
+ 1464              	.L112:
+ 786:.././hal//sam4s/pio.c **** 		pio_pull_up(p_pio, (1 << (ul_pin & 0x1F)),
+ 1465              	 .loc 1 786 3 is_stmt 1 view .LVU376
+ 786:.././hal//sam4s/pio.c **** 		pio_pull_up(p_pio, (1 << (ul_pin & 0x1F)),
+ 1466              	 .loc 1 786 57 is_stmt 0 view .LVU377
+ 1467 005e 04F01F04 	 and r4,r4,#31
+ 1468              	.LVL108:
+ 786:.././hal//sam4s/pio.c **** 		pio_pull_up(p_pio, (1 << (ul_pin & 0x1F)),
+ 1469              	 .loc 1 786 46 view .LVU378
+ 1470 0062 0122     	 movs r2,#1
+ 1471 0064 A240     	 lsls r2,r2,r4
+ 786:.././hal//sam4s/pio.c **** 		pio_pull_up(p_pio, (1 << (ul_pin & 0x1F)),
+ 1472              	 .loc 1 786 3 view .LVU379
+ 1473 0066 0D4B     	 ldr r3,.L131+4
+ 1474 0068 9847     	 blx r3
+ 1475              	.LVL109:
+ 787:.././hal//sam4s/pio.c **** 				(ul_flags & PIO_PULLUP));
+ 1476              	 .loc 1 787 3 is_stmt 1 view .LVU380
+ 1477              	.LBB80:
+ 1478              	.LBI80:
+  69:.././hal//sam4s/pio.c **** 		const uint32_t ul_pull_up_enable)
+ 1479              	 .loc 1 69 6 view .LVU381
+ 1480              	.LBB81:
+  73:.././hal//sam4s/pio.c **** 		p_pio->PIO_PUER = ul_mask;
+ 1481              	 .loc 1 73 2 view .LVU382
+  73:.././hal//sam4s/pio.c **** 		p_pio->PIO_PUER = ul_mask;
+ 1482              	 .loc 1 73 5 is_stmt 0 view .LVU383
+ 1483 006a EC07     	 lsls r4,r5,#31
+ 1484 006c F4D5     	 bpl .L120
+  74:.././hal//sam4s/pio.c **** 	} else {
+ 1485              	 .loc 1 74 3 is_stmt 1 view .LVU384
+  74:.././hal//sam4s/pio.c **** 	} else {
+ 1486              	 .loc 1 74 19 is_stmt 0 view .LVU385
+ 1487 006e 4266     	 str r2,[r0,#100]
+ 1488 0070 F3E7     	 b .L121
+ 1489              	.LVL110:
+ 1490              	.L118:
+  74:.././hal//sam4s/pio.c **** 	} else {
+ 1491              	 .loc 1 74 19 view .LVU386
+ 1492              	.LBE81:
+ 1493              	.LBE80:
+ 798:.././hal//sam4s/pio.c **** 				((ul_flags & PIO_TYPE_PIO_OUTPUT_1)
+ 1494              	 .loc 1 798 3 is_stmt 1 view .LVU387
+ 799:.././hal//sam4s/pio.c **** 				== PIO_TYPE_PIO_OUTPUT_1) ? 1 : 0,
+ 1495              	 .loc 1 799 16 is_stmt 0 view .LVU388
+ 1496 0072 05F06052 	 and r2,r5,#939524096
+ 798:.././hal//sam4s/pio.c **** 				((ul_flags & PIO_TYPE_PIO_OUTPUT_1)
+ 1497              	 .loc 1 798 3 view .LVU389
+ 1498 0076 02F14841 	 add r1,r2,#-939524096
+ 1499 007a 4A42     	 rsbs r2,r1,#0
+ 1500 007c 05F00103 	 and r3,r5,#1
+ 798:.././hal//sam4s/pio.c **** 				((ul_flags & PIO_TYPE_PIO_OUTPUT_1)
+ 1501              	 .loc 1 798 39 view .LVU390
+ 1502 0080 04F01F04 	 and r4,r4,#31
+ 1503              	.LVL111:
+ 798:.././hal//sam4s/pio.c **** 				((ul_flags & PIO_TYPE_PIO_OUTPUT_1)
+ 1504              	 .loc 1 798 3 view .LVU391
+ 1505 0084 4A41     	 adcs r2,r2,r1
+ 1506 0086 0121     	 movs r1,#1
+ 1507 0088 0093     	 str r3,[sp]
+ 1508 008a A140     	 lsls r1,r1,r4
+ 1509 008c C5F38003 	 ubfx r3,r5,#2,#1
+ 1510 0090 034C     	 ldr r4,.L131+8
+ 1511 0092 A047     	 blx r4
+ 1512              	.LVL112:
+ 803:.././hal//sam4s/pio.c **** 
+ 1513              	 .loc 1 803 3 is_stmt 1 view .LVU392
+ 1514 0094 E1E7     	 b .L121
+ 1515              	.L132:
+ 1516 0096 00BF     	 .align 2
+ 1517              	.L131:
+ 1518 0098 00000000 	 .word pio_set_input
+ 1519 009c 00000000 	 .word pio_set_peripheral
+ 1520 00a0 00000000 	 .word pio_set_output
+ 1521              	 .cfi_endproc
+ 1522              	.LFE167:
+ 1524              	 .section .text.pio_set_pin_group_high,"ax",%progbits
+ 1525              	 .align 1
+ 1526              	 .global pio_set_pin_group_high
+ 1527              	 .syntax unified
+ 1528              	 .thumb
+ 1529              	 .thumb_func
+ 1531              	pio_set_pin_group_high:
+ 1532              	.LFB187:
+ 1533              	 .cfi_startproc
+ 818:.././hal//sam4s/pio.c **** {
+ 1534              	 .loc 1 818 6 view-0
+ 1535              	 
+ 1536              	 
+ 1537              	 
+ 1538 0000 0163     	 str r1,[r0,#48]
+ 1539 0002 7047     	 bx lr
+ 1540              	 .cfi_endproc
+ 1541              	.LFE187:
+ 1543              	 .section .text.pio_set_pin_group_low,"ax",%progbits
+ 1544              	 .align 1
+ 1545              	 .global pio_set_pin_group_low
+ 1546              	 .syntax unified
+ 1547              	 .thumb
+ 1548              	 .thumb_func
+ 1550              	pio_set_pin_group_low:
+ 1551              	.LFB189:
+ 1552              	 .cfi_startproc
+ 830:.././hal//sam4s/pio.c **** {
+ 1553              	 .loc 1 830 6 view-0
+ 1554              	 
+ 1555              	 
+ 1556              	 
+ 1557 0000 4163     	 str r1,[r0,#52]
+ 1558 0002 7047     	 bx lr
+ 1559              	 .cfi_endproc
+ 1560              	.LFE189:
+ 1562              	 .section .text.pio_toggle_pin_group,"ax",%progbits
+ 1563              	 .align 1
+ 1564              	 .global pio_toggle_pin_group
+ 1565              	 .syntax unified
+ 1566              	 .thumb
+ 1567              	 .thumb_func
+ 1569              	pio_toggle_pin_group:
+ 1570              	.LVL113:
+ 1571              	.LFB170:
+ 843:.././hal//sam4s/pio.c **** 	if (p_pio->PIO_ODSR & ul_mask) {
+ 1572              	 .loc 1 843 1 view-0
+ 1573              	 .cfi_startproc
+ 1574              	 
+ 1575              	 
+ 1576              	 
+ 844:.././hal//sam4s/pio.c **** 		/* Value to be driven on the I/O line: 0. */
+ 1577              	 .loc 1 844 2 view .LVU396
+ 844:.././hal//sam4s/pio.c **** 		/* Value to be driven on the I/O line: 0. */
+ 1578              	 .loc 1 844 11 is_stmt 0 view .LVU397
+ 1579 0000 836B     	 ldr r3,[r0,#56]
+ 844:.././hal//sam4s/pio.c **** 		/* Value to be driven on the I/O line: 0. */
+ 1580              	 .loc 1 844 5 view .LVU398
+ 1581 0002 0B42     	 tst r3,r1
+ 846:.././hal//sam4s/pio.c **** 	} else {
+ 1582              	 .loc 1 846 3 is_stmt 1 view .LVU399
+ 846:.././hal//sam4s/pio.c **** 	} else {
+ 1583              	 .loc 1 846 19 is_stmt 0 view .LVU400
+ 1584 0004 14BF     	 ite ne
+ 1585 0006 4163     	 strne r1,[r0,#52]
+ 849:.././hal//sam4s/pio.c **** 	}
+ 1586              	 .loc 1 849 3 is_stmt 1 view .LVU401
+ 849:.././hal//sam4s/pio.c **** 	}
+ 1587              	 .loc 1 849 19 is_stmt 0 view .LVU402
+ 1588 0008 0163     	 streq r1,[r0,#48]
+ 851:.././hal//sam4s/pio.c **** 
+ 1589              	 .loc 1 851 1 view .LVU403
+ 1590 000a 7047     	 bx lr
+ 1591              	 .cfi_endproc
+ 1592              	.LFE170:
+ 1594              	 .section .text.pio_configure_pin_group,"ax",%progbits
+ 1595              	 .align 1
+ 1596              	 .global pio_configure_pin_group
+ 1597              	 .syntax unified
+ 1598              	 .thumb
+ 1599              	 .thumb_func
+ 1601              	pio_configure_pin_group:
+ 1602              	.LVL114:
+ 1603              	.LFB171:
+ 865:.././hal//sam4s/pio.c **** 	/* Configure pins */
+ 1604              	 .loc 1 865 1 is_stmt 1 view-0
+ 1605              	 .cfi_startproc
+ 1606              	 
+ 1607              	 
+ 867:.././hal//sam4s/pio.c **** 	case PIO_TYPE_PIO_PERIPH_A:
+ 1608              	 .loc 1 867 2 view .LVU405
+ 867:.././hal//sam4s/pio.c **** 	case PIO_TYPE_PIO_PERIPH_A:
+ 1609              	 .loc 1 867 19 is_stmt 0 view .LVU406
+ 1610 0000 02F0F043 	 and r3,r2,#2013265920
+ 867:.././hal//sam4s/pio.c **** 	case PIO_TYPE_PIO_PERIPH_A:
+ 1611              	 .loc 1 867 2 view .LVU407
+ 1612 0004 B3F1005F 	 cmp r3,#536870912
+ 865:.././hal//sam4s/pio.c **** 	/* Configure pins */
+ 1613              	 .loc 1 865 1 view .LVU408
+ 1614 0008 73B5     	 push {r0,r1,r4,r5,r6,lr}
+ 1615              	.LCFI7:
+ 1616              	 .cfi_def_cfa_offset 24
+ 1617              	 .cfi_offset 4,-16
+ 1618              	 .cfi_offset 5,-12
+ 1619              	 .cfi_offset 6,-8
+ 1620              	 .cfi_offset 14,-4
+ 865:.././hal//sam4s/pio.c **** 	/* Configure pins */
+ 1621              	 .loc 1 865 1 view .LVU409
+ 1622 000a 0646     	 mov r6,r0
+ 1623 000c 0C46     	 mov r4,r1
+ 1624 000e 1546     	 mov r5,r2
+ 867:.././hal//sam4s/pio.c **** 	case PIO_TYPE_PIO_PERIPH_A:
+ 1625              	 .loc 1 867 2 view .LVU410
+ 1626 0010 1AD0     	 beq .L139
+ 1627 0012 0BD8     	 bhi .L140
+ 1628 0014 B3F1805F 	 cmp r3,#268435456
+ 1629 0018 16D0     	 beq .L139
+ 1630 001a B3F1C05F 	 cmp r3,#402653184
+ 1631 001e 13D0     	 beq .L139
+ 1632 0020 B3F1006F 	 cmp r3,#134217728
+ 1633 0024 10D0     	 beq .L139
+ 1634              	.L155:
+ 867:.././hal//sam4s/pio.c **** 	case PIO_TYPE_PIO_PERIPH_A:
+ 1635              	 .loc 1 867 2 view .LVU411
+ 1636 0026 0020     	 movs r0,#0
+ 1637              	.LVL115:
+ 1638              	.L138:
+ 905:.././hal//sam4s/pio.c **** 
+ 1639              	 .loc 1 905 1 view .LVU412
+ 1640 0028 02B0     	 add sp,sp,#8
+ 1641              	.LCFI8:
+ 1642              	 .cfi_remember_state
+ 1643              	 .cfi_def_cfa_offset 16
+ 1644              	 
+ 1645 002a 70BD     	 pop {r4,r5,r6,pc}
+ 1646              	.LVL116:
+ 1647              	.L140:
+ 1648              	.LCFI9:
+ 1649              	 .cfi_restore_state
+ 867:.././hal//sam4s/pio.c **** 	case PIO_TYPE_PIO_PERIPH_A:
+ 1650              	 .loc 1 867 2 view .LVU413
+ 1651 002c 02F0E044 	 and r4,r2,#1879048192
+ 1652 0030 B4F1405F 	 cmp r4,#805306368
+ 1653 0034 10D0     	 beq .L145
+ 1654 0036 B3F1205F 	 cmp r3,#671088640
+ 1655 003a F4D1     	 bne .L155
+ 888:.././hal//sam4s/pio.c **** 		break;
+ 1656              	 .loc 1 888 3 is_stmt 1 view .LVU414
+ 1657 003c 0D4B     	 ldr r3,.L158
+ 1658 003e 9847     	 blx r3
+ 1659              	.LVL117:
+ 889:.././hal//sam4s/pio.c **** 
+ 1660              	 .loc 1 889 3 view .LVU415
+ 1661 0040 00E0     	 b .L148
+ 1662              	.LVL118:
+ 1663              	.L147:
+ 1664              	.LBB82:
+ 1665              	.LBB83:
+  76:.././hal//sam4s/pio.c **** 	}
+ 1666              	 .loc 1 76 3 view .LVU416
+  76:.././hal//sam4s/pio.c **** 	}
+ 1667              	 .loc 1 76 19 is_stmt 0 view .LVU417
+ 1668 0042 3466     	 str r4,[r6,#96]
+ 1669              	.LVL119:
+ 1670              	.L148:
+  76:.././hal//sam4s/pio.c **** 	}
+ 1671              	 .loc 1 76 19 view .LVU418
+ 1672              	.LBE83:
+ 1673              	.LBE82:
+ 904:.././hal//sam4s/pio.c **** }
+ 1674              	 .loc 1 904 9 view .LVU419
+ 1675 0044 0120     	 movs r0,#1
+ 1676              	.LVL120:
+ 904:.././hal//sam4s/pio.c **** }
+ 1677              	 .loc 1 904 9 view .LVU420
+ 1678 0046 EFE7     	 b .L138
+ 1679              	.LVL121:
+ 1680              	.L139:
+ 882:.././hal//sam4s/pio.c **** 		pio_pull_up(p_pio, ul_mask, (ul_flags & PIO_PULLUP));
+ 1681              	 .loc 1 882 3 is_stmt 1 view .LVU421
+ 1682 0048 1946     	 mov r1,r3
+ 1683              	.LVL122:
+ 882:.././hal//sam4s/pio.c **** 		pio_pull_up(p_pio, ul_mask, (ul_flags & PIO_PULLUP));
+ 1684              	 .loc 1 882 3 is_stmt 0 view .LVU422
+ 1685 004a 2246     	 mov r2,r4
+ 1686              	.LVL123:
+ 882:.././hal//sam4s/pio.c **** 		pio_pull_up(p_pio, ul_mask, (ul_flags & PIO_PULLUP));
+ 1687              	 .loc 1 882 3 view .LVU423
+ 1688 004c 0A4B     	 ldr r3,.L158+4
+ 1689 004e 9847     	 blx r3
+ 1690              	.LVL124:
+ 883:.././hal//sam4s/pio.c **** 		break;
+ 1691              	 .loc 1 883 3 is_stmt 1 view .LVU424
+ 1692              	.LBB84:
+ 1693              	.LBI84:
+  69:.././hal//sam4s/pio.c **** 		const uint32_t ul_pull_up_enable)
+ 1694              	 .loc 1 69 6 view .LVU425
+ 1695              	.LBB85:
+  73:.././hal//sam4s/pio.c **** 		p_pio->PIO_PUER = ul_mask;
+ 1696              	 .loc 1 73 2 view .LVU426
+  73:.././hal//sam4s/pio.c **** 		p_pio->PIO_PUER = ul_mask;
+ 1697              	 .loc 1 73 5 is_stmt 0 view .LVU427
+ 1698 0050 ED07     	 lsls r5,r5,#31
+ 1699              	.LVL125:
+  73:.././hal//sam4s/pio.c **** 		p_pio->PIO_PUER = ul_mask;
+ 1700              	 .loc 1 73 5 view .LVU428
+ 1701 0052 F6D5     	 bpl .L147
+ 1702              	.LVL126:
+  74:.././hal//sam4s/pio.c **** 	} else {
+ 1703              	 .loc 1 74 3 is_stmt 1 view .LVU429
+  74:.././hal//sam4s/pio.c **** 	} else {
+ 1704              	 .loc 1 74 19 is_stmt 0 view .LVU430
+ 1705 0054 7466     	 str r4,[r6,#100]
+ 1706 0056 F5E7     	 b .L148
+ 1707              	.LVL127:
+ 1708              	.L145:
+  74:.././hal//sam4s/pio.c **** 	} else {
+ 1709              	 .loc 1 74 19 view .LVU431
+ 1710              	.LBE85:
+ 1711              	.LBE84:
+ 893:.././hal//sam4s/pio.c **** 				((ul_flags & PIO_TYPE_PIO_OUTPUT_1)
+ 1712              	 .loc 1 893 3 is_stmt 1 view .LVU432
+ 894:.././hal//sam4s/pio.c **** 				== PIO_TYPE_PIO_OUTPUT_1) ? 1 : 0,
+ 1713              	 .loc 1 894 16 is_stmt 0 view .LVU433
+ 1714 0058 02F06052 	 and r2,r2,#939524096
+ 1715              	.LVL128:
+ 893:.././hal//sam4s/pio.c **** 				((ul_flags & PIO_TYPE_PIO_OUTPUT_1)
+ 1716              	 .loc 1 893 3 view .LVU434
+ 1717 005c 02F14844 	 add r4,r2,#-939524096
+ 1718 0060 05F00103 	 and r3,r5,#1
+ 1719 0064 6242     	 rsbs r2,r4,#0
+ 1720 0066 0093     	 str r3,[sp]
+ 1721 0068 6241     	 adcs r2,r2,r4
+ 1722 006a C5F38003 	 ubfx r3,r5,#2,#1
+ 1723 006e 034C     	 ldr r4,.L158+8
+ 1724 0070 A047     	 blx r4
+ 1725              	.LVL129:
+ 898:.././hal//sam4s/pio.c **** 
+ 1726              	 .loc 1 898 3 is_stmt 1 view .LVU435
+ 1727 0072 E7E7     	 b .L148
+ 1728              	.L159:
+ 1729              	 .align 2
+ 1730              	.L158:
+ 1731 0074 00000000 	 .word pio_set_input
+ 1732 0078 00000000 	 .word pio_set_peripheral
+ 1733 007c 00000000 	 .word pio_set_output
+ 1734              	 .cfi_endproc
+ 1735              	.LFE171:
+ 1737              	 .section .text.pio_enable_pin_interrupt,"ax",%progbits
+ 1738              	 .align 1
+ 1739              	 .global pio_enable_pin_interrupt
+ 1740              	 .syntax unified
+ 1741              	 .thumb
+ 1742              	 .thumb_func
+ 1744              	pio_enable_pin_interrupt:
+ 1745              	.LVL130:
+ 1746              	.LFB172:
+ 915:.././hal//sam4s/pio.c **** 	Pio *p_pio = pio_get_pin_group(ul_pin);
+ 1747              	 .loc 1 915 1 view-0
+ 1748              	 .cfi_startproc
+ 1749              	 
+ 1750              	 
+ 1751              	 
+ 916:.././hal//sam4s/pio.c **** 
+ 1752              	 .loc 1 916 2 view .LVU437
+ 1753              	.LBB86:
+ 1754              	.LBI86:
+ 944:.././hal//sam4s/pio.c **** {
+ 1755              	 .loc 1 944 6 view .LVU438
+ 1756              	.LBB87:
+ 946:.././hal//sam4s/pio.c **** 
+ 1757              	 .loc 1 946 2 view .LVU439
+ 967:.././hal//sam4s/pio.c **** #endif
+ 1758              	 .loc 1 967 2 view .LVU440
+ 967:.././hal//sam4s/pio.c **** #endif
+ 1759              	 .loc 1 967 56 is_stmt 0 view .LVU441
+ 1760 0000 4309     	 lsrs r3,r0,#5
+ 967:.././hal//sam4s/pio.c **** #endif
+ 1761              	 .loc 1 967 33 view .LVU442
+ 1762 0002 03F50013 	 add r3,r3,#2097152
+ 1763 0006 03F20773 	 addw r3,r3,#1799
+ 1764 000a 5B02     	 lsls r3,r3,#9
+ 1765              	.LVL131:
+ 1766              	 .loc 1 969 2 is_stmt 1 view .LVU443
+ 1767              	 .loc 1 969 2 is_stmt 0 view .LVU444
+ 1768              	.LBE87:
+ 1769              	.LBE86:
+ 918:.././hal//sam4s/pio.c **** }
+ 1770              	 .loc 1 918 2 is_stmt 1 view .LVU445
+ 918:.././hal//sam4s/pio.c **** }
+ 1771              	 .loc 1 918 32 is_stmt 0 view .LVU446
+ 1772 000c 00F01F00 	 and r0,r0,#31
+ 1773              	.LVL132:
+ 918:.././hal//sam4s/pio.c **** }
+ 1774              	 .loc 1 918 21 view .LVU447
+ 1775 0010 0122     	 movs r2,#1
+ 1776 0012 8240     	 lsls r2,r2,r0
+ 918:.././hal//sam4s/pio.c **** }
+ 1777              	 .loc 1 918 17 view .LVU448
+ 1778 0014 1A64     	 str r2,[r3,#64]
+ 919:.././hal//sam4s/pio.c **** 
+ 1779              	 .loc 1 919 1 view .LVU449
+ 1780 0016 7047     	 bx lr
+ 1781              	 .cfi_endproc
+ 1782              	.LFE172:
+ 1784              	 .section .text.pio_disable_pin_interrupt,"ax",%progbits
+ 1785              	 .align 1
+ 1786              	 .global pio_disable_pin_interrupt
+ 1787              	 .syntax unified
+ 1788              	 .thumb
+ 1789              	 .thumb_func
+ 1791              	pio_disable_pin_interrupt:
+ 1792              	.LVL133:
+ 1793              	.LFB173:
+ 930:.././hal//sam4s/pio.c **** 	Pio *p_pio = pio_get_pin_group(ul_pin);
+ 1794              	 .loc 1 930 1 is_stmt 1 view-0
+ 1795              	 .cfi_startproc
+ 1796              	 
+ 1797              	 
+ 1798              	 
+ 931:.././hal//sam4s/pio.c **** 
+ 1799              	 .loc 1 931 2 view .LVU451
+ 1800              	.LBB88:
+ 1801              	.LBI88:
+ 944:.././hal//sam4s/pio.c **** {
+ 1802              	 .loc 1 944 6 view .LVU452
+ 1803              	.LBB89:
+ 946:.././hal//sam4s/pio.c **** 
+ 1804              	 .loc 1 946 2 view .LVU453
+ 967:.././hal//sam4s/pio.c **** #endif
+ 1805              	 .loc 1 967 2 view .LVU454
+ 967:.././hal//sam4s/pio.c **** #endif
+ 1806              	 .loc 1 967 56 is_stmt 0 view .LVU455
+ 1807 0000 4309     	 lsrs r3,r0,#5
+ 967:.././hal//sam4s/pio.c **** #endif
+ 1808              	 .loc 1 967 33 view .LVU456
+ 1809 0002 03F50013 	 add r3,r3,#2097152
+ 1810 0006 03F20773 	 addw r3,r3,#1799
+ 1811 000a 5B02     	 lsls r3,r3,#9
+ 1812              	.LVL134:
+ 1813              	 .loc 1 969 2 is_stmt 1 view .LVU457
+ 1814              	 .loc 1 969 2 is_stmt 0 view .LVU458
+ 1815              	.LBE89:
+ 1816              	.LBE88:
+ 933:.././hal//sam4s/pio.c **** }
+ 1817              	 .loc 1 933 2 is_stmt 1 view .LVU459
+ 933:.././hal//sam4s/pio.c **** }
+ 1818              	 .loc 1 933 32 is_stmt 0 view .LVU460
+ 1819 000c 00F01F00 	 and r0,r0,#31
+ 1820              	.LVL135:
+ 933:.././hal//sam4s/pio.c **** }
+ 1821              	 .loc 1 933 21 view .LVU461
+ 1822 0010 0122     	 movs r2,#1
+ 1823 0012 8240     	 lsls r2,r2,r0
+ 933:.././hal//sam4s/pio.c **** }
+ 1824              	 .loc 1 933 17 view .LVU462
+ 1825 0014 5A64     	 str r2,[r3,#68]
+ 934:.././hal//sam4s/pio.c **** 
+ 1826              	 .loc 1 934 1 view .LVU463
+ 1827 0016 7047     	 bx lr
+ 1828              	 .cfi_endproc
+ 1829              	.LFE173:
+ 1831              	 .section .text.pio_get_pin_group,"ax",%progbits
+ 1832              	 .align 1
+ 1833              	 .global pio_get_pin_group
+ 1834              	 .syntax unified
+ 1835              	 .thumb
+ 1836              	 .thumb_func
+ 1838              	pio_get_pin_group:
+ 1839              	.LVL136:
+ 1840              	.LFB174:
+ 945:.././hal//sam4s/pio.c **** 	Pio *p_pio;
+ 1841              	 .loc 1 945 1 is_stmt 1 view-0
+ 1842              	 .cfi_startproc
+ 1843              	 
+ 1844              	 
+ 1845              	 
+ 946:.././hal//sam4s/pio.c **** 
+ 1846              	 .loc 1 946 2 view .LVU465
+ 967:.././hal//sam4s/pio.c **** #endif
+ 1847              	 .loc 1 967 2 view .LVU466
+ 1848              	 .loc 1 969 2 view .LVU467
+ 967:.././hal//sam4s/pio.c **** #endif
+ 1849              	 .loc 1 967 56 is_stmt 0 view .LVU468
+ 1850 0000 4009     	 lsrs r0,r0,#5
+ 1851              	.LVL137:
+ 967:.././hal//sam4s/pio.c **** #endif
+ 1852              	 .loc 1 967 33 view .LVU469
+ 1853 0002 00F50010 	 add r0,r0,#2097152
+ 1854 0006 00F20770 	 addw r0,r0,#1799
+ 970:.././hal//sam4s/pio.c **** }
+ 1855              	 .loc 1 970 1 view .LVU470
+ 1856 000a 4002     	 lsls r0,r0,#9
+ 1857 000c 7047     	 bx lr
+ 1858              	 .cfi_endproc
+ 1859              	.LFE174:
+ 1861              	 .section .text.pio_get_pin_group_id,"ax",%progbits
+ 1862              	 .align 1
+ 1863              	 .global pio_get_pin_group_id
+ 1864              	 .syntax unified
+ 1865              	 .thumb
+ 1866              	 .thumb_func
+ 1868              	pio_get_pin_group_id:
+ 1869              	.LVL138:
+ 1870              	.LFB175:
+ 971:.././hal//sam4s/pio.c **** 
+ 972:.././hal//sam4s/pio.c **** /**
+ 973:.././hal//sam4s/pio.c ****  * \brief Return GPIO port peripheral ID for a GPIO pin.
+ 974:.././hal//sam4s/pio.c ****  *
+ 975:.././hal//sam4s/pio.c ****  * \param ul_pin The pin index.
+ 976:.././hal//sam4s/pio.c ****  *
+ 977:.././hal//sam4s/pio.c ****  * \return GPIO port peripheral ID.
+ 978:.././hal//sam4s/pio.c ****  */
+ 979:.././hal//sam4s/pio.c **** uint32_t pio_get_pin_group_id(uint32_t ul_pin)
+ 980:.././hal//sam4s/pio.c **** {
+ 1871              	 .loc 1 980 1 is_stmt 1 view-0
+ 1872              	 .cfi_startproc
+ 1873              	 
+ 1874              	 
+ 1875              	 
+ 981:.././hal//sam4s/pio.c **** 	uint32_t ul_id;
+ 1876              	 .loc 1 981 2 view .LVU472
+ 982:.././hal//sam4s/pio.c **** 
+ 983:.././hal//sam4s/pio.c **** #if (SAM4C || SAM4CP)
+ 984:.././hal//sam4s/pio.c **** #  ifdef ID_PIOD
+ 985:.././hal//sam4s/pio.c **** 	if (ul_pin > PIO_PC9_IDX) {
+ 986:.././hal//sam4s/pio.c **** 		ul_id = ID_PIOD;
+ 987:.././hal//sam4s/pio.c **** 	} else if (ul_pin > PIO_PB31_IDX) {
+ 988:.././hal//sam4s/pio.c **** #  else
+ 989:.././hal//sam4s/pio.c **** 	if (ul_pin > PIO_PB31_IDX) {
+ 990:.././hal//sam4s/pio.c **** #  endif
+ 991:.././hal//sam4s/pio.c **** 		ul_id = ID_PIOC;
+ 992:.././hal//sam4s/pio.c **** 	} else {
+ 993:.././hal//sam4s/pio.c **** 		ul_id = ID_PIOA + (ul_pin >> 5);
+ 994:.././hal//sam4s/pio.c **** 	}
+ 995:.././hal//sam4s/pio.c **** #elif (SAM4CM)
+ 996:.././hal//sam4s/pio.c **** 	if (ul_pin > PIO_PB21_IDX) {
+ 997:.././hal//sam4s/pio.c **** 		ul_id = ID_PIOC;
+ 998:.././hal//sam4s/pio.c **** 	} else {
+ 999:.././hal//sam4s/pio.c **** 		ul_id = ID_PIOA + (ul_pin >> 5);
+1000:.././hal//sam4s/pio.c **** 	}
+1001:.././hal//sam4s/pio.c **** #elif (SAMV70 || SAMV71 || SAME70 || SAMS70)
+1002:.././hal//sam4s/pio.c **** 	ul_id = ID_PIOA + (ul_pin >> 5);
+1003:.././hal//sam4s/pio.c **** 
+1004:.././hal//sam4s/pio.c **** 	#ifdef ID_PIOD 
+1005:.././hal//sam4s/pio.c **** 	if (ul_pin >= PIO_PD0_IDX) ul_id = ID_PIOD; 
+1006:.././hal//sam4s/pio.c **** 	#endif
+1007:.././hal//sam4s/pio.c **** 	
+1008:.././hal//sam4s/pio.c **** 	#ifdef ID_PIOE 
+1009:.././hal//sam4s/pio.c **** 	if (ul_pin >= PIO_PE0_IDX) ul_id = ID_PIOE; 
+1010:.././hal//sam4s/pio.c **** 	#endif 
+1011:.././hal//sam4s/pio.c **** #else
+1012:.././hal//sam4s/pio.c **** 	ul_id = ID_PIOA + (ul_pin >> 5);
+ 1877              	 .loc 1 1012 2 view .LVU473
+1013:.././hal//sam4s/pio.c **** #endif
+1014:.././hal//sam4s/pio.c **** 	return ul_id;
+ 1878              	 .loc 1 1014 2 view .LVU474
+1012:.././hal//sam4s/pio.c **** #endif
+ 1879              	 .loc 1 1012 28 is_stmt 0 view .LVU475
+ 1880 0000 4009     	 lsrs r0,r0,#5
+ 1881              	.LVL139:
+1015:.././hal//sam4s/pio.c **** }
+ 1882              	 .loc 1 1015 1 view .LVU476
+ 1883 0002 0B30     	 adds r0,r0,#11
+ 1884              	.LVL140:
+ 1885              	 .loc 1 1015 1 view .LVU477
+ 1886 0004 7047     	 bx lr
+ 1887              	 .cfi_endproc
+ 1888              	.LFE175:
+ 1890              	 .section .text.pio_get_pin_group_mask,"ax",%progbits
+ 1891              	 .align 1
+ 1892              	 .global pio_get_pin_group_mask
+ 1893              	 .syntax unified
+ 1894              	 .thumb
+ 1895              	 .thumb_func
+ 1897              	pio_get_pin_group_mask:
+ 1898              	.LVL141:
+ 1899              	.LFB176:
+1016:.././hal//sam4s/pio.c **** 
+1017:.././hal//sam4s/pio.c **** 
+1018:.././hal//sam4s/pio.c **** /**
+1019:.././hal//sam4s/pio.c ****  * \brief Return GPIO port pin mask for a GPIO pin.
+1020:.././hal//sam4s/pio.c ****  *
+1021:.././hal//sam4s/pio.c ****  * \param ul_pin The pin index.
+1022:.././hal//sam4s/pio.c ****  *
+1023:.././hal//sam4s/pio.c ****  * \return GPIO port pin mask.
+1024:.././hal//sam4s/pio.c ****  */
+1025:.././hal//sam4s/pio.c **** uint32_t pio_get_pin_group_mask(uint32_t ul_pin)
+1026:.././hal//sam4s/pio.c **** {
+ 1900              	 .loc 1 1026 1 is_stmt 1 view-0
+ 1901              	 .cfi_startproc
+ 1902              	 
+ 1903              	 
+ 1904              	 
+1027:.././hal//sam4s/pio.c **** 	uint32_t ul_mask = 1 << (ul_pin & 0x1F);
+ 1905              	 .loc 1 1027 2 view .LVU479
+1028:.././hal//sam4s/pio.c **** 	return ul_mask;
+ 1906              	 .loc 1 1028 2 view .LVU480
+1029:.././hal//sam4s/pio.c **** }
+ 1907              	 .loc 1 1029 1 is_stmt 0 view .LVU481
+ 1908 0000 0123     	 movs r3,#1
+1027:.././hal//sam4s/pio.c **** 	uint32_t ul_mask = 1 << (ul_pin & 0x1F);
+ 1909              	 .loc 1 1027 34 view .LVU482
+ 1910 0002 00F01F00 	 and r0,r0,#31
+ 1911              	.LVL142:
+ 1912              	 .loc 1 1029 1 view .LVU483
+ 1913 0006 03FA00F0 	 lsl r0,r3,r0
+ 1914              	.LVL143:
+ 1915              	 .loc 1 1029 1 view .LVU484
+ 1916 000a 7047     	 bx lr
+ 1917              	 .cfi_endproc
+ 1918              	.LFE176:
+ 1920              	 .section .text.pio_capture_set_mode,"ax",%progbits
+ 1921              	 .align 1
+ 1922              	 .global pio_capture_set_mode
+ 1923              	 .syntax unified
+ 1924              	 .thumb
+ 1925              	 .thumb_func
+ 1927              	pio_capture_set_mode:
+ 1928              	.LVL144:
+ 1929              	.LFB177:
+1030:.././hal//sam4s/pio.c **** 
+1031:.././hal//sam4s/pio.c **** #if (SAM3S || SAM4S || SAM4E || SAMV71 || SAMV70 || SAME70 || SAMS70)
+1032:.././hal//sam4s/pio.c **** /* Capture mode enable flag */
+1033:.././hal//sam4s/pio.c **** uint32_t pio_capture_enable_flag;
+1034:.././hal//sam4s/pio.c **** 
+1035:.././hal//sam4s/pio.c **** /**
+1036:.././hal//sam4s/pio.c ****  * \brief Configure PIO capture mode.
+1037:.././hal//sam4s/pio.c ****  * \note PIO capture mode will be disabled automatically.
+1038:.././hal//sam4s/pio.c ****  *
+1039:.././hal//sam4s/pio.c ****  * \param p_pio Pointer to a PIO instance.
+1040:.././hal//sam4s/pio.c ****  * \param ul_mode Bitmask of one or more modes.
+1041:.././hal//sam4s/pio.c ****  */
+1042:.././hal//sam4s/pio.c **** void pio_capture_set_mode(Pio *p_pio, uint32_t ul_mode)
+1043:.././hal//sam4s/pio.c **** {
+ 1930              	 .loc 1 1043 1 is_stmt 1 view-0
+ 1931              	 .cfi_startproc
+ 1932              	 
+ 1933              	 
+ 1934              	 
+1044:.././hal//sam4s/pio.c **** 	ul_mode &= (~PIO_PCMR_PCEN); /* Disable PIO capture mode */
+ 1935              	 .loc 1 1044 2 view .LVU486
+ 1936              	 .loc 1 1044 10 is_stmt 0 view .LVU487
+ 1937 0000 21F00101 	 bic r1,r1,#1
+ 1938              	.LVL145:
+1045:.././hal//sam4s/pio.c **** 	p_pio->PIO_PCMR = ul_mode;
+ 1939              	 .loc 1 1045 2 is_stmt 1 view .LVU488
+ 1940              	 .loc 1 1045 18 is_stmt 0 view .LVU489
+ 1941 0004 C0F85011 	 str r1,[r0,#336]
+1046:.././hal//sam4s/pio.c **** }
+ 1942              	 .loc 1 1046 1 view .LVU490
+ 1943 0008 7047     	 bx lr
+ 1944              	 .cfi_endproc
+ 1945              	.LFE177:
+ 1947              	 .section .text.pio_capture_enable,"ax",%progbits
+ 1948              	 .align 1
+ 1949              	 .global pio_capture_enable
+ 1950              	 .syntax unified
+ 1951              	 .thumb
+ 1952              	 .thumb_func
+ 1954              	pio_capture_enable:
+ 1955              	.LVL146:
+ 1956              	.LFB178:
+1047:.././hal//sam4s/pio.c **** 
+1048:.././hal//sam4s/pio.c **** /**
+1049:.././hal//sam4s/pio.c ****  * \brief Enable PIO capture mode.
+1050:.././hal//sam4s/pio.c ****  *
+1051:.././hal//sam4s/pio.c ****  * \param p_pio Pointer to a PIO instance.
+1052:.././hal//sam4s/pio.c ****  */
+1053:.././hal//sam4s/pio.c **** void pio_capture_enable(Pio *p_pio)
+1054:.././hal//sam4s/pio.c **** {
+ 1957              	 .loc 1 1054 1 is_stmt 1 view-0
+ 1958              	 .cfi_startproc
+ 1959              	 
+ 1960              	 
+ 1961              	 
+1055:.././hal//sam4s/pio.c **** 	p_pio->PIO_PCMR |= PIO_PCMR_PCEN;
+ 1962              	 .loc 1 1055 2 view .LVU492
+ 1963              	 .loc 1 1055 7 is_stmt 0 view .LVU493
+ 1964 0000 D0F85031 	 ldr r3,[r0,#336]
+ 1965              	 .loc 1 1055 18 view .LVU494
+ 1966 0004 43F00103 	 orr r3,r3,#1
+ 1967 0008 C0F85031 	 str r3,[r0,#336]
+1056:.././hal//sam4s/pio.c **** 	pio_capture_enable_flag = true;
+ 1968              	 .loc 1 1056 2 is_stmt 1 view .LVU495
+ 1969              	 .loc 1 1056 26 is_stmt 0 view .LVU496
+ 1970 000c 014B     	 ldr r3,.L167
+ 1971 000e 0122     	 movs r2,#1
+ 1972 0010 1A60     	 str r2,[r3]
+1057:.././hal//sam4s/pio.c **** }
+ 1973              	 .loc 1 1057 1 view .LVU497
+ 1974 0012 7047     	 bx lr
+ 1975              	.L168:
+ 1976              	 .align 2
+ 1977              	.L167:
+ 1978 0014 00000000 	 .word pio_capture_enable_flag
+ 1979              	 .cfi_endproc
+ 1980              	.LFE178:
+ 1982              	 .section .text.pio_capture_disable,"ax",%progbits
+ 1983              	 .align 1
+ 1984              	 .global pio_capture_disable
+ 1985              	 .syntax unified
+ 1986              	 .thumb
+ 1987              	 .thumb_func
+ 1989              	pio_capture_disable:
+ 1990              	.LVL147:
+ 1991              	.LFB179:
+1058:.././hal//sam4s/pio.c **** 
+1059:.././hal//sam4s/pio.c **** /**
+1060:.././hal//sam4s/pio.c ****  * \brief Disable PIO capture mode.
+1061:.././hal//sam4s/pio.c ****  *
+1062:.././hal//sam4s/pio.c ****  * \param p_pio Pointer to a PIO instance.
+1063:.././hal//sam4s/pio.c ****  */
+1064:.././hal//sam4s/pio.c **** void pio_capture_disable(Pio *p_pio)
+1065:.././hal//sam4s/pio.c **** {
+ 1992              	 .loc 1 1065 1 is_stmt 1 view-0
+ 1993              	 .cfi_startproc
+ 1994              	 
+ 1995              	 
+ 1996              	 
+1066:.././hal//sam4s/pio.c **** 	p_pio->PIO_PCMR &= (~PIO_PCMR_PCEN);
+ 1997              	 .loc 1 1066 2 view .LVU499
+ 1998              	 .loc 1 1066 7 is_stmt 0 view .LVU500
+ 1999 0000 D0F85031 	 ldr r3,[r0,#336]
+ 2000              	 .loc 1 1066 18 view .LVU501
+ 2001 0004 23F00103 	 bic r3,r3,#1
+ 2002 0008 C0F85031 	 str r3,[r0,#336]
+1067:.././hal//sam4s/pio.c **** 	pio_capture_enable_flag = false;
+ 2003              	 .loc 1 1067 2 is_stmt 1 view .LVU502
+ 2004              	 .loc 1 1067 26 is_stmt 0 view .LVU503
+ 2005 000c 014B     	 ldr r3,.L170
+ 2006 000e 0022     	 movs r2,#0
+ 2007 0010 1A60     	 str r2,[r3]
+1068:.././hal//sam4s/pio.c **** }
+ 2008              	 .loc 1 1068 1 view .LVU504
+ 2009 0012 7047     	 bx lr
+ 2010              	.L171:
+ 2011              	 .align 2
+ 2012              	.L170:
+ 2013 0014 00000000 	 .word pio_capture_enable_flag
+ 2014              	 .cfi_endproc
+ 2015              	.LFE179:
+ 2017              	 .section .text.pio_capture_read,"ax",%progbits
+ 2018              	 .align 1
+ 2019              	 .global pio_capture_read
+ 2020              	 .syntax unified
+ 2021              	 .thumb
+ 2022              	 .thumb_func
+ 2024              	pio_capture_read:
+ 2025              	.LVL148:
+ 2026              	.LFB180:
+1069:.././hal//sam4s/pio.c **** 
+1070:.././hal//sam4s/pio.c **** /**
+1071:.././hal//sam4s/pio.c ****  * \brief Read from Capture Reception Holding Register.
+1072:.././hal//sam4s/pio.c ****  * \note Data presence should be tested before any read attempt.
+1073:.././hal//sam4s/pio.c ****  *
+1074:.././hal//sam4s/pio.c ****  * \param p_pio Pointer to a PIO instance.
+1075:.././hal//sam4s/pio.c ****  * \param pul_data Pointer to store the data.
+1076:.././hal//sam4s/pio.c ****  *
+1077:.././hal//sam4s/pio.c ****  * \retval 0 Success.
+1078:.././hal//sam4s/pio.c ****  * \retval 1 I/O Failure, Capture data is not ready.
+1079:.././hal//sam4s/pio.c ****  */
+1080:.././hal//sam4s/pio.c **** uint32_t pio_capture_read(const Pio *p_pio, uint32_t *pul_data)
+1081:.././hal//sam4s/pio.c **** {
+ 2027              	 .loc 1 1081 1 is_stmt 1 view-0
+ 2028              	 .cfi_startproc
+ 2029              	 
+ 2030              	 
+ 2031              	 
+1082:.././hal//sam4s/pio.c **** 	/* Check if the data is ready */
+1083:.././hal//sam4s/pio.c **** 	if ((p_pio->PIO_PCISR & PIO_PCISR_DRDY) == 0) {
+ 2032              	 .loc 1 1083 2 view .LVU506
+ 2033              	 .loc 1 1083 12 is_stmt 0 view .LVU507
+ 2034 0000 D0F86031 	 ldr r3,[r0,#352]
+ 2035              	 .loc 1 1083 5 view .LVU508
+ 2036 0004 DB07     	 lsls r3,r3,#31
+1084:.././hal//sam4s/pio.c **** 		return 1;
+1085:.././hal//sam4s/pio.c **** 	}
+1086:.././hal//sam4s/pio.c **** 
+1087:.././hal//sam4s/pio.c **** 	/* Read data */
+1088:.././hal//sam4s/pio.c **** 	*pul_data = p_pio->PIO_PCRHR;
+ 2037              	 .loc 1 1088 2 is_stmt 1 view .LVU509
+ 2038              	 .loc 1 1088 19 is_stmt 0 view .LVU510
+ 2039 0006 43BF     	 ittte mi
+ 2040 0008 D0F86431 	 ldrmi r3,[r0,#356]
+ 2041              	 .loc 1 1088 12 view .LVU511
+ 2042 000c 0B60     	 strmi r3,[r1]
+1089:.././hal//sam4s/pio.c **** 	return 0;
+ 2043              	 .loc 1 1089 2 is_stmt 1 view .LVU512
+ 2044              	 .loc 1 1089 9 is_stmt 0 view .LVU513
+ 2045 000e 0020     	 movmi r0,#0
+ 2046              	.LVL149:
+1084:.././hal//sam4s/pio.c **** 		return 1;
+ 2047              	 .loc 1 1084 10 view .LVU514
+ 2048 0010 0120     	 movpl r0,#1
+1090:.././hal//sam4s/pio.c **** }
+ 2049              	 .loc 1 1090 1 view .LVU515
+ 2050 0012 7047     	 bx lr
+ 2051              	 .cfi_endproc
+ 2052              	.LFE180:
+ 2054              	 .section .text.pio_capture_enable_interrupt,"ax",%progbits
+ 2055              	 .align 1
+ 2056              	 .global pio_capture_enable_interrupt
+ 2057              	 .syntax unified
+ 2058              	 .thumb
+ 2059              	 .thumb_func
+ 2061              	pio_capture_enable_interrupt:
+ 2062              	.LVL150:
+ 2063              	.LFB181:
+1091:.././hal//sam4s/pio.c **** 
+1092:.././hal//sam4s/pio.c **** /**
+1093:.././hal//sam4s/pio.c ****  * \brief Enable the given interrupt source of PIO capture. The status
+1094:.././hal//sam4s/pio.c ****  * register of the corresponding PIO capture controller is cleared prior
+1095:.././hal//sam4s/pio.c ****  * to enabling the interrupt.
+1096:.././hal//sam4s/pio.c ****  *
+1097:.././hal//sam4s/pio.c ****  * \param p_pio Pointer to a PIO instance.
+1098:.././hal//sam4s/pio.c ****  * \param ul_mask Interrupt sources bit map.
+1099:.././hal//sam4s/pio.c ****  */
+1100:.././hal//sam4s/pio.c **** void pio_capture_enable_interrupt(Pio *p_pio, const uint32_t ul_mask)
+1101:.././hal//sam4s/pio.c **** {
+ 2064              	 .loc 1 1101 1 is_stmt 1 view-0
+ 2065              	 .cfi_startproc
+ 2066              	 
+ 2067              	 
+ 2068              	 
+1102:.././hal//sam4s/pio.c **** 	p_pio->PIO_PCISR;
+ 2069              	 .loc 1 1102 2 view .LVU517
+ 2070              	 .loc 1 1102 7 is_stmt 0 view .LVU518
+ 2071 0000 D0F86031 	 ldr r3,[r0,#352]
+1103:.././hal//sam4s/pio.c **** 	p_pio->PIO_PCIER = ul_mask;
+ 2072              	 .loc 1 1103 2 is_stmt 1 view .LVU519
+ 2073              	 .loc 1 1103 19 is_stmt 0 view .LVU520
+ 2074 0004 C0F85411 	 str r1,[r0,#340]
+1104:.././hal//sam4s/pio.c **** }
+ 2075              	 .loc 1 1104 1 view .LVU521
+ 2076 0008 7047     	 bx lr
+ 2077              	 .cfi_endproc
+ 2078              	.LFE181:
+ 2080              	 .section .text.pio_capture_disable_interrupt,"ax",%progbits
+ 2081              	 .align 1
+ 2082              	 .global pio_capture_disable_interrupt
+ 2083              	 .syntax unified
+ 2084              	 .thumb
+ 2085              	 .thumb_func
+ 2087              	pio_capture_disable_interrupt:
+ 2088              	.LVL151:
+ 2089              	.LFB182:
+1105:.././hal//sam4s/pio.c **** 
+1106:.././hal//sam4s/pio.c **** /**
+1107:.././hal//sam4s/pio.c ****  * \brief Disable a given interrupt source of PIO capture.
+1108:.././hal//sam4s/pio.c ****  *
+1109:.././hal//sam4s/pio.c ****  * \param p_pio Pointer to a PIO instance.
+1110:.././hal//sam4s/pio.c ****  * \param ul_mask Interrupt sources bit map.
+1111:.././hal//sam4s/pio.c ****  */
+1112:.././hal//sam4s/pio.c **** void pio_capture_disable_interrupt(Pio *p_pio, const uint32_t ul_mask)
+1113:.././hal//sam4s/pio.c **** {
+ 2090              	 .loc 1 1113 1 is_stmt 1 view-0
+ 2091              	 .cfi_startproc
+ 2092              	 
+ 2093              	 
+ 2094              	 
+1114:.././hal//sam4s/pio.c **** 	p_pio->PIO_PCIDR = ul_mask;
+ 2095              	 .loc 1 1114 2 view .LVU523
+ 2096              	 .loc 1 1114 19 is_stmt 0 view .LVU524
+ 2097 0000 C0F85811 	 str r1,[r0,#344]
+1115:.././hal//sam4s/pio.c **** }
+ 2098              	 .loc 1 1115 1 view .LVU525
+ 2099 0004 7047     	 bx lr
+ 2100              	 .cfi_endproc
+ 2101              	.LFE182:
+ 2103              	 .section .text.pio_capture_get_interrupt_status,"ax",%progbits
+ 2104              	 .align 1
+ 2105              	 .global pio_capture_get_interrupt_status
+ 2106              	 .syntax unified
+ 2107              	 .thumb
+ 2108              	 .thumb_func
+ 2110              	pio_capture_get_interrupt_status:
+ 2111              	.LVL152:
+ 2112              	.LFB183:
+1116:.././hal//sam4s/pio.c **** 
+1117:.././hal//sam4s/pio.c **** /**
+1118:.././hal//sam4s/pio.c ****  * \brief Read PIO interrupt status of PIO capture.
+1119:.././hal//sam4s/pio.c ****  *
+1120:.././hal//sam4s/pio.c ****  * \param p_pio Pointer to a PIO instance.
+1121:.././hal//sam4s/pio.c ****  *
+1122:.././hal//sam4s/pio.c ****  * \return The interrupt status mask value.
+1123:.././hal//sam4s/pio.c ****  */
+1124:.././hal//sam4s/pio.c **** uint32_t pio_capture_get_interrupt_status(const Pio *p_pio)
+1125:.././hal//sam4s/pio.c **** {
+ 2113              	 .loc 1 1125 1 is_stmt 1 view-0
+ 2114              	 .cfi_startproc
+ 2115              	 
+ 2116              	 
+ 2117              	 
+1126:.././hal//sam4s/pio.c **** 	return p_pio->PIO_PCISR;
+ 2118              	 .loc 1 1126 2 view .LVU527
+ 2119              	 .loc 1 1126 14 is_stmt 0 view .LVU528
+ 2120 0000 D0F86001 	 ldr r0,[r0,#352]
+ 2121              	.LVL153:
+1127:.././hal//sam4s/pio.c **** }
+ 2122              	 .loc 1 1127 1 view .LVU529
+ 2123 0004 7047     	 bx lr
+ 2124              	 .cfi_endproc
+ 2125              	.LFE183:
+ 2127              	 .section .text.pio_capture_get_interrupt_mask,"ax",%progbits
+ 2128              	 .align 1
+ 2129              	 .global pio_capture_get_interrupt_mask
+ 2130              	 .syntax unified
+ 2131              	 .thumb
+ 2132              	 .thumb_func
+ 2134              	pio_capture_get_interrupt_mask:
+ 2135              	.LVL154:
+ 2136              	.LFB184:
+1128:.././hal//sam4s/pio.c **** 
+1129:.././hal//sam4s/pio.c **** /**
+1130:.././hal//sam4s/pio.c ****  * \brief Read PIO interrupt mask of PIO capture.
+1131:.././hal//sam4s/pio.c ****  *
+1132:.././hal//sam4s/pio.c ****  * \param p_pio Pointer to a PIO instance.
+1133:.././hal//sam4s/pio.c ****  *
+1134:.././hal//sam4s/pio.c ****  * \return The interrupt mask value.
+1135:.././hal//sam4s/pio.c ****  */
+1136:.././hal//sam4s/pio.c **** uint32_t pio_capture_get_interrupt_mask(const Pio *p_pio)
+1137:.././hal//sam4s/pio.c **** {
+ 2137              	 .loc 1 1137 1 is_stmt 1 view-0
+ 2138              	 .cfi_startproc
+ 2139              	 
+ 2140              	 
+ 2141              	 
+1138:.././hal//sam4s/pio.c **** 	return p_pio->PIO_PCIMR;
+ 2142              	 .loc 1 1138 2 view .LVU531
+ 2143              	 .loc 1 1138 14 is_stmt 0 view .LVU532
+ 2144 0000 D0F85C01 	 ldr r0,[r0,#348]
+ 2145              	.LVL155:
+1139:.././hal//sam4s/pio.c **** }
+ 2146              	 .loc 1 1139 1 view .LVU533
+ 2147 0004 7047     	 bx lr
+ 2148              	 .cfi_endproc
+ 2149              	.LFE184:
+ 2151              	 .section .text.pio_capture_get_pdc_base,"ax",%progbits
+ 2152              	 .align 1
+ 2153              	 .global pio_capture_get_pdc_base
+ 2154              	 .syntax unified
+ 2155              	 .thumb
+ 2156              	 .thumb_func
+ 2158              	pio_capture_get_pdc_base:
+ 2159              	.LVL156:
+ 2160              	.LFB185:
+1140:.././hal//sam4s/pio.c **** #if !(SAMV71 || SAMV70 || SAME70 || SAMS70)
+1141:.././hal//sam4s/pio.c **** /**
+1142:.././hal//sam4s/pio.c ****  * \brief Get PDC registers base address.
+1143:.././hal//sam4s/pio.c ****  *
+1144:.././hal//sam4s/pio.c ****  * \param p_pio Pointer to an PIO peripheral.
+1145:.././hal//sam4s/pio.c ****  *
+1146:.././hal//sam4s/pio.c ****  * \return PIOA PDC register base address.
+1147:.././hal//sam4s/pio.c ****  */
+1148:.././hal//sam4s/pio.c **** Pdc *pio_capture_get_pdc_base(const Pio *p_pio)
+1149:.././hal//sam4s/pio.c **** {
+ 2161              	 .loc 1 1149 1 is_stmt 1 view-0
+ 2162              	 .cfi_startproc
+ 2163              	 
+ 2164              	 
+ 2165              	 
+1150:.././hal//sam4s/pio.c **** 	UNUSED(p_pio); /* Stop warning */
+ 2166              	 .loc 1 1150 2 view .LVU535
+1151:.././hal//sam4s/pio.c **** 	return PDC_PIOA;
+ 2167              	 .loc 1 1151 2 view .LVU536
+1152:.././hal//sam4s/pio.c **** }
+ 2168              	 .loc 1 1152 1 is_stmt 0 view .LVU537
+ 2169 0000 0048     	 ldr r0,.L180
+ 2170              	.LVL157:
+ 2171              	 .loc 1 1152 1 view .LVU538
+ 2172 0002 7047     	 bx lr
+ 2173              	.L181:
+ 2174              	 .align 2
+ 2175              	.L180:
+ 2176 0004 680F0E40 	 .word 1074663272
+ 2177              	 .cfi_endproc
+ 2178              	.LFE185:
+ 2180              	 .global pio_capture_enable_flag
+ 2181              	 .section .bss.pio_capture_enable_flag,"aw",%nobits
+ 2182              	 .align 2
+ 2185              	pio_capture_enable_flag:
+ 2186 0000 00000000 	 .space 4
+ 2187              	 .section .bss.cpu_irq_prev_interrupt_state,"aw",%nobits
+ 2190              	cpu_irq_prev_interrupt_state:
+ 2191 0000 00       	 .space 1
+ 2192              	 .section .bss.cpu_irq_critical_section_counter,"aw",%nobits
+ 2193              	 .align 2
+ 2196              	cpu_irq_critical_section_counter:
+ 2197 0000 00000000 	 .space 4
+ 2198              	 .text
+ 2199              	.Letext0:
+ 2200              	 .file 2 ".././hal//sam4s/inc/component/component_pdc.h"
+ 2201              	 .file 3 ".././hal//sam4s/inc/component/component_pio.h"
+ 2202              	 .file 4 ".././hal//sam4s/inc/interrupt/interrupt_sam_nvic.h"
+ 2203              	 .file 5 "/usr/lib/gcc/arm-none-eabi/13.2.1/include/stdint.h"
+ 2204              	 .file 6 ".././hal//sam4s/inc/pio.h"
+DEFINED SYMBOLS
+                            *ABS*:00000000 pio.c
+    {standard input}:19     .text.pio_pull_up:00000000 $t
+    {standard input}:25     .text.pio_pull_up:00000000 pio_pull_up
+    {standard input}:50     .text.pio_set_debounce_filter:00000000 $t
+    {standard input}:56     .text.pio_set_debounce_filter:00000000 pio_set_debounce_filter
+    {standard input}:84     .text.pio_set:00000000 $t
+    {standard input}:90     .text.pio_set:00000000 pio_set
+    {standard input}:107    .text.pio_clear:00000000 $t
+    {standard input}:113    .text.pio_clear:00000000 pio_clear
+    {standard input}:130    .text.pio_get:00000000 $t
+    {standard input}:136    .text.pio_get:00000000 pio_get
+    {standard input}:174    .text.pio_set_peripheral:00000000 $t
+    {standard input}:180    .text.pio_set_peripheral:00000000 pio_set_peripheral
+    {standard input}:307    .text.pio_set_input:00000000 $t
+    {standard input}:313    .text.pio_set_input:00000000 pio_set_input
+    {standard input}:404    .text.pio_set_output:00000000 $t
+    {standard input}:410    .text.pio_set_output:00000000 pio_set_output
+    {standard input}:505    .text.pio_configure:00000000 $t
+    {standard input}:511    .text.pio_configure:00000000 pio_configure
+    {standard input}:648    .text.pio_configure:00000074 $d
+    {standard input}:655    .text.pio_get_output_data_status:00000000 $t
+    {standard input}:661    .text.pio_get_output_data_status:00000000 pio_get_output_data_status
+    {standard input}:685    .text.pio_set_multi_driver:00000000 $t
+    {standard input}:691    .text.pio_set_multi_driver:00000000 pio_set_multi_driver
+    {standard input}:716    .text.pio_get_multi_driver_status:00000000 $t
+    {standard input}:722    .text.pio_get_multi_driver_status:00000000 pio_get_multi_driver_status
+    {standard input}:740    .text.pio_pull_down:00000000 $t
+    {standard input}:746    .text.pio_pull_down:00000000 pio_pull_down
+    {standard input}:771    .text.pio_enable_output_write:00000000 $t
+    {standard input}:777    .text.pio_enable_output_write:00000000 pio_enable_output_write
+    {standard input}:794    .text.pio_disable_output_write:00000000 $t
+    {standard input}:800    .text.pio_disable_output_write:00000000 pio_disable_output_write
+    {standard input}:817    .text.pio_get_output_write_status:00000000 $t
+    {standard input}:823    .text.pio_get_output_write_status:00000000 pio_get_output_write_status
+    {standard input}:841    .text.pio_sync_output_write:00000000 $t
+    {standard input}:847    .text.pio_sync_output_write:00000000 pio_sync_output_write
+    {standard input}:864    .text.pio_set_schmitt_trigger:00000000 $t
+    {standard input}:870    .text.pio_set_schmitt_trigger:00000000 pio_set_schmitt_trigger
+    {standard input}:887    .text.pio_get_schmitt_trigger:00000000 $t
+    {standard input}:893    .text.pio_get_schmitt_trigger:00000000 pio_get_schmitt_trigger
+    {standard input}:911    .text.pio_configure_interrupt:00000000 $t
+    {standard input}:917    .text.pio_configure_interrupt:00000000 pio_configure_interrupt
+    {standard input}:963    .text.pio_enable_interrupt:00000000 $t
+    {standard input}:969    .text.pio_enable_interrupt:00000000 pio_enable_interrupt
+    {standard input}:986    .text.pio_disable_interrupt:00000000 $t
+    {standard input}:992    .text.pio_disable_interrupt:00000000 pio_disable_interrupt
+    {standard input}:1009   .text.pio_get_interrupt_status:00000000 $t
+    {standard input}:1015   .text.pio_get_interrupt_status:00000000 pio_get_interrupt_status
+    {standard input}:1033   .text.pio_get_interrupt_mask:00000000 $t
+    {standard input}:1039   .text.pio_get_interrupt_mask:00000000 pio_get_interrupt_mask
+    {standard input}:1057   .text.pio_set_additional_interrupt_mode:00000000 $t
+    {standard input}:1063   .text.pio_set_additional_interrupt_mode:00000000 pio_set_additional_interrupt_mode
+    {standard input}:1075   .text.pio_set_additional_interrupt_mode:00000004 $d
+    {standard input}:1080   .text.pio_set_writeprotect:00000000 $t
+    {standard input}:1086   .text.pio_set_writeprotect:00000000 pio_set_writeprotect
+    {standard input}:1109   .text.pio_set_writeprotect:00000010 $d
+    {standard input}:1114   .text.pio_get_writeprotect_status:00000000 $t
+    {standard input}:1120   .text.pio_get_writeprotect_status:00000000 pio_get_writeprotect_status
+    {standard input}:1138   .text.pio_get_pin_value:00000000 $t
+    {standard input}:1144   .text.pio_get_pin_value:00000000 pio_get_pin_value
+    {standard input}:1186   .text.pio_set_pin_high:00000000 $t
+    {standard input}:1192   .text.pio_set_pin_high:00000000 pio_set_pin_high
+    {standard input}:1233   .text.pio_set_pin_low:00000000 $t
+    {standard input}:1239   .text.pio_set_pin_low:00000000 pio_set_pin_low
+    {standard input}:1280   .text.pio_toggle_pin:00000000 $t
+    {standard input}:1286   .text.pio_toggle_pin:00000000 pio_toggle_pin
+    {standard input}:1336   .text.pio_configure_pin:00000000 $t
+    {standard input}:1342   .text.pio_configure_pin:00000000 pio_configure_pin
+    {standard input}:1518   .text.pio_configure_pin:00000098 $d
+    {standard input}:1525   .text.pio_set_pin_group_high:00000000 $t
+    {standard input}:1531   .text.pio_set_pin_group_high:00000000 pio_set_pin_group_high
+    {standard input}:1544   .text.pio_set_pin_group_low:00000000 $t
+    {standard input}:1550   .text.pio_set_pin_group_low:00000000 pio_set_pin_group_low
+    {standard input}:1563   .text.pio_toggle_pin_group:00000000 $t
+    {standard input}:1569   .text.pio_toggle_pin_group:00000000 pio_toggle_pin_group
+    {standard input}:1595   .text.pio_configure_pin_group:00000000 $t
+    {standard input}:1601   .text.pio_configure_pin_group:00000000 pio_configure_pin_group
+    {standard input}:1731   .text.pio_configure_pin_group:00000074 $d
+    {standard input}:1738   .text.pio_enable_pin_interrupt:00000000 $t
+    {standard input}:1744   .text.pio_enable_pin_interrupt:00000000 pio_enable_pin_interrupt
+    {standard input}:1785   .text.pio_disable_pin_interrupt:00000000 $t
+    {standard input}:1791   .text.pio_disable_pin_interrupt:00000000 pio_disable_pin_interrupt
+    {standard input}:1832   .text.pio_get_pin_group:00000000 $t
+    {standard input}:1838   .text.pio_get_pin_group:00000000 pio_get_pin_group
+    {standard input}:1862   .text.pio_get_pin_group_id:00000000 $t
+    {standard input}:1868   .text.pio_get_pin_group_id:00000000 pio_get_pin_group_id
+    {standard input}:1891   .text.pio_get_pin_group_mask:00000000 $t
+    {standard input}:1897   .text.pio_get_pin_group_mask:00000000 pio_get_pin_group_mask
+    {standard input}:1921   .text.pio_capture_set_mode:00000000 $t
+    {standard input}:1927   .text.pio_capture_set_mode:00000000 pio_capture_set_mode
+    {standard input}:1948   .text.pio_capture_enable:00000000 $t
+    {standard input}:1954   .text.pio_capture_enable:00000000 pio_capture_enable
+    {standard input}:1978   .text.pio_capture_enable:00000014 $d
+    {standard input}:2185   .bss.pio_capture_enable_flag:00000000 pio_capture_enable_flag
+    {standard input}:1983   .text.pio_capture_disable:00000000 $t
+    {standard input}:1989   .text.pio_capture_disable:00000000 pio_capture_disable
+    {standard input}:2013   .text.pio_capture_disable:00000014 $d
+    {standard input}:2018   .text.pio_capture_read:00000000 $t
+    {standard input}:2024   .text.pio_capture_read:00000000 pio_capture_read
+    {standard input}:2055   .text.pio_capture_enable_interrupt:00000000 $t
+    {standard input}:2061   .text.pio_capture_enable_interrupt:00000000 pio_capture_enable_interrupt
+    {standard input}:2081   .text.pio_capture_disable_interrupt:00000000 $t
+    {standard input}:2087   .text.pio_capture_disable_interrupt:00000000 pio_capture_disable_interrupt
+    {standard input}:2104   .text.pio_capture_get_interrupt_status:00000000 $t
+    {standard input}:2110   .text.pio_capture_get_interrupt_status:00000000 pio_capture_get_interrupt_status
+    {standard input}:2128   .text.pio_capture_get_interrupt_mask:00000000 $t
+    {standard input}:2134   .text.pio_capture_get_interrupt_mask:00000000 pio_capture_get_interrupt_mask
+    {standard input}:2152   .text.pio_capture_get_pdc_base:00000000 $t
+    {standard input}:2158   .text.pio_capture_get_pdc_base:00000000 pio_capture_get_pdc_base
+    {standard input}:2176   .text.pio_capture_get_pdc_base:00000004 $d
+    {standard input}:2182   .bss.pio_capture_enable_flag:00000000 $d
+    {standard input}:2190   .bss.cpu_irq_prev_interrupt_state:00000000 cpu_irq_prev_interrupt_state
+    {standard input}:2191   .bss.cpu_irq_prev_interrupt_state:00000000 $d
+    {standard input}:2193   .bss.cpu_irq_critical_section_counter:00000000 $d
+    {standard input}:2196   .bss.cpu_irq_critical_section_counter:00000000 cpu_irq_critical_section_counter
+                           .group:00000000 wm4.0.ade4f9eb57a3e60dd8a456a9e838da1f
+                           .group:00000000 wm4.stddef.h.39.38eb7ec030421799c657b13be5aa21c7
+                           .group:00000000 wm4.parts.h.38.09ccce703cc30b12360b0e797fac8cb6
+                           .group:00000000 wm4.tpaste.h.38.f9caafafc33cddaf7097f68661fce374
+                           .group:00000000 wm4.stringz.h.38.451b1c9629f877d07c6b3529fe5b37b2
+                           .group:00000000 wm4.mrepeat.h.52.224450943b2762ae34ad2cae2fa96ad2
+                           .group:00000000 wm4.stdint.h.29.6d480f4ba0f60596e88234283d42444f
+                           .group:00000000 wm4.sam4s2b.h.221.db99b1f5dbb5d4301dbbbaff13b63e70
+                           .group:00000000 wm4.core_cm4.h.43.9593ac0dcec24a3a6f1d638d754e90b2
+                           .group:00000000 wm4.core_cmInstr.h.39.53f0cdf363d7ba01993152fdcb6be5d3
+                           .group:00000000 wm4.core_cmSimd.h.43.c355993beb49ccd10586af5b1cfe5aee
+                           .group:00000000 wm4.core_cm4.h.201.504dd1a6bdf57a6296d26f255ae618b9
+                           .group:00000000 wm4.component_acc.h.36.308f7d4c1685c8ebd00910c37bbeab26
+                           .group:00000000 wm4.component_adc.h.36.b8477219496e42be1d01ccb1b6f6b02b
+                           .group:00000000 wm4.component_chipid.h.36.cb4a4222aca9bee8d01f4aa49afe4d6d
+                           .group:00000000 wm4.component_crccu.h.36.1d71ce61706000275b271d03beaec6d2
+                           .group:00000000 wm4.component_dacc.h.36.0b87b1e719912b5885bdf9531e0e43d6
+                           .group:00000000 wm4.component_efc.h.36.a6b4458c43d27669aaa6147006e1eb74
+                           .group:00000000 wm4.component_gpbr.h.36.595122ea9c79505c4e73c9e7421802a8
+                           .group:00000000 wm4.component_hsmci.h.36.ccf6dd1a128877835aec3d40c12745dd
+                           .group:00000000 wm4.component_matrix.h.36.8f1d7aeed86a08ab4d936e5a0f026440
+                           .group:00000000 wm4.component_pdc.h.36.363e6546b41ce8a14a922d18930df184
+                           .group:00000000 wm4.component_pio.h.36.f033c3341fbeea7d2a04545c9a72bd24
+                           .group:00000000 wm4.component_pmc.h.36.2771b76afbda6351cb4cf4c6708887d5
+                           .group:00000000 wm4.component_pwm.h.36.0cd735c74e99ef7d330cb87d1f16c213
+                           .group:00000000 wm4.component_rstc.h.36.1af4b8140176d86bc0af5b861fd3a623
+                           .group:00000000 wm4.component_rtc.h.36.c865407d28492a40a128dee548893efe
+                           .group:00000000 wm4.component_rtt.h.36.46adad6456893b38ef49ae9a2d0afea1
+                           .group:00000000 wm4.component_spi.h.36.a18850bcdd90fcb2d130155fa94829ea
+                           .group:00000000 wm4.component_ssc.h.36.6ffc46b5a0a9219bd5c90b3f63510b0f
+                           .group:00000000 wm4.component_supc.h.36.0db4554695c6e864e5338e4faca84d88
+                           .group:00000000 wm4.component_tc.h.36.af47419b07ade32b2d1423414983d2f7
+                           .group:00000000 wm4.component_twi.h.36.3496bc3884f63f906fd446649da75de1
+                           .group:00000000 wm4.component_uart.h.36.74e9355d463b56860c56764a9be37213
+                           .group:00000000 wm4.component_udp.h.36.8cb9530d4bf5319aabe6158f5e738b3d
+                           .group:00000000 wm4.component_usart.h.36.5e91c114006f7b551a45955ae29cb6cf
+                           .group:00000000 wm4.component_wdt.h.36.277adc27b017beabbb9f7b11b0fa46f2
+                           .group:00000000 wm4.instance_hsmci.h.36.9855cb84ff287cffb479099857800873
+                           .group:00000000 wm4.instance_ssc.h.36.630afe78e802d5fc05c6224c23890fe1
+                           .group:00000000 wm4.instance_spi.h.36.325bf539a06b58ad3327698a7ef68d81
+                           .group:00000000 wm4.instance_tc0.h.36.fbfa021f96aebd3d46fa1937156b0b0a
+                           .group:00000000 wm4.instance_twi0.h.36.13a0f0822f7bd9074e9b846b04ed10b9
+                           .group:00000000 wm4.instance_twi1.h.36.6c6b55c3fab76b3818eb5314bf7bc410
+                           .group:00000000 wm4.instance_pwm.h.36.1b555f9fd14d69df968818a3882b2cde
+                           .group:00000000 wm4.instance_usart0.h.36.3b6138f7be7c01038525724f6c5d6c1e
+                           .group:00000000 wm4.instance_usart1.h.36.137c36ec170c7ca2c1f8e046f5d0e0c9
+                           .group:00000000 wm4.instance_udp.h.36.b94eabb27893117a74b4d6faebd80bc6
+                           .group:00000000 wm4.instance_adc.h.36.84184448551cb0a3c52160d178904d14
+                           .group:00000000 wm4.instance_dacc.h.36.28a68c12285ab1a6b24d06876c4b8807
+                           .group:00000000 wm4.instance_acc.h.36.71d96a8f2214f8a9d18eec4d2d93f130
+                           .group:00000000 wm4.instance_crccu.h.36.549cca511b407ab33982b56bae0c25ac
+                           .group:00000000 wm4.instance_matrix.h.36.da03b47f7e819cfcead8ef1cd71b60ce
+                           .group:00000000 wm4.instance_pmc.h.36.002f4765e9f18dc4b183b779163ab06e
+                           .group:00000000 wm4.instance_uart0.h.36.fa62b2ed6ce17806cd77556aa65a73f5
+                           .group:00000000 wm4.instance_chipid.h.36.6f5f676d52e3e21dba5d88a4bb87d922
+                           .group:00000000 wm4.instance_uart1.h.36.bc11f9c4189a4ac15cce81cf9f40fcf9
+                           .group:00000000 wm4.instance_efc0.h.36.67a3a70e962ac1d6ef8fcee0e9fd4a9b
+                           .group:00000000 wm4.instance_pioa.h.36.27d92aa6d00d8b6a2b34acdeee1aa60a
+                           .group:00000000 wm4.instance_piob.h.36.b0f95d3fb66ff01bcd91fb6a4cb54dc3
+                           .group:00000000 wm4.instance_rstc.h.36.f8bcddbd3310cbb6a39c155e9e6b3cfb
+                           .group:00000000 wm4.instance_supc.h.36.17878f57a77a9d368090917738ff3e02
+                           .group:00000000 wm4.instance_rtt.h.36.8759ab7e2580c101b6db702769407cb0
+                           .group:00000000 wm4.instance_wdt.h.36.ab83587b138c65dcd29a29119835b92a
+                           .group:00000000 wm4.instance_rtc.h.36.52aa67a6a7c945bf00db9fb9d057e3e0
+                           .group:00000000 wm4.instance_gpbr.h.36.b2cfd4dee03ed0c28ecb9eb233d2ac42
+                           .group:00000000 wm4.sam4s2b.h.313.04ed20c80f538f8fadb9388a8469283e
+                           .group:00000000 wm4.pio_sam4s2b.h.36.e1b33fead6a6e1ee98b2f4cba4bb11b4
+                           .group:00000000 wm4.sam4s2b.h.450.98a9c8ea67d90470c8554ffe87c8398a
+                           .group:00000000 wm4._newlib_version.h.4.411db44ea2338a62eca2f0777f81481b
+                           .group:00000000 wm4.newlib.h.27.07bf1b8b16da454ae07478107717878b
+                           .group:00000000 wm4.ieeefp.h.77.fbf6f2f498a71d39a0aaf172d6680419
+                           .group:00000000 wm4.features.h.22.c11ecc6cb8b914ead0c0895c00b4b4d5
+                           .group:00000000 wm4.config.h.224.10ee1ad185d877c6e334e6581faab44d
+                           .group:00000000 wm4._ansi.h.31.de524f58584151836e90d8620a16f8e8
+                           .group:00000000 wm4.stdio.h.31.7c0e28c411445f3f9c5b11accf882760
+                           .group:00000000 wm4._default_types.h.6.959254cf5f09734ea7516c89e8bb21bd
+                           .group:00000000 wm4.stddef.h.158.eec8bf00b5213f43d095cb984c5f22e3
+                           .group:00000000 wm4.cdefs.h.49.a0dc0a4a6c7d01e2e5d0aade9399215f
+                           .group:00000000 wm4.stdarg.h.34.3a23a216c0c293b3d2ea2e89281481e6
+                           .group:00000000 wm4._types.h.20.dd0d04dca3800a0d2a6129b87f3adbb2
+                           .group:00000000 wm4.stddef.h.158.6f8e08a347b1cff664332fa350bfceb3
+                           .group:00000000 wm4._types.h.127.3bdfe3ff8ea2d0985b03d9cbe93480e3
+                           .group:00000000 wm4.reent.h.18.25503cdc8b7e55dd0d6ea7b3e5af7a03
+                           .group:00000000 wm4.lock.h.2.c0958401bd0ce484d507ee19aacab817
+                           .group:00000000 wm4.reent.h.78.7f0775353a33c852a1479c008f68cd03
+                           .group:00000000 wm4.stdio.h.67.0cf8a9c281ab0b348aef5c02e7e48825
+                           .group:00000000 wm4.stdio.h.2.4aa87247282eca6c8f36f9de33d8df1a
+                           .group:00000000 wm4.stdio.h.87.a1e20d2651f9bfb66e51bfbe849db00a
+                           .group:00000000 wm4.stdbool.h.29.c08aa3eec75cf5b9b5003883f43253f0
+                           .group:00000000 wm4.stdlib.h.13.4ed386f5c1a80d71e72172885d946ef2
+                           .group:00000000 wm4.alloca.h.8.dfc0c703c47ec3e69746825b17d9e66d
+                           .group:00000000 wm4.stdlib.h.56.f4862cfbf4363a1db01842d5bdf72c18
+                           .group:00000000 wm4.compiler.h.81.f75af8228a71cd19fa09df23f58333e2
+                           .group:00000000 wm4.interrupt_sam_nvic.h.77.5650b866702c5f625c80d648ec551823
+                           .group:00000000 wm4.compiler.h.420.b563cf39b91298e26f28e0fd38c47072
+                           .group:00000000 wm4.pio.h.47.0a673ba4b4d02ffef34e2316f66d501b
+
+NO UNDEFINED SYMBOLS

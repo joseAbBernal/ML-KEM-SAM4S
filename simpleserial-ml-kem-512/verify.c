@@ -3,6 +3,8 @@
 #include <stdint.h>
 #include <stdlib.h>
 
+#include "hal.h"
+
 /*************************************************
 * Name:        verify
 *
@@ -45,7 +47,12 @@ void cmov(unsigned char *r, const unsigned char *x, size_t len, unsigned char b)
     size_t i;
 
     b = -b;
+    
+    trigger_high();
+    
     for (i = 0; i < len; i++) {
         r[i] ^= b & (x[i] ^ r[i]);
     }
+    
+    trigger_low();
 }

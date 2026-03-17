@@ -1,0 +1,299 @@
+   1              	 .cpu cortex-m4
+   2              	 .arch armv7e-m
+   3              	 .fpu softvfp
+   4              	 .eabi_attribute 20,1
+   5              	 .eabi_attribute 21,1
+   6              	 .eabi_attribute 23,3
+   7              	 .eabi_attribute 24,1
+   8              	 .eabi_attribute 25,1
+   9              	 .eabi_attribute 26,1
+  10              	 .eabi_attribute 30,4
+  11              	 .eabi_attribute 34,1
+  12              	 .eabi_attribute 18,4
+  13              	 .file "matacc.c"
+  14              	 .text
+  15              	.Ltext0:
+  16              	 .cfi_sections .debug_frame
+  17              	 .file 1 "matacc.c"
+  18              	 .section .text.matacc,"ax",%progbits
+  19              	 .align 1
+  20              	 .global matacc
+  21              	 .syntax unified
+  22              	 .thumb
+  23              	 .thumb_func
+  25              	matacc:
+  26              	.LVL0:
+  27              	.LFB2:
+   1:matacc.c      **** #include "ntt.h"
+   2:matacc.c      **** #include "poly.h"
+   3:matacc.c      **** #include "polyvec.h"
+   4:matacc.c      **** #include "symmetric.h"
+   5:matacc.c      **** #include "matacc.h"
+   6:matacc.c      **** 
+   7:matacc.c      **** /*************************************************
+   8:matacc.c      **** * Name:        matacc
+   9:matacc.c      **** *
+  10:matacc.c      **** * Description: Multiplies a row of A or A^T, generated on-the-fly,
+  11:matacc.c      **** *              with a vector of polynomials and accumulates into the result.
+  12:matacc.c      **** *
+  13:matacc.c      **** * Arguments:   - poly *r:                    pointer to output polynomial to accumulate in
+  14:matacc.c      **** *              - polyvec *b:                 pointer to input vector of polynomials to multiply wit
+  15:matacc.c      **** *              - unsigned char i:            byte to indicate the index < KYBER_K of the row of A o
+  16:matacc.c      **** *              - const unsigned char *seed:  pointer to the public seed used to generate A
+  17:matacc.c      **** *              - int transposed:             boolean indicatin whether A or A^T is generated
+  18:matacc.c      **** **************************************************/
+  19:matacc.c      **** void matacc(poly* r, const polyvec *b, unsigned char i, const unsigned char *seed, int transposed) 
+  28              	 .loc 1 19 100 view-0
+  29              	 .cfi_startproc
+  30              	 
+  31              	 
+  20:matacc.c      ****   unsigned char buf[XOF_BLOCKBYTES+2];
+  32              	 .loc 1 20 3 view .LVU1
+  21:matacc.c      ****   xof_state state;
+  33              	 .loc 1 21 3 view .LVU2
+  22:matacc.c      ****   int16_t c[4];
+  34              	 .loc 1 22 3 view .LVU3
+  23:matacc.c      ****   int j = 0;
+  35              	 .loc 1 23 3 view .LVU4
+  24:matacc.c      ****   
+  25:matacc.c      ****   if (transposed)
+  36              	 .loc 1 25 3 view .LVU5
+  19:matacc.c      ****   unsigned char buf[XOF_BLOCKBYTES+2];
+  37              	 .loc 1 19 100 is_stmt 0 view .LVU6
+  38 0000 2DE9F04F 	 push {r4,r5,r6,r7,r8,r9,r10,fp,lr}
+  39              	.LCFI0:
+  40              	 .cfi_def_cfa_offset 36
+  41              	 .cfi_offset 4,-36
+  42              	 .cfi_offset 5,-32
+  43              	 .cfi_offset 6,-28
+  44              	 .cfi_offset 7,-24
+  45              	 .cfi_offset 8,-20
+  46              	 .cfi_offset 9,-16
+  47              	 .cfi_offset 10,-12
+  48              	 .cfi_offset 11,-8
+  49              	 .cfi_offset 14,-4
+  50 0004 E3B0     	 sub sp,sp,#396
+  51              	.LCFI1:
+  52              	 .cfi_def_cfa_offset 432
+  19:matacc.c      ****   unsigned char buf[XOF_BLOCKBYTES+2];
+  53              	 .loc 1 19 100 view .LVU7
+  54 0006 1C46     	 mov r4,r3
+  55              	 .loc 1 25 6 view .LVU8
+  56 0008 6C9B     	 ldr r3,[sp,#432]
+  57              	.LVL1:
+  58              	 .loc 1 25 6 view .LVU9
+  59 000a DFF87890 	 ldr r9,.L8
+  19:matacc.c      ****   unsigned char buf[XOF_BLOCKBYTES+2];
+  60              	 .loc 1 19 100 view .LVU10
+  61 000e 0646     	 mov r6,r0
+  62 0010 0F46     	 mov r7,r1
+  63 0012 1546     	 mov r5,r2
+  64              	 .loc 1 25 6 view .LVU11
+  65 0014 002B     	 cmp r3,#0
+  66 0016 2ED0     	 beq .L2
+  26:matacc.c      ****     xof_absorb(&state, seed, i, j);
+  67              	 .loc 1 26 5 is_stmt 1 view .LVU12
+  68 0018 0023     	 movs r3,#0
+  69              	.LVL2:
+  70              	.L6:
+  27:matacc.c      ****   else
+  28:matacc.c      ****     xof_absorb(&state, seed, j, i);
+  71              	 .loc 1 28 5 is_stmt 0 view .LVU13
+  72 001a 2146     	 mov r1,r4
+  73              	.LVL3:
+  74              	 .loc 1 28 5 view .LVU14
+  75 001c 30A8     	 add r0,sp,#192
+  76              	.LVL4:
+  77              	 .loc 1 28 5 view .LVU15
+  78 001e C847     	 blx r9
+  79              	.LVL5:
+  29:matacc.c      **** 
+  30:matacc.c      ****   xof_squeezeblocks(buf, 1, &state);
+  80              	 .loc 1 30 3 is_stmt 1 view .LVU16
+  81 0020 DFF86480 	 ldr r8,.L8+4
+  82 0024 30AA     	 add r2,sp,#192
+  83 0026 0121     	 movs r1,#1
+  84 0028 05A8     	 add r0,sp,#20
+  85 002a C047     	 blx r8
+  86              	.LVL6:
+  31:matacc.c      **** 
+  32:matacc.c      ****   matacc_asm(r->coeffs, b->vec[j].coeffs, c, buf, zetas, &state);
+  87              	 .loc 1 32 3 view .LVU17
+  88              	.LBB6:
+  89              	.LBI6:
+  90              	 .file 2 "matacc.h"
+   1:matacc.h      **** #ifndef MATACC_H
+   2:matacc.h      **** #define MATACC_H
+   3:matacc.h      **** #include "poly.h"
+   4:matacc.h      **** #include "polyvec.h"
+   5:matacc.h      **** #include "symmetric.h"
+   6:matacc.h      **** 
+   7:matacc.h      **** extern void matacc_asm(int16_t *r, const int16_t *b, int16_t c[4], unsigned char buf[XOF_BLOCKBYTES
+   8:matacc.h      **** static inline void _matacc_asm(int16_t *r, const int16_t *b, int16_t c[4], unsigned char buf[XOF_BL
+  91              	 .loc 2 8 20 view .LVU18
+  92              	.LBB7:
+   9:matacc.h      **** {
+  10:matacc.h      **** 	// floating point registers clobbered by assembly function
+  11:matacc.h      **** 	asm volatile("" : : : "s16", "s17", "s18", "s19", "s20", "s21", "s26");
+  93              	 .loc 2 11 2 view .LVU19
+  12:matacc.h      **** 	matacc_asm(r, b, c, buf, _zetas, state);
+  94              	 .loc 2 12 2 view .LVU20
+  95 002c DFF85CA0 	 ldr r10,.L8+8
+  96 0030 DFF85CB0 	 ldr fp,.L8+12
+  97 0034 CDF800A0 	 str r10,[sp]
+  98 0038 30AB     	 add r3,sp,#192
+  99              	.LVL7:
+ 100              	 .loc 2 12 2 is_stmt 0 view .LVU21
+ 101 003a 0193     	 str r3,[sp,#4]
+ 102 003c 03AA     	 add r2,sp,#12
+ 103              	.LVL8:
+ 104              	 .loc 2 12 2 view .LVU22
+ 105 003e 05AB     	 add r3,sp,#20
+ 106              	.LVL9:
+ 107              	 .loc 2 12 2 view .LVU23
+ 108 0040 3946     	 mov r1,r7
+ 109 0042 3046     	 mov r0,r6
+ 110 0044 D847     	 blx fp
+ 111              	.LVL10:
+ 112              	 .loc 2 12 2 view .LVU24
+ 113              	.LBE7:
+ 114              	.LBE6:
+  33:matacc.c      ****   for(j=1;j<KYBER_K;j++) {
+ 115              	 .loc 1 33 3 is_stmt 1 view .LVU25
+ 116              	 .loc 1 33 12 discriminator 1 view .LVU26
+  34:matacc.c      **** 
+  35:matacc.c      ****     if (transposed)
+ 117              	 .loc 1 35 5 view .LVU27
+ 118              	 .loc 1 35 8 is_stmt 0 view .LVU28
+ 119 0046 6C9B     	 ldr r3,[sp,#432]
+ 120 0048 C3B1     	 cbz r3,.L4
+  36:matacc.c      ****       xof_absorb(&state, seed, i, j);
+ 121              	 .loc 1 36 7 is_stmt 1 view .LVU29
+ 122 004a 0123     	 movs r3,#1
+ 123 004c 2A46     	 mov r2,r5
+ 124              	.L7:
+  37:matacc.c      ****     else
+  38:matacc.c      ****       xof_absorb(&state, seed, j, i);
+ 125              	 .loc 1 38 7 is_stmt 0 view .LVU30
+ 126 004e 2146     	 mov r1,r4
+ 127 0050 30A8     	 add r0,sp,#192
+ 128 0052 C847     	 blx r9
+ 129              	.LVL11:
+  39:matacc.c      **** 
+  40:matacc.c      ****     xof_squeezeblocks(buf, 1, &state);
+ 130              	 .loc 1 40 5 is_stmt 1 view .LVU31
+ 131 0054 30AA     	 add r2,sp,#192
+ 132 0056 0121     	 movs r1,#1
+ 133 0058 05A8     	 add r0,sp,#20
+ 134 005a C047     	 blx r8
+ 135              	.LVL12:
+  41:matacc.c      ****     matacc_asm_acc(r->coeffs, b->vec[j].coeffs, c, buf, zetas, &state);
+ 136              	 .loc 1 41 5 view .LVU32
+ 137              	.LBB8:
+ 138              	.LBI8:
+  13:matacc.h      **** }
+  14:matacc.h      **** #define matacc_asm _matacc_asm
+  15:matacc.h      **** 
+  16:matacc.h      **** extern void matacc_asm_acc(int16_t *r, const int16_t *b, int16_t c[4], unsigned char buf[XOF_BLOCKB
+  17:matacc.h      **** static inline void _matacc_asm_acc(int16_t *r, const int16_t *b, int16_t c[4], unsigned char buf[XO
+ 139              	 .loc 2 17 20 view .LVU33
+ 140              	.LBB9:
+  18:matacc.h      **** {
+  19:matacc.h      **** 	// floating point registers clobbered by assembly function
+  20:matacc.h      **** 	asm volatile("" : : : "s16", "s17", "s18", "s19", "s20", "s21", "s26");
+ 141              	 .loc 2 20 2 view .LVU34
+  21:matacc.h      **** 	matacc_asm_acc(r, b, c, buf, _zetas, state);
+ 142              	 .loc 2 21 2 view .LVU35
+ 143 005c 30AB     	 add r3,sp,#192
+ 144              	.LVL13:
+ 145              	 .loc 2 21 2 is_stmt 0 view .LVU36
+ 146 005e CDE900A3 	 strd r10,r3,[sp]
+ 147 0062 0C4C     	 ldr r4,.L8+16
+ 148              	.LVL14:
+ 149              	 .loc 2 21 2 view .LVU37
+ 150 0064 05AB     	 add r3,sp,#20
+ 151              	.LVL15:
+ 152              	 .loc 2 21 2 view .LVU38
+ 153 0066 03AA     	 add r2,sp,#12
+ 154              	.LVL16:
+ 155              	 .loc 2 21 2 view .LVU39
+ 156 0068 07F50071 	 add r1,r7,#512
+ 157              	.LVL17:
+ 158              	 .loc 2 21 2 view .LVU40
+ 159 006c 3046     	 mov r0,r6
+ 160 006e A047     	 blx r4
+ 161              	.LVL18:
+ 162              	 .loc 2 21 2 view .LVU41
+ 163              	.LBE9:
+ 164              	.LBE8:
+  33:matacc.c      **** 
+ 165              	 .loc 1 33 22 is_stmt 1 discriminator 2 view .LVU42
+  33:matacc.c      **** 
+ 166              	 .loc 1 33 12 discriminator 1 view .LVU43
+  42:matacc.c      ****   }
+  43:matacc.c      **** }...
+ 167              	 .loc 1 43 1 is_stmt 0 view .LVU44
+ 168 0070 63B0     	 add sp,sp,#396
+ 169              	.LCFI2:
+ 170              	 .cfi_remember_state
+ 171              	 .cfi_def_cfa_offset 36
+ 172              	 
+ 173 0072 BDE8F08F 	 pop {r4,r5,r6,r7,r8,r9,r10,fp,pc}
+ 174              	.LVL19:
+ 175              	.L2:
+ 176              	.LCFI3:
+ 177              	 .cfi_restore_state
+  28:matacc.c      ****     xof_absorb(&state, seed, j, i);
+ 178              	 .loc 1 28 5 is_stmt 1 view .LVU45
+ 179 0076 1346     	 mov r3,r2
+ 180 0078 6C9A     	 ldr r2,[sp,#432]
+ 181              	.LVL20:
+  28:matacc.c      ****     xof_absorb(&state, seed, j, i);
+ 182              	 .loc 1 28 5 is_stmt 0 view .LVU46
+ 183 007a CEE7     	 b .L6
+ 184              	.LVL21:
+ 185              	.L4:
+  38:matacc.c      ****       xof_absorb(&state, seed, j, i);
+ 186              	 .loc 1 38 7 is_stmt 1 view .LVU47
+ 187 007c 2B46     	 mov r3,r5
+ 188 007e 0122     	 movs r2,#1
+ 189 0080 E5E7     	 b .L7
+ 190              	.L9:
+ 191 0082 00BF     	 .align 2
+ 192              	.L8:
+ 193 0084 00000000 	 .word kyber_shake128_absorb
+ 194 0088 00000000 	 .word shake128_squeezeblocks
+ 195 008c 00000000 	 .word zetas
+ 196 0090 00000000 	 .word matacc_asm
+ 197 0094 00000000 	 .word matacc_asm_acc
+ 198              	 .cfi_endproc
+ 199              	.LFE2:
+ 201              	 .text
+ 202              	.Letext0:
+ 203              	 .file 3 "/usr/lib/gcc/arm-none-eabi/13.2.1/include/stdint.h"
+ 204              	 .file 4 "poly.h"
+ 205              	 .file 5 "polyvec.h"
+ 206              	 .file 6 "/usr/lib/gcc/arm-none-eabi/13.2.1/include/stddef.h"
+ 207              	 .file 7 "fips202.h"
+ 208              	 .file 8 "symmetric.h"
+ 209              	 .file 9 "ntt.h"
+DEFINED SYMBOLS
+                            *ABS*:00000000 matacc.c
+    {standard input}:19     .text.matacc:00000000 $t
+    {standard input}:25     .text.matacc:00000000 matacc
+    {standard input}:193    .text.matacc:00000084 $d
+                           .group:00000000 wm4.0.ade4f9eb57a3e60dd8a456a9e838da1f
+                           .group:00000000 wm4.stdint.h.29.6d480f4ba0f60596e88234283d42444f
+                           .group:00000000 wm4.params.h.2.d902bb26d9fbc1e1d74ad483d256421a
+                           .group:00000000 wm4.poly.h.8.0e764e15c31dfc33946fce8d19340767
+                           .group:00000000 wm4.stddef.h.39.38eb7ec030421799c657b13be5aa21c7
+                           .group:00000000 wm4.fips202.h.8.2cc74cbc0cc47480e2382b93618e92e9
+                           .group:00000000 wm4.symmetric.h.19.6b8561598e1aa7d234e26b33934c066b
+                           .group:00000000 wm4.matacc.h.2.173832620c3a8b5128e572bc41375885
+
+UNDEFINED SYMBOLS
+kyber_shake128_absorb
+shake128_squeezeblocks
+zetas
+matacc_asm
+matacc_asm_acc

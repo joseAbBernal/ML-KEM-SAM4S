@@ -1,0 +1,601 @@
+   1              	 .cpu cortex-m4
+   2              	 .arch armv7e-m
+   3              	 .fpu softvfp
+   4              	 .eabi_attribute 20,1
+   5              	 .eabi_attribute 21,1
+   6              	 .eabi_attribute 23,3
+   7              	 .eabi_attribute 24,1
+   8              	 .eabi_attribute 25,1
+   9              	 .eabi_attribute 26,1
+  10              	 .eabi_attribute 30,4
+  11              	 .eabi_attribute 34,1
+  12              	 .eabi_attribute 18,4
+  13              	 .file "randombytes.c"
+  14              	 .text
+  15              	.Ltext0:
+  16              	 .cfi_sections .debug_frame
+  17              	 .file 1 "randombytes.c"
+  18              	 .section .text.PQCLEAN_randombytes,"ax",%progbits
+  19              	 .align 1
+  20              	 .global PQCLEAN_randombytes
+  21              	 .syntax unified
+  22              	 .thumb
+  23              	 .thumb_func
+  25              	PQCLEAN_randombytes:
+  26              	.LVL0:
+  27              	.LFB3:
+   1:randombytes.c **** /*
+   2:randombytes.c **** The MIT License
+   3:randombytes.c **** 
+   4:randombytes.c **** Copyright (c) 2017 Daan Sprenkels <hello@dsprenkels.com>
+   5:randombytes.c **** 
+   6:randombytes.c **** Permission is hereby granted, free of charge, to any person obtaining a copy
+   7:randombytes.c **** of this software and associated documentation files (the "Software"), to deal
+   8:randombytes.c **** in the Software without restriction, including without limitation the rights
+   9:randombytes.c **** to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+  10:randombytes.c **** copies of the Software, and to permit persons to whom the Software is
+  11:randombytes.c **** furnished to do so, subject to the following conditions:
+  12:randombytes.c **** 
+  13:randombytes.c **** The above copyright notice and this permission notice shall be included in
+  14:randombytes.c **** all copies or substantial portions of the Software.
+  15:randombytes.c **** 
+  16:randombytes.c **** THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+  17:randombytes.c **** IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+  18:randombytes.c **** FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+  19:randombytes.c **** AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+  20:randombytes.c **** LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+  21:randombytes.c **** OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+  22:randombytes.c **** THE SOFTWARE.
+  23:randombytes.c **** */
+  24:randombytes.c **** // In the case that are compiling on linux, we need to define _GNU_SOURCE
+  25:randombytes.c **** // *before* randombytes.h is included. Otherwise SYS_getrandom will not be
+  26:randombytes.c **** // declared.
+  27:randombytes.c **** #if defined(__linux__)
+  28:randombytes.c **** # define _GNU_SOURCE
+  29:randombytes.c **** #endif /* defined(__linux__) */
+  30:randombytes.c **** 
+  31:randombytes.c **** #include "randombytes.h"
+  32:randombytes.c **** 
+  33:randombytes.c **** #if defined(_WIN32)
+  34:randombytes.c **** /* Windows */
+  35:randombytes.c **** # include <windows.h>
+  36:randombytes.c **** # include <wincrypt.h> /* CryptAcquireContext, CryptGenRandom */
+  37:randombytes.c **** #endif /* defined(_WIN32) */
+  38:randombytes.c **** 
+  39:randombytes.c **** /* wasi */
+  40:randombytes.c **** #if defined(__wasi__)
+  41:randombytes.c **** #include <stdlib.h>
+  42:randombytes.c **** #endif
+  43:randombytes.c **** 
+  44:randombytes.c **** #if defined(__linux__)
+  45:randombytes.c **** /* Linux */
+  46:randombytes.c **** // We would need to include <linux/random.h>, but not every target has access
+  47:randombytes.c **** // to the linux headers. We only need RNDGETENTCNT, so we instead inline it.
+  48:randombytes.c **** // RNDGETENTCNT is originally defined in `include/uapi/linux/random.h` in the
+  49:randombytes.c **** // linux repo.
+  50:randombytes.c **** # define RNDGETENTCNT 0x80045200
+  51:randombytes.c **** 
+  52:randombytes.c **** # include <assert.h>
+  53:randombytes.c **** # include <errno.h>
+  54:randombytes.c **** # include <fcntl.h>
+  55:randombytes.c **** # include <poll.h>
+  56:randombytes.c **** # include <stdint.h>
+  57:randombytes.c **** # include <stdio.h>
+  58:randombytes.c **** # include <sys/ioctl.h>
+  59:randombytes.c **** # if defined(__linux__) && defined(__GLIBC__) && ((__GLIBC__ > 2) || (__GLIBC_MINOR__ > 24))
+  60:randombytes.c **** #  define USE_GLIBC
+  61:randombytes.c **** #  include <sys/random.h>
+  62:randombytes.c **** # endif /* defined(__linux__) && defined(__GLIBC__) && ((__GLIBC__ > 2) || (__GLIBC_MINOR__ > 24)) 
+  63:randombytes.c **** # include <sys/stat.h>
+  64:randombytes.c **** # include <sys/syscall.h>
+  65:randombytes.c **** # include <sys/types.h>
+  66:randombytes.c **** # include <unistd.h>
+  67:randombytes.c **** 
+  68:randombytes.c **** // We need SSIZE_MAX as the maximum read len from /dev/urandom
+  69:randombytes.c **** # if !defined(SSIZE_MAX)
+  70:randombytes.c **** #  define SSIZE_MAX (SIZE_MAX / 2 - 1)
+  71:randombytes.c **** # endif /* defined(SSIZE_MAX) */
+  72:randombytes.c **** 
+  73:randombytes.c **** #endif /* defined(__linux__) */
+  74:randombytes.c **** 
+  75:randombytes.c **** #if defined(__unix__) || (defined(__APPLE__) && defined(__MACH__))
+  76:randombytes.c **** /* Dragonfly, FreeBSD, NetBSD, OpenBSD (has arc4random) */
+  77:randombytes.c **** # include <sys/param.h>
+  78:randombytes.c **** # if defined(BSD)
+  79:randombytes.c **** #  include <stdlib.h>
+  80:randombytes.c **** # endif
+  81:randombytes.c **** #endif
+  82:randombytes.c **** 
+  83:randombytes.c **** #if defined(__EMSCRIPTEN__)
+  84:randombytes.c **** # include <assert.h>
+  85:randombytes.c **** # include <emscripten.h>
+  86:randombytes.c **** # include <errno.h>
+  87:randombytes.c **** # include <stdbool.h>
+  88:randombytes.c **** #endif /* defined(__EMSCRIPTEN__) */
+  89:randombytes.c **** 
+  90:randombytes.c **** #if defined(__arm__) || defined(__arm)
+  91:randombytes.c **** /* ARM embedded platforms - use simple XORShift PRNG */
+  92:randombytes.c **** #include <stdint.h>
+  93:randombytes.c **** 
+  94:randombytes.c **** static uint32_t random_state = 0x12345678;
+  95:randombytes.c **** 
+  96:randombytes.c **** static void randombytes_arm_init(void) {
+  97:randombytes.c ****     /* Initialize with a non-zero seed */
+  98:randombytes.c ****     if (random_state == 0) {
+  99:randombytes.c ****         random_state = 0x12345678;
+ 100:randombytes.c ****     }
+ 101:randombytes.c **** }
+ 102:randombytes.c **** 
+ 103:randombytes.c **** static uint32_t xorshift32(uint32_t x) {
+ 104:randombytes.c ****     x ^= x << 13;
+ 105:randombytes.c ****     x ^= x >> 17;
+ 106:randombytes.c ****     x ^= x << 5;
+ 107:randombytes.c ****     return x;
+ 108:randombytes.c **** }
+ 109:randombytes.c **** 
+ 110:randombytes.c **** static int randombytes_arm_randombytes(void *buf, size_t n) {
+ 111:randombytes.c ****     uint8_t *p = (uint8_t *)buf;
+ 112:randombytes.c ****     randombytes_arm_init();
+ 113:randombytes.c ****     while (n--) {
+ 114:randombytes.c ****         random_state = xorshift32(random_state);
+ 115:randombytes.c ****         *p++ = random_state & 0xFF;
+ 116:randombytes.c ****     }
+ 117:randombytes.c ****     return 0;
+ 118:randombytes.c **** }
+ 119:randombytes.c **** #endif /* defined(__arm__) */
+ 120:randombytes.c **** 
+ 121:randombytes.c **** #if defined(_WIN32)
+ 122:randombytes.c **** static int randombytes_win32_randombytes(void *buf, const size_t n) {
+ 123:randombytes.c ****     HCRYPTPROV ctx;
+ 124:randombytes.c ****     BOOL tmp;
+ 125:randombytes.c **** 
+ 126:randombytes.c ****     tmp = CryptAcquireContext(&ctx, NULL, NULL, PROV_RSA_FULL,
+ 127:randombytes.c ****                               CRYPT_VERIFYCONTEXT);
+ 128:randombytes.c ****     if (tmp == FALSE) {
+ 129:randombytes.c ****         return -1;
+ 130:randombytes.c ****     }
+ 131:randombytes.c **** 
+ 132:randombytes.c ****     tmp = CryptGenRandom(ctx, (unsigned long)n, (BYTE *) buf);
+ 133:randombytes.c ****     if (tmp == FALSE) {
+ 134:randombytes.c ****         return -1;
+ 135:randombytes.c ****     }
+ 136:randombytes.c **** 
+ 137:randombytes.c ****     tmp = CryptReleaseContext(ctx, 0);
+ 138:randombytes.c ****     if (tmp == FALSE) {
+ 139:randombytes.c ****         return -1;
+ 140:randombytes.c ****     }
+ 141:randombytes.c **** 
+ 142:randombytes.c ****     return 0;
+ 143:randombytes.c **** }
+ 144:randombytes.c **** #endif /* defined(_WIN32) */
+ 145:randombytes.c **** 
+ 146:randombytes.c **** #if defined(__wasi__)
+ 147:randombytes.c **** static int randombytes_wasi_randombytes(void *buf, size_t n) {
+ 148:randombytes.c ****     arc4random_buf(buf, n);
+ 149:randombytes.c ****     return 0;
+ 150:randombytes.c **** }
+ 151:randombytes.c **** #endif /* defined(__wasi__) */
+ 152:randombytes.c **** 
+ 153:randombytes.c **** #if defined(__linux__) && (defined(USE_GLIBC) || defined(SYS_getrandom))
+ 154:randombytes.c **** # if defined(USE_GLIBC)
+ 155:randombytes.c **** // getrandom is declared in glibc.
+ 156:randombytes.c **** # elif defined(SYS_getrandom)
+ 157:randombytes.c **** static ssize_t getrandom(void *buf, size_t buflen, unsigned int flags) {
+ 158:randombytes.c ****     return syscall(SYS_getrandom, buf, buflen, flags);
+ 159:randombytes.c **** }
+ 160:randombytes.c **** # endif
+ 161:randombytes.c **** 
+ 162:randombytes.c **** static int randombytes_linux_randombytes_getrandom(void *buf, size_t n) {
+ 163:randombytes.c ****     /* I have thought about using a separate PRF, seeded by getrandom, but
+ 164:randombytes.c ****      * it turns out that the performance of getrandom is good enough
+ 165:randombytes.c ****      * (250 MB/s on my laptop).
+ 166:randombytes.c ****      */
+ 167:randombytes.c ****     size_t offset = 0, chunk;
+ 168:randombytes.c ****     int ret;
+ 169:randombytes.c ****     while (n > 0) {
+ 170:randombytes.c ****         /* getrandom does not allow chunks larger than 33554431 */
+ 171:randombytes.c ****         chunk = n <= 33554431 ? n : 33554431;
+ 172:randombytes.c ****         do {
+ 173:randombytes.c ****             ret = getrandom((char *)buf + offset, chunk, 0);
+ 174:randombytes.c ****         } while (ret == -1 && errno == EINTR);
+ 175:randombytes.c ****         if (ret < 0) {
+ 176:randombytes.c ****             return ret;
+ 177:randombytes.c ****         }
+ 178:randombytes.c ****         offset += ret;
+ 179:randombytes.c ****         n -= ret;
+ 180:randombytes.c ****     }
+ 181:randombytes.c ****     assert(n == 0);
+ 182:randombytes.c ****     return 0;
+ 183:randombytes.c **** }
+ 184:randombytes.c **** #endif // defined(__linux__) && (defined(USE_GLIBC) || defined(SYS_getrandom))
+ 185:randombytes.c **** 
+ 186:randombytes.c **** #if defined(__linux__) && !defined(SYS_getrandom)
+ 187:randombytes.c **** static int randombytes_linux_read_entropy_ioctl(int device, int *entropy) {
+ 188:randombytes.c ****     return ioctl(device, RNDGETENTCNT, entropy);
+ 189:randombytes.c **** }
+ 190:randombytes.c **** 
+ 191:randombytes.c **** static int randombytes_linux_read_entropy_proc(FILE *stream, int *entropy) {
+ 192:randombytes.c ****     int retcode;
+ 193:randombytes.c ****     do {
+ 194:randombytes.c ****         rewind(stream);
+ 195:randombytes.c ****         retcode = fscanf(stream, "%d", entropy);
+ 196:randombytes.c ****     } while (retcode != 1 && errno == EINTR);
+ 197:randombytes.c ****     if (retcode != 1) {
+ 198:randombytes.c ****         return -1;
+ 199:randombytes.c ****     }
+ 200:randombytes.c ****     return 0;
+ 201:randombytes.c **** }
+ 202:randombytes.c **** 
+ 203:randombytes.c **** static int randombytes_linux_wait_for_entropy(int device) {
+ 204:randombytes.c ****     /* We will block on /dev/random, because any increase in the OS' entropy
+ 205:randombytes.c ****      * level will unblock the request. I use poll here (as does libsodium),
+ 206:randombytes.c ****      * because we don't *actually* want to read from the device. */
+ 207:randombytes.c ****     enum { IOCTL, PROC } strategy = IOCTL;
+ 208:randombytes.c ****     const int bits = 128;
+ 209:randombytes.c ****     struct pollfd pfd;
+ 210:randombytes.c ****     int fd;
+ 211:randombytes.c ****     FILE *proc_file;
+ 212:randombytes.c ****     int retcode, retcode_error = 0; // Used as return codes throughout this function
+ 213:randombytes.c ****     int entropy = 0;
+ 214:randombytes.c **** 
+ 215:randombytes.c ****     /* If the device has enough entropy already, we will want to return early */
+ 216:randombytes.c ****     retcode = randombytes_linux_read_entropy_ioctl(device, &entropy);
+ 217:randombytes.c ****     // printf("errno: %d (%s)\n", errno, strerror(errno));
+ 218:randombytes.c ****     if (retcode != 0 && (errno == ENOTTY || errno == ENOSYS)) {
+ 219:randombytes.c ****         // The ioctl call on /dev/urandom has failed due to a
+ 220:randombytes.c ****         //   - ENOTTY (unsupported action), or
+ 221:randombytes.c ****         //   - ENOSYS (invalid ioctl; this happens on MIPS, see #22).
+ 222:randombytes.c ****         //
+ 223:randombytes.c ****         // We will fall back to reading from
+ 224:randombytes.c ****         // `/proc/sys/kernel/random/entropy_avail`.  This less ideal,
+ 225:randombytes.c ****         // because it allocates a file descriptor, and it may not work
+ 226:randombytes.c ****         // in a chroot.  But at this point it seems we have no better
+ 227:randombytes.c ****         // options left.
+ 228:randombytes.c ****         strategy = PROC;
+ 229:randombytes.c ****         // Open the entropy count file
+ 230:randombytes.c ****         proc_file = fopen("/proc/sys/kernel/random/entropy_avail", "r");
+ 231:randombytes.c ****     } else if (retcode != 0) {
+ 232:randombytes.c ****         // Unrecoverable ioctl error
+ 233:randombytes.c ****         return -1;
+ 234:randombytes.c ****     }
+ 235:randombytes.c ****     if (entropy >= bits) {
+ 236:randombytes.c ****         return 0;
+ 237:randombytes.c ****     }
+ 238:randombytes.c **** 
+ 239:randombytes.c ****     do {
+ 240:randombytes.c ****         fd = open("/dev/random", O_RDONLY);
+ 241:randombytes.c ****     } while (fd == -1 && errno == EINTR); /* EAGAIN will not occur */
+ 242:randombytes.c ****     if (fd == -1) {
+ 243:randombytes.c ****         /* Unrecoverable IO error */
+ 244:randombytes.c ****         return -1;
+ 245:randombytes.c ****     }
+ 246:randombytes.c **** 
+ 247:randombytes.c ****     pfd.fd = fd;
+ 248:randombytes.c ****     pfd.events = POLLIN;
+ 249:randombytes.c ****     for (;;) {
+ 250:randombytes.c ****         retcode = poll(&pfd, 1, -1);
+ 251:randombytes.c ****         if (retcode == -1 && (errno == EINTR || errno == EAGAIN)) {
+ 252:randombytes.c ****             continue;
+ 253:randombytes.c ****         } else if (retcode == 1) {
+ 254:randombytes.c ****             if (strategy == IOCTL) {
+ 255:randombytes.c ****                 retcode = randombytes_linux_read_entropy_ioctl(device, &entropy);
+ 256:randombytes.c ****             } else if (strategy == PROC) {
+ 257:randombytes.c ****                 retcode = randombytes_linux_read_entropy_proc(proc_file, &entropy);
+ 258:randombytes.c ****             } else {
+ 259:randombytes.c ****                 return -1; // Unreachable
+ 260:randombytes.c ****             }
+ 261:randombytes.c **** 
+ 262:randombytes.c ****             if (retcode != 0) {
+ 263:randombytes.c ****                 // Unrecoverable I/O error
+ 264:randombytes.c ****                 retcode_error = retcode;
+ 265:randombytes.c ****                 break;
+ 266:randombytes.c ****             }
+ 267:randombytes.c ****             if (entropy >= bits) {
+ 268:randombytes.c ****                 break;
+ 269:randombytes.c ****             }
+ 270:randombytes.c ****         } else {
+ 271:randombytes.c ****             // Unreachable: poll() should only return -1 or 1
+ 272:randombytes.c ****             retcode_error = -1;
+ 273:randombytes.c ****             break;
+ 274:randombytes.c ****         }
+ 275:randombytes.c ****     }
+ 276:randombytes.c ****     do {
+ 277:randombytes.c ****         retcode = close(fd);
+ 278:randombytes.c ****     } while (retcode == -1 && errno == EINTR);
+ 279:randombytes.c ****     if (strategy == PROC) {
+ 280:randombytes.c ****         do {
+ 281:randombytes.c ****             retcode = fclose(proc_file);
+ 282:randombytes.c ****         } while (retcode == -1 && errno == EINTR);
+ 283:randombytes.c ****     }
+ 284:randombytes.c ****     if (retcode_error != 0) {
+ 285:randombytes.c ****         return retcode_error;
+ 286:randombytes.c ****     }
+ 287:randombytes.c ****     return retcode;
+ 288:randombytes.c **** }
+ 289:randombytes.c **** 
+ 290:randombytes.c **** static int randombytes_linux_randombytes_urandom(void *buf, size_t n) {
+ 291:randombytes.c ****     int fd;
+ 292:randombytes.c ****     size_t offset = 0, count;
+ 293:randombytes.c ****     ssize_t tmp;
+ 294:randombytes.c ****     do {
+ 295:randombytes.c ****         fd = open("/dev/urandom", O_RDONLY);
+ 296:randombytes.c ****     } while (fd == -1 && errno == EINTR);
+ 297:randombytes.c ****     if (fd == -1) {
+ 298:randombytes.c ****         return -1;
+ 299:randombytes.c ****     }
+ 300:randombytes.c ****     if (randombytes_linux_wait_for_entropy(fd) == -1) {
+ 301:randombytes.c ****         return -1;
+ 302:randombytes.c ****     }
+ 303:randombytes.c **** 
+ 304:randombytes.c ****     while (n > 0) {
+ 305:randombytes.c ****         count = n <= SSIZE_MAX ? n : SSIZE_MAX;
+ 306:randombytes.c ****         tmp = read(fd, (char *)buf + offset, count);
+ 307:randombytes.c ****         if (tmp == -1 && (errno == EAGAIN || errno == EINTR)) {
+ 308:randombytes.c ****             continue;
+ 309:randombytes.c ****         }
+ 310:randombytes.c ****         if (tmp == -1) {
+ 311:randombytes.c ****             return -1;    /* Unrecoverable IO error */
+ 312:randombytes.c ****         }
+ 313:randombytes.c ****         offset += tmp;
+ 314:randombytes.c ****         n -= tmp;
+ 315:randombytes.c ****     }
+ 316:randombytes.c ****     close(fd);
+ 317:randombytes.c ****     assert(n == 0);
+ 318:randombytes.c ****     return 0;
+ 319:randombytes.c **** }
+ 320:randombytes.c **** #endif /* defined(__linux__) && !defined(SYS_getrandom) */
+ 321:randombytes.c **** 
+ 322:randombytes.c **** #if defined(BSD)
+ 323:randombytes.c **** static int randombytes_bsd_randombytes(void *buf, size_t n) {
+ 324:randombytes.c ****     arc4random_buf(buf, n);
+ 325:randombytes.c ****     return 0;
+ 326:randombytes.c **** }
+ 327:randombytes.c **** #endif /* defined(BSD) */
+ 328:randombytes.c **** 
+ 329:randombytes.c **** #if defined(__EMSCRIPTEN__)
+ 330:randombytes.c **** static int randombytes_js_randombytes_nodejs(void *buf, size_t n) {
+ 331:randombytes.c ****     const int ret = EM_ASM_INT({
+ 332:randombytes.c ****         var crypto;
+ 333:randombytes.c ****         try {
+ 334:randombytes.c ****             crypto = require('crypto');
+ 335:randombytes.c ****         } catch (error) {
+ 336:randombytes.c ****             return -2;
+ 337:randombytes.c ****         }
+ 338:randombytes.c ****         try {
+ 339:randombytes.c ****             writeArrayToMemory(crypto.randomBytes($1), $0);
+ 340:randombytes.c ****             return 0;
+ 341:randombytes.c ****         } catch (error) {
+ 342:randombytes.c ****             return -1;
+ 343:randombytes.c ****         }
+ 344:randombytes.c ****     }, buf, n);
+ 345:randombytes.c ****     switch (ret) {
+ 346:randombytes.c ****     case 0:
+ 347:randombytes.c ****         return 0;
+ 348:randombytes.c ****     case -1:
+ 349:randombytes.c ****         errno = EINVAL;
+ 350:randombytes.c ****         return -1;
+ 351:randombytes.c ****     case -2:
+ 352:randombytes.c ****         errno = ENOSYS;
+ 353:randombytes.c ****         return -1;
+ 354:randombytes.c ****     }
+ 355:randombytes.c ****     assert(false); // Unreachable
+ 356:randombytes.c **** }
+ 357:randombytes.c **** #endif /* defined(__EMSCRIPTEN__) */
+ 358:randombytes.c **** 
+ 359:randombytes.c **** int randombytes(uint8_t *output, size_t n) {
+  28              	 .loc 1 359 44 view-0
+  29              	 .cfi_startproc
+  30              	 
+  31              	 
+ 360:randombytes.c ****     void *buf = (void *)output;
+  32              	 .loc 1 360 5 view .LVU1
+ 361:randombytes.c ****     #if defined(__EMSCRIPTEN__)
+ 362:randombytes.c ****     return randombytes_js_randombytes_nodejs(buf, n);
+ 363:randombytes.c ****     #elif defined(__linux__)
+ 364:randombytes.c ****     # if defined(USE_GLIBC)
+ 365:randombytes.c ****     /* Use getrandom system call */
+ 366:randombytes.c ****     return randombytes_linux_randombytes_getrandom(buf, n);
+ 367:randombytes.c ****     # elif defined(SYS_getrandom)
+ 368:randombytes.c ****     /* Use getrandom system call */
+ 369:randombytes.c ****     return randombytes_linux_randombytes_getrandom(buf, n);
+ 370:randombytes.c ****     # else
+ 371:randombytes.c ****     /* When we have enough entropy, we can read from /dev/urandom */
+ 372:randombytes.c ****     return randombytes_linux_randombytes_urandom(buf, n);
+ 373:randombytes.c ****     # endif
+ 374:randombytes.c ****     #elif defined(BSD)
+ 375:randombytes.c ****     /* Use arc4random system call */
+ 376:randombytes.c ****     return randombytes_bsd_randombytes(buf, n);
+ 377:randombytes.c ****     #elif defined(_WIN32)
+ 378:randombytes.c ****     /* Use windows API */
+ 379:randombytes.c ****     return randombytes_win32_randombytes(buf, n);
+ 380:randombytes.c ****     #elif defined(__wasi__)
+ 381:randombytes.c ****     /* Use WASI */
+ 382:randombytes.c ****     return randombytes_wasi_randombytes(buf, n);
+ 383:randombytes.c ****     #elif defined(__arm__) || defined(__arm)
+ 384:randombytes.c ****     /* Use simple XORShift PRNG for ARM embedded platforms */
+ 385:randombytes.c ****     return randombytes_arm_randombytes(buf, n);
+  33              	 .loc 1 385 5 view .LVU2
+  34              	.LBB8:
+  35              	.LBI8:
+ 110:randombytes.c ****     uint8_t *p = (uint8_t *)buf;
+  36              	 .loc 1 110 12 view .LVU3
+  37              	.LBB9:
+ 111:randombytes.c ****     randombytes_arm_init();
+  38              	 .loc 1 111 5 view .LVU4
+ 112:randombytes.c ****     while (n--) {
+  39              	 .loc 1 112 5 view .LVU5
+  40              	.LBB10:
+  41              	.LBI10:
+  96:randombytes.c ****     /* Initialize with a non-zero seed */
+  42              	 .loc 1 96 13 view .LVU6
+  43              	.LBB11:
+  98:randombytes.c ****         random_state = 0x12345678;
+  44              	 .loc 1 98 5 view .LVU7
+  45              	.LBE11:
+  46              	.LBE10:
+  47              	.LBE9:
+  48              	.LBE8:
+ 359:randombytes.c ****     void *buf = (void *)output;
+  49              	 .loc 1 359 44 is_stmt 0 view .LVU8
+  50 0000 10B5     	 push {r4,lr}
+  51              	.LCFI0:
+  52              	 .cfi_def_cfa_offset 8
+  53              	 .cfi_offset 4,-8
+  54              	 .cfi_offset 14,-4
+  55              	.LBB19:
+  56              	.LBB16:
+  57              	.LBB13:
+  58              	.LBB12:
+  98:randombytes.c ****         random_state = 0x12345678;
+  59              	 .loc 1 98 22 view .LVU9
+  60 0002 0C4A     	 ldr r2,.L9
+  98:randombytes.c ****         random_state = 0x12345678;
+  61              	 .loc 1 98 8 view .LVU10
+  62 0004 1368     	 ldr r3,[r2]
+  63 0006 0BB9     	 cbnz r3,.L2
+  99:randombytes.c ****     }
+  64              	 .loc 1 99 9 is_stmt 1 view .LVU11
+  99:randombytes.c ****     }
+  65              	 .loc 1 99 22 is_stmt 0 view .LVU12
+  66 0008 0B4B     	 ldr r3,.L9+4
+  67 000a 1360     	 str r3,[r2]
+  68              	.L2:
+  69 000c 1368     	 ldr r3,[r2]
+  70 000e 0144     	 add r1,r1,r0
+  71              	.LVL1:
+  99:randombytes.c ****     }
+  72              	 .loc 1 99 22 view .LVU13
+  73              	.LBE12:
+  74              	.LBE13:
+  75              	.LBE16:
+  76              	.LBE19:
+ 359:randombytes.c ****     void *buf = (void *)output;
+  77              	 .loc 1 359 44 view .LVU14
+  78 0010 0024     	 movs r4,#0
+  79              	.LVL2:
+  80              	.L3:
+  81              	.LBB20:
+  82              	.LBB17:
+ 113:randombytes.c ****         random_state = xorshift32(random_state);
+  83              	 .loc 1 113 12 is_stmt 1 view .LVU15
+ 113:randombytes.c ****         random_state = xorshift32(random_state);
+  84              	 .loc 1 113 12 is_stmt 0 view .LVU16
+  85 0012 8842     	 cmp r0,r1
+  86 0014 03D1     	 bne .L4
+ 113:randombytes.c ****         random_state = xorshift32(random_state);
+  87              	 .loc 1 113 12 view .LVU17
+  88 0016 04B1     	 cbz r4,.L5
+  89 0018 1360     	 str r3,[r2]
+  90              	.L5:
+ 117:randombytes.c **** }
+  91              	 .loc 1 117 5 is_stmt 1 view .LVU18
+  92              	.LVL3:
+ 117:randombytes.c **** }
+  93              	 .loc 1 117 5 is_stmt 0 view .LVU19
+  94              	.LBE17:
+  95              	.LBE20:
+ 386:randombytes.c ****     #else
+ 387:randombytes.c **** # error "randombytes(...) is not supported on this platform"
+ 388:randombytes.c ****     #endif
+ 389:randombytes.c **** }
+  96              	 .loc 1 389 1 view .LVU20
+  97 001a 0020     	 movs r0,#0
+  98 001c 10BD     	 pop {r4,pc}
+  99              	.LVL4:
+ 100              	.L4:
+ 101              	.LBB21:
+ 102              	.LBB18:
+ 114:randombytes.c ****         *p++ = random_state & 0xFF;
+ 103              	 .loc 1 114 9 is_stmt 1 view .LVU21
+ 104              	.LBB14:
+ 105              	.LBI14:
+ 103:randombytes.c ****     x ^= x << 13;
+ 106              	 .loc 1 103 17 view .LVU22
+ 107              	.LBB15:
+ 104:randombytes.c ****     x ^= x >> 17;
+ 108              	 .loc 1 104 5 view .LVU23
+ 104:randombytes.c ****     x ^= x >> 17;
+ 109              	 .loc 1 104 7 is_stmt 0 view .LVU24
+ 110 001e 83EA4333 	 eor r3,r3,r3,lsl#13
+ 111              	.LVL5:
+ 105:randombytes.c ****     x ^= x << 5;
+ 112              	 .loc 1 105 5 is_stmt 1 view .LVU25
+ 105:randombytes.c ****     x ^= x << 5;
+ 113              	 .loc 1 105 7 is_stmt 0 view .LVU26
+ 114 0022 83EA5343 	 eor r3,r3,r3,lsr#17
+ 115              	.LVL6:
+ 106:randombytes.c ****     return x;
+ 116              	 .loc 1 106 5 is_stmt 1 view .LVU27
+ 106:randombytes.c ****     return x;
+ 117              	 .loc 1 106 7 is_stmt 0 view .LVU28
+ 118 0026 83EA4313 	 eor r3,r3,r3,lsl#5
+ 119              	.LVL7:
+ 107:randombytes.c **** }
+ 120              	 .loc 1 107 5 is_stmt 1 view .LVU29
+ 107:randombytes.c **** }
+ 121              	 .loc 1 107 5 is_stmt 0 view .LVU30
+ 122              	.LBE15:
+ 123              	.LBE14:
+ 115:randombytes.c ****     }
+ 124              	 .loc 1 115 9 is_stmt 1 view .LVU31
+ 115:randombytes.c ****     }
+ 125              	 .loc 1 115 14 is_stmt 0 view .LVU32
+ 126 002a 00F8013B 	 strb r3,[r0],#1
+ 127              	.LVL8:
+ 115:randombytes.c ****     }
+ 128              	 .loc 1 115 14 view .LVU33
+ 129 002e 0124     	 movs r4,#1
+ 130 0030 EFE7     	 b .L3
+ 131              	.L10:
+ 132 0032 00BF     	 .align 2
+ 133              	.L9:
+ 134 0034 00000000 	 .word random_state
+ 135 0038 78563412 	 .word 305419896
+ 136              	.LBE18:
+ 137              	.LBE21:
+ 138              	 .cfi_endproc
+ 139              	.LFE3:
+ 141              	 .section .data.random_state,"aw"
+ 142              	 .align 2
+ 145              	random_state:
+ 146 0000 78563412 	 .word 305419896
+ 147              	 .text
+ 148              	.Letext0:
+ 149              	 .file 2 "/usr/lib/gcc/arm-none-eabi/13.2.1/include/stdint.h"
+ 150              	 .file 3 "/usr/lib/gcc/arm-none-eabi/13.2.1/include/stddef.h"
+DEFINED SYMBOLS
+                            *ABS*:00000000 randombytes.c
+    {standard input}:19     .text.PQCLEAN_randombytes:00000000 $t
+    {standard input}:25     .text.PQCLEAN_randombytes:00000000 PQCLEAN_randombytes
+    {standard input}:134    .text.PQCLEAN_randombytes:00000034 $d
+    {standard input}:145    .data.random_state:00000000 random_state
+    {standard input}:142    .data.random_state:00000000 $d
+                           .group:00000000 wm4.0.ade4f9eb57a3e60dd8a456a9e838da1f
+                           .group:00000000 wm4.stdint.h.29.6d480f4ba0f60596e88234283d42444f
+                           .group:00000000 wm4._newlib_version.h.4.411db44ea2338a62eca2f0777f81481b
+                           .group:00000000 wm4.newlib.h.27.07bf1b8b16da454ae07478107717878b
+                           .group:00000000 wm4.ieeefp.h.77.fbf6f2f498a71d39a0aaf172d6680419
+                           .group:00000000 wm4.features.h.22.c11ecc6cb8b914ead0c0895c00b4b4d5
+                           .group:00000000 wm4.config.h.224.10ee1ad185d877c6e334e6581faab44d
+                           .group:00000000 wm4._ansi.h.31.de524f58584151836e90d8620a16f8e8
+                           .group:00000000 wm4.unistd.h.9.2709ac388e61c5728907bf928c890ff7
+                           .group:00000000 wm4._default_types.h.6.959254cf5f09734ea7516c89e8bb21bd
+                           .group:00000000 wm4.stddef.h.132.1afdd7da36d27b39387169a042f6f591
+                           .group:00000000 wm4.cdefs.h.49.a0dc0a4a6c7d01e2e5d0aade9399215f
+                           .group:00000000 wm4.types.h.40.8b6acba56cefbb11746718204edc8f5e
+                           .group:00000000 wm4._types.h.20.dd0d04dca3800a0d2a6129b87f3adbb2
+                           .group:00000000 wm4.stddef.h.237.9850e39ab2d64d6c5b323bd3217b427d
+                           .group:00000000 wm4._types.h.127.3bdfe3ff8ea2d0985b03d9cbe93480e3
+                           .group:00000000 wm4._stdint.h.10.c24fa3af3bc1706662bb5593a907e841
+                           .group:00000000 wm4._endian.h.31.65a10590763c3dde1ac4a7f66d7d4891
+                           .group:00000000 wm4.endian.h.9.49f3a4695c1b61e8a0808de3c4a106cb
+                           .group:00000000 wm4._timeval.h.32.bec3221fa7a9bb0bdde696c9c57e47d2
+                           .group:00000000 wm4.timespec.h.41.d855182eb0e690443ab8651bcedca6e1
+                           .group:00000000 wm4.select.h.19.8f92964f85316d866d3bb193a38b5ac3
+                           .group:00000000 wm4.types.h.51.e2a6e4379b4797ffcc4841f8498fd61b
+                           .group:00000000 wm4.sched.h.22.c60982713a5c428609783c78f9c78d95
+                           .group:00000000 wm4._pthreadtypes.h.36.fcee9961c35163dde6267ef772ad1972
+                           .group:00000000 wm4.stddef.h.39.84f280b4d43ab019798ff29d29267cac
+                           .group:00000000 wm4.unistd.h.160.45a9edd1b9f6af3adbc1570347bb0e81
+
+NO UNDEFINED SYMBOLS

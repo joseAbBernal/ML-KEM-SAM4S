@@ -1,0 +1,1079 @@
+   1              	 .cpu cortex-m4
+   2              	 .arch armv7e-m
+   3              	 .fpu softvfp
+   4              	 .eabi_attribute 20,1
+   5              	 .eabi_attribute 21,1
+   6              	 .eabi_attribute 23,3
+   7              	 .eabi_attribute 24,1
+   8              	 .eabi_attribute 25,1
+   9              	 .eabi_attribute 26,1
+  10              	 .eabi_attribute 30,4
+  11              	 .eabi_attribute 34,1
+  12              	 .eabi_attribute 18,4
+  13              	 .file "simpleserial-ml-kem-512.c"
+  14              	 .text
+  15              	.Ltext0:
+  16              	 .cfi_sections .debug_frame
+  17              	 .file 1 "simpleserial-ml-kem-512.c"
+  18              	 .section .text.kem,"ax",%progbits
+  19              	 .align 1
+  20              	 .global kem
+  21              	 .syntax unified
+  22              	 .thumb
+  23              	 .thumb_func
+  25              	kem:
+  26              	.LVL0:
+  27              	.LFB6:
+   1:simpleserial-ml-kem-512.c **** /*
+   2:simpleserial-ml-kem-512.c ****     This file is part of the ChipWhisperer Example Targets
+   3:simpleserial-ml-kem-512.c ****     Copyright (C) 2012-2017 NewAE Technology Inc.
+   4:simpleserial-ml-kem-512.c **** 
+   5:simpleserial-ml-kem-512.c ****     This program is free software: you can redistribute it and/or modify
+   6:simpleserial-ml-kem-512.c ****     it under the terms of the GNU General Public License as published by
+   7:simpleserial-ml-kem-512.c ****     the Free Software Foundation, either version 3 of the License, or
+   8:simpleserial-ml-kem-512.c ****     (at your option) any later version.
+   9:simpleserial-ml-kem-512.c **** 
+  10:simpleserial-ml-kem-512.c ****     This program is distributed in the hope that it will be useful,
+  11:simpleserial-ml-kem-512.c ****     but WITHOUT ANY WARRANTY; without even the implied warranty of
+  12:simpleserial-ml-kem-512.c ****     MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+  13:simpleserial-ml-kem-512.c ****     GNU General Public License for more details.
+  14:simpleserial-ml-kem-512.c **** 
+  15:simpleserial-ml-kem-512.c ****     You should have received a copy of the GNU General Public License
+  16:simpleserial-ml-kem-512.c ****     along with this program.  If not, see <http://www.gnu.org/licenses/>.
+  17:simpleserial-ml-kem-512.c **** */
+  18:simpleserial-ml-kem-512.c **** 
+  19:simpleserial-ml-kem-512.c **** #include "api.h"
+  20:simpleserial-ml-kem-512.c **** #include "hal.h"
+  21:simpleserial-ml-kem-512.c **** #include "simpleserial.h"
+  22:simpleserial-ml-kem-512.c **** #include <stdint.h>
+  23:simpleserial-ml-kem-512.c **** #include <stdlib.h>
+  24:simpleserial-ml-kem-512.c **** #include <string.h>
+  25:simpleserial-ml-kem-512.c **** 
+  26:simpleserial-ml-kem-512.c **** // ML-KEM-512 key sizes
+  27:simpleserial-ml-kem-512.c **** #define KEM_PUBLIC_KEY_BYTES  KYBER_PUBLICKEYBYTES   // 800 bytes
+  28:simpleserial-ml-kem-512.c **** #define KEM_SECRET_KEY_BYTES  KYBER_SECRETKEYBYTES   // 1632 bytes  
+  29:simpleserial-ml-kem-512.c **** #define KEM_CIPHERTEXT_BYTES  KYBER_CIPHERTEXTBYTES  // 768 bytes
+  30:simpleserial-ml-kem-512.c **** #define KEM_SHARED_SECRET_BYTES KYBER_SSBYTES         // 32 bytes
+  31:simpleserial-ml-kem-512.c **** 
+  32:simpleserial-ml-kem-512.c **** // Storage for KEM keys (static to avoid stack issues)
+  33:simpleserial-ml-kem-512.c **** static uint8_t kem_public_key[KEM_PUBLIC_KEY_BYTES];
+  34:simpleserial-ml-kem-512.c **** static uint8_t kem_secret_key[KEM_SECRET_KEY_BYTES];
+  35:simpleserial-ml-kem-512.c **** static uint8_t kem_ciphertext[KEM_CIPHERTEXT_BYTES];
+  36:simpleserial-ml-kem-512.c **** static uint8_t kem_shared_secret[KEM_SHARED_SECRET_BYTES];
+  37:simpleserial-ml-kem-512.c **** 
+  38:simpleserial-ml-kem-512.c **** // Key generation command
+  39:simpleserial-ml-kem-512.c **** uint8_t kem_keygen(uint8_t* x, uint8_t len)
+  40:simpleserial-ml-kem-512.c **** {
+  41:simpleserial-ml-kem-512.c ****     (void)len;
+  42:simpleserial-ml-kem-512.c ****     (void)x;
+  43:simpleserial-ml-kem-512.c ****     
+  44:simpleserial-ml-kem-512.c ****     // Generate key pair
+  45:simpleserial-ml-kem-512.c ****     crypto_kem_keypair(kem_public_key, kem_secret_key);
+  46:simpleserial-ml-kem-512.c ****     
+  47:simpleserial-ml-kem-512.c ****     // Return public key
+  48:simpleserial-ml-kem-512.c ****     simpleserial_put('p', KEM_PUBLIC_KEY_BYTES, kem_public_key);
+  49:simpleserial-ml-kem-512.c ****     return 0x00;
+  50:simpleserial-ml-kem-512.c **** }
+  51:simpleserial-ml-kem-512.c **** 
+  52:simpleserial-ml-kem-512.c **** // Encapsulation command (using public key)
+  53:simpleserial-ml-kem-512.c **** uint8_t kem_encaps(uint8_t* pt, uint8_t len)
+  54:simpleserial-ml-kem-512.c **** {
+  55:simpleserial-ml-kem-512.c ****     // Input should be public key (or use stored public key if empty)
+  56:simpleserial-ml-kem-512.c ****     if (len == KEM_PUBLIC_KEY_BYTES) {
+  57:simpleserial-ml-kem-512.c ****         memcpy(kem_public_key, pt, KEM_PUBLIC_KEY_BYTES);
+  58:simpleserial-ml-kem-512.c ****     } else if (len != 0) {
+  59:simpleserial-ml-kem-512.c ****         return SS_ERR_LEN;
+  60:simpleserial-ml-kem-512.c ****     }
+  61:simpleserial-ml-kem-512.c ****     
+  62:simpleserial-ml-kem-512.c ****     trigger_high();
+  63:simpleserial-ml-kem-512.c ****     
+  64:simpleserial-ml-kem-512.c ****     // Encapsulate: generates ciphertext and shared secret
+  65:simpleserial-ml-kem-512.c ****     crypto_kem_enc(kem_ciphertext, kem_shared_secret, kem_public_key);
+  66:simpleserial-ml-kem-512.c ****     
+  67:simpleserial-ml-kem-512.c ****     trigger_low();
+  68:simpleserial-ml-kem-512.c ****     
+  69:simpleserial-ml-kem-512.c ****     // Return ciphertext + shared secret (for capture)
+  70:simpleserial-ml-kem-512.c ****     simpleserial_put('c', KEM_CIPHERTEXT_BYTES + KEM_SHARED_SECRET_BYTES, kem_ciphertext);
+  71:simpleserial-ml-kem-512.c ****     return 0x00;
+  72:simpleserial-ml-kem-512.c **** }
+  73:simpleserial-ml-kem-512.c **** 
+  74:simpleserial-ml-kem-512.c **** // Decapsulation command (using secret key and ciphertext)
+  75:simpleserial-ml-kem-512.c **** uint8_t kem_decaps(uint8_t* ct, uint8_t len)
+  76:simpleserial-ml-kem-512.c **** {
+  77:simpleserial-ml-kem-512.c ****     // Input should be ciphertext
+  78:simpleserial-ml-kem-512.c ****     if (len != KEM_CIPHERTEXT_BYTES) {
+  79:simpleserial-ml-kem-512.c ****         return SS_ERR_LEN;
+  80:simpleserial-ml-kem-512.c ****     }
+  81:simpleserial-ml-kem-512.c ****     
+  82:simpleserial-ml-kem-512.c ****     memcpy(kem_ciphertext, ct, KEM_CIPHERTEXT_BYTES);
+  83:simpleserial-ml-kem-512.c ****     
+  84:simpleserial-ml-kem-512.c ****     trigger_high();
+  85:simpleserial-ml-kem-512.c ****     
+  86:simpleserial-ml-kem-512.c ****     // Decapsulate: uses secret key and ciphertext to recover shared secret
+  87:simpleserial-ml-kem-512.c ****     crypto_kem_dec(kem_shared_secret, kem_ciphertext, kem_secret_key);
+  88:simpleserial-ml-kem-512.c ****     
+  89:simpleserial-ml-kem-512.c ****     trigger_low();
+  90:simpleserial-ml-kem-512.c ****     
+  91:simpleserial-ml-kem-512.c ****     // Return shared secret
+  92:simpleserial-ml-kem-512.c ****     simpleserial_put('s', KEM_SHARED_SECRET_BYTES, kem_shared_secret);
+  93:simpleserial-ml-kem-512.c ****     return 0x00;
+  94:simpleserial-ml-kem-512.c **** }
+  95:simpleserial-ml-kem-512.c **** 
+  96:simpleserial-ml-kem-512.c **** // Set public key command
+  97:simpleserial-ml-kem-512.c **** uint8_t get_pk(uint8_t* pk, uint8_t len)
+  98:simpleserial-ml-kem-512.c **** {
+  99:simpleserial-ml-kem-512.c ****     if (len != KEM_PUBLIC_KEY_BYTES) {
+ 100:simpleserial-ml-kem-512.c ****         return SS_ERR_LEN;
+ 101:simpleserial-ml-kem-512.c ****     }
+ 102:simpleserial-ml-kem-512.c ****     memcpy(kem_public_key, pk, KEM_PUBLIC_KEY_BYTES);
+ 103:simpleserial-ml-kem-512.c ****     return 0x00;
+ 104:simpleserial-ml-kem-512.c **** }
+ 105:simpleserial-ml-kem-512.c **** 
+ 106:simpleserial-ml-kem-512.c **** // Set secret key command
+ 107:simpleserial-ml-kem-512.c **** uint8_t get_sk(uint8_t* sk, uint8_t len)
+ 108:simpleserial-ml-kem-512.c **** {
+ 109:simpleserial-ml-kem-512.c ****     if (len != KEM_SECRET_KEY_BYTES) {
+ 110:simpleserial-ml-kem-512.c ****         return SS_ERR_LEN;
+ 111:simpleserial-ml-kem-512.c ****     }
+ 112:simpleserial-ml-kem-512.c ****     memcpy(kem_secret_key, sk, KEM_SECRET_KEY_BYTES);
+ 113:simpleserial-ml-kem-512.c ****     return 0x00;
+ 114:simpleserial-ml-kem-512.c **** }
+ 115:simpleserial-ml-kem-512.c **** 
+ 116:simpleserial-ml-kem-512.c **** // Reset command
+ 117:simpleserial-ml-kem-512.c **** uint8_t reset(uint8_t* x, uint8_t len)
+ 118:simpleserial-ml-kem-512.c **** {
+ 119:simpleserial-ml-kem-512.c ****     (void)x;
+ 120:simpleserial-ml-kem-512.c ****     (void)len;
+ 121:simpleserial-ml-kem-512.c ****     // Clear keys on reset
+ 122:simpleserial-ml-kem-512.c ****     memset(kem_public_key, 0, KEM_PUBLIC_KEY_BYTES);
+ 123:simpleserial-ml-kem-512.c ****     memset(kem_secret_key, 0, KEM_SECRET_KEY_BYTES);
+ 124:simpleserial-ml-kem-512.c ****     memset(kem_ciphertext, 0, KEM_CIPHERTEXT_BYTES);
+ 125:simpleserial-ml-kem-512.c ****     memset(kem_shared_secret, 0, KEM_SHARED_SECRET_BYTES);
+ 126:simpleserial-ml-kem-512.c ****     return 0x00;
+ 127:simpleserial-ml-kem-512.c **** }
+ 128:simpleserial-ml-kem-512.c **** 
+ 129:simpleserial-ml-kem-512.c **** // SS_VER_2_1 unified command handler
+ 130:simpleserial-ml-kem-512.c **** // Supports combined operations via subcommand flags:
+ 131:simpleserial-ml-kem-512.c **** // 0x01: Generate new keypair
+ 132:simpleserial-ml-kem-512.c **** // 0x02: Set public key (pk must be in buffer)
+ 133:simpleserial-ml-kem-512.c **** // 0x04: Set secret key (sk must be in buffer)
+ 134:simpleserial-ml-kem-512.c **** // 0x08: Encapsulate (requires pk in buffer or uses stored pk)
+ 135:simpleserial-ml-kem-512.c **** // 0x10: Decapsulate (requires sk and ct in buffer)
+ 136:simpleserial-ml-kem-512.c **** #if SS_VER == SS_VER_2_1
+ 137:simpleserial-ml-kem-512.c **** uint8_t kem(uint8_t cmd, uint8_t scmd, uint8_t len, uint8_t *buf)
+ 138:simpleserial-ml-kem-512.c **** {
+  28              	 .loc 1 138 1 view-0
+  29              	 .cfi_startproc
+  30              	 
+  31              	 
+ 139:simpleserial-ml-kem-512.c ****     uint8_t req_len = 0;
+  32              	 .loc 1 139 5 view .LVU1
+ 140:simpleserial-ml-kem-512.c ****     uint8_t err = 0;
+  33              	 .loc 1 140 5 view .LVU2
+ 141:simpleserial-ml-kem-512.c ****     
+ 142:simpleserial-ml-kem-512.c ****     // Handle key generation (0x01)
+ 143:simpleserial-ml-kem-512.c ****     if (scmd & 0x01) {
+  34              	 .loc 1 143 5 view .LVU3
+  35              	 .loc 1 143 8 is_stmt 0 view .LVU4
+  36 0000 C807     	 lsls r0,r1,#31
+  37              	.LVL1:
+ 138:simpleserial-ml-kem-512.c ****     uint8_t req_len = 0;
+  38              	 .loc 1 138 1 view .LVU5
+  39 0002 2DE9F041 	 push {r4,r5,r6,r7,r8,lr}
+  40              	.LCFI0:
+  41              	 .cfi_def_cfa_offset 24
+  42              	 .cfi_offset 4,-24
+  43              	 .cfi_offset 5,-20
+  44              	 .cfi_offset 6,-16
+  45              	 .cfi_offset 7,-12
+  46              	 .cfi_offset 8,-8
+  47              	 .cfi_offset 14,-4
+ 138:simpleserial-ml-kem-512.c ****     uint8_t req_len = 0;
+  48              	 .loc 1 138 1 view .LVU6
+  49 0006 0E46     	 mov r6,r1
+  50 0008 1746     	 mov r7,r2
+  51 000a 1D46     	 mov r5,r3
+  52              	 .loc 1 143 8 view .LVU7
+  53 000c 0ED5     	 bpl .L2
+ 144:simpleserial-ml-kem-512.c ****         trigger_high();
+  54              	 .loc 1 144 9 is_stmt 1 view .LVU8
+  55 000e 324B     	 ldr r3,.L18
+  56              	.LVL2:
+  57              	 .loc 1 144 9 is_stmt 0 view .LVU9
+  58 0010 9847     	 blx r3
+  59              	.LVL3:
+ 145:simpleserial-ml-kem-512.c ****         crypto_kem_keypair(kem_public_key, kem_secret_key);
+  60              	 .loc 1 145 9 is_stmt 1 view .LVU10
+  61 0012 3249     	 ldr r1,.L18+4
+  62 0014 324B     	 ldr r3,.L18+8
+  63 0016 3348     	 ldr r0,.L18+12
+  64 0018 9847     	 blx r3
+  65              	.LVL4:
+ 146:simpleserial-ml-kem-512.c ****         trigger_low();
+  66              	 .loc 1 146 9 view .LVU11
+  67 001a 334B     	 ldr r3,.L18+16
+  68 001c 9847     	 blx r3
+  69              	.LVL5:
+ 147:simpleserial-ml-kem-512.c ****         // Return public key
+ 148:simpleserial-ml-kem-512.c ****         simpleserial_put('p', KEM_PUBLIC_KEY_BYTES, kem_public_key);
+  70              	 .loc 1 148 9 view .LVU12
+  71 001e 314A     	 ldr r2,.L18+12
+  72 0020 2021     	 movs r1,#32
+  73 0022 7020     	 movs r0,#112
+  74              	.LVL6:
+  75              	.L17:
+  76              	.LBB2:
+ 149:simpleserial-ml-kem-512.c ****         return 0x00;
+ 150:simpleserial-ml-kem-512.c ****     }
+ 151:simpleserial-ml-kem-512.c ****     
+ 152:simpleserial-ml-kem-512.c ****     // Handle set public key (0x02)
+ 153:simpleserial-ml-kem-512.c ****     if (scmd & 0x02) {
+ 154:simpleserial-ml-kem-512.c ****         req_len += KEM_PUBLIC_KEY_BYTES;
+ 155:simpleserial-ml-kem-512.c ****         if (req_len > len) {
+ 156:simpleserial-ml-kem-512.c ****             return SS_ERR_LEN;
+ 157:simpleserial-ml-kem-512.c ****         }
+ 158:simpleserial-ml-kem-512.c ****         memcpy(kem_public_key, buf + req_len - KEM_PUBLIC_KEY_BYTES, KEM_PUBLIC_KEY_BYTES);
+ 159:simpleserial-ml-kem-512.c ****     }
+ 160:simpleserial-ml-kem-512.c ****     
+ 161:simpleserial-ml-kem-512.c ****     // Handle set secret key (0x04)
+ 162:simpleserial-ml-kem-512.c ****     if (scmd & 0x04) {
+ 163:simpleserial-ml-kem-512.c ****         req_len += KEM_SECRET_KEY_BYTES;
+ 164:simpleserial-ml-kem-512.c ****         if (req_len > len) {
+ 165:simpleserial-ml-kem-512.c ****             return SS_ERR_LEN;
+ 166:simpleserial-ml-kem-512.c ****         }
+ 167:simpleserial-ml-kem-512.c ****         memcpy(kem_secret_key, buf + req_len - KEM_SECRET_KEY_BYTES, KEM_SECRET_KEY_BYTES);
+ 168:simpleserial-ml-kem-512.c ****     }
+ 169:simpleserial-ml-kem-512.c ****     
+ 170:simpleserial-ml-kem-512.c ****     // Handle encapsulate (0x08)
+ 171:simpleserial-ml-kem-512.c ****     if (scmd & 0x08) {
+ 172:simpleserial-ml-kem-512.c ****         req_len += KEM_PUBLIC_KEY_BYTES;
+ 173:simpleserial-ml-kem-512.c ****         if (req_len > len) {
+ 174:simpleserial-ml-kem-512.c ****             return SS_ERR_LEN;
+ 175:simpleserial-ml-kem-512.c ****         }
+ 176:simpleserial-ml-kem-512.c ****         // If pk is provided in buffer, use it; otherwise use stored pk
+ 177:simpleserial-ml-kem-512.c ****         const uint8_t *pk_to_use = (scmd & 0x02) ? (buf) : (kem_public_key);
+ 178:simpleserial-ml-kem-512.c ****         
+ 179:simpleserial-ml-kem-512.c ****         trigger_high();
+ 180:simpleserial-ml-kem-512.c ****         crypto_kem_enc(kem_ciphertext, kem_shared_secret, pk_to_use);
+ 181:simpleserial-ml-kem-512.c ****         trigger_low();
+ 182:simpleserial-ml-kem-512.c ****         
+ 183:simpleserial-ml-kem-512.c ****         // Return ct + ss
+ 184:simpleserial-ml-kem-512.c ****         simpleserial_put('c', KEM_CIPHERTEXT_BYTES + KEM_SHARED_SECRET_BYTES, kem_ciphertext);
+  77              	 .loc 1 184 9 is_stmt 0 view .LVU13
+  78 0024 314B     	 ldr r3,.L18+20
+  79 0026 9847     	 blx r3
+  80              	.LVL7:
+ 185:simpleserial-ml-kem-512.c ****         return 0x00;
+  81              	 .loc 1 185 9 is_stmt 1 view .LVU14
+  82              	.LBE2:
+ 149:simpleserial-ml-kem-512.c ****         return 0x00;
+  83              	 .loc 1 149 16 is_stmt 0 view .LVU15
+  84 0028 0020     	 movs r0,#0
+  85 002a 05E0     	 b .L6
+  86              	.LVL8:
+  87              	.L2:
+ 153:simpleserial-ml-kem-512.c ****         req_len += KEM_PUBLIC_KEY_BYTES;
+  88              	 .loc 1 153 5 is_stmt 1 view .LVU16
+ 153:simpleserial-ml-kem-512.c ****         req_len += KEM_PUBLIC_KEY_BYTES;
+  89              	 .loc 1 153 8 is_stmt 0 view .LVU17
+  90 002c 11F00208 	 ands r8,r1,#2
+  91 0030 32D0     	 beq .L12
+ 154:simpleserial-ml-kem-512.c ****         if (req_len > len) {
+  92              	 .loc 1 154 9 is_stmt 1 view .LVU18
+  93              	.LVL9:
+ 155:simpleserial-ml-kem-512.c ****             return SS_ERR_LEN;
+  94              	 .loc 1 155 9 view .LVU19
+ 155:simpleserial-ml-kem-512.c ****             return SS_ERR_LEN;
+  95              	 .loc 1 155 12 is_stmt 0 view .LVU20
+  96 0032 1F2A     	 cmp r2,#31
+  97 0034 02D8     	 bhi .L5
+  98              	.LVL10:
+  99              	.L8:
+ 156:simpleserial-ml-kem-512.c ****         }
+ 100              	 .loc 1 156 20 view .LVU21
+ 101 0036 0420     	 movs r0,#4
+ 102              	.LVL11:
+ 103              	.L6:
+ 186:simpleserial-ml-kem-512.c ****     }
+ 187:simpleserial-ml-kem-512.c ****     
+ 188:simpleserial-ml-kem-512.c ****     // Handle decapsulate (0x10)
+ 189:simpleserial-ml-kem-512.c ****     if (scmd & 0x10) {
+ 190:simpleserial-ml-kem-512.c ****         req_len += KEM_CIPHERTEXT_BYTES;
+ 191:simpleserial-ml-kem-512.c ****         if (req_len > len) {
+ 192:simpleserial-ml-kem-512.c ****             return SS_ERR_LEN;
+ 193:simpleserial-ml-kem-512.c ****         }
+ 194:simpleserial-ml-kem-512.c ****         // If ct is provided in buffer, use it; otherwise use stored ct
+ 195:simpleserial-ml-kem-512.c ****         uint8_t *ct_to_use = (scmd & 0x08) ? (buf + ((scmd & 0x02) ? KEM_PUBLIC_KEY_BYTES : 0)) : (
+ 196:simpleserial-ml-kem-512.c ****         if (!(scmd & 0x08)) {
+ 197:simpleserial-ml-kem-512.c ****             memcpy(kem_ciphertext, buf + req_len - KEM_CIPHERTEXT_BYTES, KEM_CIPHERTEXT_BYTES);
+ 198:simpleserial-ml-kem-512.c ****             ct_to_use = kem_ciphertext;
+ 199:simpleserial-ml-kem-512.c ****         }
+ 200:simpleserial-ml-kem-512.c ****         
+ 201:simpleserial-ml-kem-512.c ****         trigger_high();
+ 202:simpleserial-ml-kem-512.c ****         crypto_kem_dec(kem_shared_secret, ct_to_use, kem_secret_key);
+ 203:simpleserial-ml-kem-512.c ****         trigger_low();
+ 204:simpleserial-ml-kem-512.c ****         
+ 205:simpleserial-ml-kem-512.c ****         // Return shared secret
+ 206:simpleserial-ml-kem-512.c ****         simpleserial_put('s', KEM_SHARED_SECRET_BYTES, kem_shared_secret);
+ 207:simpleserial-ml-kem-512.c ****         return 0x00;
+ 208:simpleserial-ml-kem-512.c ****     }
+ 209:simpleserial-ml-kem-512.c ****     
+ 210:simpleserial-ml-kem-512.c ****     if (len != req_len) {
+ 211:simpleserial-ml-kem-512.c ****         return SS_ERR_LEN;
+ 212:simpleserial-ml-kem-512.c ****     }
+ 213:simpleserial-ml-kem-512.c ****     
+ 214:simpleserial-ml-kem-512.c ****     return 0x00;
+ 215:simpleserial-ml-kem-512.c **** }
+ 104              	 .loc 1 215 1 view .LVU22
+ 105 0038 BDE8F081 	 pop {r4,r5,r6,r7,r8,pc}
+ 106              	.LVL12:
+ 107              	.L5:
+ 158:simpleserial-ml-kem-512.c ****     }
+ 108              	 .loc 1 158 9 is_stmt 1 view .LVU23
+ 109 003c A3F54071 	 sub r1,r3,#768
+ 110              	.LVL13:
+ 158:simpleserial-ml-kem-512.c ****     }
+ 111              	 .loc 1 158 9 is_stmt 0 view .LVU24
+ 112 0040 2848     	 ldr r0,.L18+12
+ 113 0042 2B4B     	 ldr r3,.L18+24
+ 114              	.LVL14:
+ 158:simpleserial-ml-kem-512.c ****     }
+ 115              	 .loc 1 158 9 view .LVU25
+ 116 0044 4FF44872 	 mov r2,#800
+ 117              	.LVL15:
+ 158:simpleserial-ml-kem-512.c ****     }
+ 118              	 .loc 1 158 9 view .LVU26
+ 119 0048 9847     	 blx r3
+ 120              	.LVL16:
+ 154:simpleserial-ml-kem-512.c ****         if (req_len > len) {
+ 121              	 .loc 1 154 17 view .LVU27
+ 122 004a 2024     	 movs r4,#32
+ 123              	.LVL17:
+ 124              	.L4:
+ 162:simpleserial-ml-kem-512.c ****         req_len += KEM_SECRET_KEY_BYTES;
+ 125              	 .loc 1 162 5 is_stmt 1 view .LVU28
+ 162:simpleserial-ml-kem-512.c ****         req_len += KEM_SECRET_KEY_BYTES;
+ 126              	 .loc 1 162 8 is_stmt 0 view .LVU29
+ 127 004c 7107     	 lsls r1,r6,#29
+ 128 004e 0BD5     	 bpl .L7
+ 163:simpleserial-ml-kem-512.c ****         if (req_len > len) {
+ 129              	 .loc 1 163 9 is_stmt 1 view .LVU30
+ 163:simpleserial-ml-kem-512.c ****         if (req_len > len) {
+ 130              	 .loc 1 163 17 is_stmt 0 view .LVU31
+ 131 0050 6034     	 adds r4,r4,#96
+ 132              	.LVL18:
+ 163:simpleserial-ml-kem-512.c ****         if (req_len > len) {
+ 133              	 .loc 1 163 17 view .LVU32
+ 134 0052 E4B2     	 uxtb r4,r4
+ 135              	.LVL19:
+ 164:simpleserial-ml-kem-512.c ****             return SS_ERR_LEN;
+ 136              	 .loc 1 164 9 is_stmt 1 view .LVU33
+ 164:simpleserial-ml-kem-512.c ****             return SS_ERR_LEN;
+ 137              	 .loc 1 164 12 is_stmt 0 view .LVU34
+ 138 0054 A742     	 cmp r7,r4
+ 139 0056 EED3     	 bcc .L8
+ 167:simpleserial-ml-kem-512.c ****     }
+ 140              	 .loc 1 167 9 is_stmt 1 view .LVU35
+ 141 0058 2919     	 adds r1,r5,r4
+ 142 005a 2048     	 ldr r0,.L18+4
+ 143 005c 244B     	 ldr r3,.L18+24
+ 144 005e 4FF4CC62 	 mov r2,#1632
+ 145 0062 A1F5CC61 	 sub r1,r1,#1632
+ 146 0066 9847     	 blx r3
+ 147              	.LVL20:
+ 148              	.L7:
+ 171:simpleserial-ml-kem-512.c ****         req_len += KEM_PUBLIC_KEY_BYTES;
+ 149              	 .loc 1 171 5 view .LVU36
+ 171:simpleserial-ml-kem-512.c ****         req_len += KEM_PUBLIC_KEY_BYTES;
+ 150              	 .loc 1 171 8 is_stmt 0 view .LVU37
+ 151 0068 3207     	 lsls r2,r6,#28
+ 152 006a 17D5     	 bpl .L9
+ 153              	.LBB3:
+ 172:simpleserial-ml-kem-512.c ****         if (req_len > len) {
+ 154              	 .loc 1 172 9 is_stmt 1 view .LVU38
+ 155              	.LVL21:
+ 173:simpleserial-ml-kem-512.c ****             return SS_ERR_LEN;
+ 156              	 .loc 1 173 9 view .LVU39
+ 172:simpleserial-ml-kem-512.c ****         if (req_len > len) {
+ 157              	 .loc 1 172 17 is_stmt 0 view .LVU40
+ 158 006c 2034     	 adds r4,r4,#32
+ 159              	.LVL22:
+ 173:simpleserial-ml-kem-512.c ****             return SS_ERR_LEN;
+ 160              	 .loc 1 173 12 view .LVU41
+ 161 006e E4B2     	 uxtb r4,r4
+ 162              	.LVL23:
+ 173:simpleserial-ml-kem-512.c ****             return SS_ERR_LEN;
+ 163              	 .loc 1 173 12 view .LVU42
+ 164 0070 A742     	 cmp r7,r4
+ 165 0072 E0D3     	 bcc .L8
+ 177:simpleserial-ml-kem-512.c ****         
+ 166              	 .loc 1 177 9 is_stmt 1 view .LVU43
+ 177:simpleserial-ml-kem-512.c ****         
+ 167              	 .loc 1 177 58 is_stmt 0 discriminator 2 view .LVU44
+ 168 0074 1B4B     	 ldr r3,.L18+12
+ 169 0076 B8F1000F 	 cmp r8,#0
+ 170 007a 08BF     	 it eq
+ 171 007c 1D46     	 moveq r5,r3
+ 172              	.LVL24:
+ 179:simpleserial-ml-kem-512.c ****         crypto_kem_enc(kem_ciphertext, kem_shared_secret, pk_to_use);
+ 173              	 .loc 1 179 9 is_stmt 1 view .LVU45
+ 174 007e 164B     	 ldr r3,.L18
+ 175 0080 9847     	 blx r3
+ 176              	.LVL25:
+ 180:simpleserial-ml-kem-512.c ****         trigger_low();
+ 177              	 .loc 1 180 9 view .LVU46
+ 178 0082 1C49     	 ldr r1,.L18+28
+ 179 0084 1C4B     	 ldr r3,.L18+32
+ 180 0086 1D48     	 ldr r0,.L18+36
+ 181 0088 2A46     	 mov r2,r5
+ 182 008a 9847     	 blx r3
+ 183              	.LVL26:
+ 181:simpleserial-ml-kem-512.c ****         
+ 184              	 .loc 1 181 9 view .LVU47
+ 185 008c 164B     	 ldr r3,.L18+16
+ 186 008e 9847     	 blx r3
+ 187              	.LVL27:
+ 184:simpleserial-ml-kem-512.c ****         return 0x00;
+ 188              	 .loc 1 184 9 view .LVU48
+ 189 0090 1A4A     	 ldr r2,.L18+36
+ 190 0092 2021     	 movs r1,#32
+ 191 0094 6320     	 movs r0,#99
+ 192 0096 C5E7     	 b .L17
+ 193              	.LVL28:
+ 194              	.L12:
+ 184:simpleserial-ml-kem-512.c ****         return 0x00;
+ 195              	 .loc 1 184 9 is_stmt 0 view .LVU49
+ 196              	.LBE3:
+ 139:simpleserial-ml-kem-512.c ****     uint8_t err = 0;
+ 197              	 .loc 1 139 13 view .LVU50
+ 198 0098 4446     	 mov r4,r8
+ 199 009a D7E7     	 b .L4
+ 200              	.LVL29:
+ 201              	.L9:
+ 189:simpleserial-ml-kem-512.c ****         req_len += KEM_CIPHERTEXT_BYTES;
+ 202              	 .loc 1 189 5 is_stmt 1 view .LVU51
+ 189:simpleserial-ml-kem-512.c ****         req_len += KEM_CIPHERTEXT_BYTES;
+ 203              	 .loc 1 189 8 is_stmt 0 view .LVU52
+ 204 009c F306     	 lsls r3,r6,#27
+ 205 009e 16D5     	 bpl .L11
+ 206              	.LBB4:
+ 190:simpleserial-ml-kem-512.c ****         if (req_len > len) {
+ 207              	 .loc 1 190 9 is_stmt 1 view .LVU53
+ 191:simpleserial-ml-kem-512.c ****             return SS_ERR_LEN;
+ 208              	 .loc 1 191 9 view .LVU54
+ 191:simpleserial-ml-kem-512.c ****             return SS_ERR_LEN;
+ 209              	 .loc 1 191 12 is_stmt 0 view .LVU55
+ 210 00a0 BC42     	 cmp r4,r7
+ 211 00a2 C8D8     	 bhi .L8
+ 195:simpleserial-ml-kem-512.c ****         if (!(scmd & 0x08)) {
+ 212              	 .loc 1 195 9 is_stmt 1 view .LVU56
+ 213              	.LVL30:
+ 196:simpleserial-ml-kem-512.c ****             memcpy(kem_ciphertext, buf + req_len - KEM_CIPHERTEXT_BYTES, KEM_CIPHERTEXT_BYTES);
+ 214              	 .loc 1 196 9 view .LVU57
+ 197:simpleserial-ml-kem-512.c ****             ct_to_use = kem_ciphertext;
+ 215              	 .loc 1 197 13 view .LVU58
+ 216 00a4 2919     	 adds r1,r5,r4
+ 217 00a6 4FF44072 	 mov r2,#768
+ 218 00aa A1F54071 	 sub r1,r1,#768
+ 219 00ae 104B     	 ldr r3,.L18+24
+ 220 00b0 1248     	 ldr r0,.L18+36
+ 221 00b2 9847     	 blx r3
+ 222              	.LVL31:
+ 198:simpleserial-ml-kem-512.c ****         }
+ 223              	 .loc 1 198 13 view .LVU59
+ 201:simpleserial-ml-kem-512.c ****         crypto_kem_dec(kem_shared_secret, ct_to_use, kem_secret_key);
+ 224              	 .loc 1 201 9 view .LVU60
+ 225 00b4 084B     	 ldr r3,.L18
+ 226 00b6 9847     	 blx r3
+ 227              	.LVL32:
+ 202:simpleserial-ml-kem-512.c ****         trigger_low();
+ 228              	 .loc 1 202 9 view .LVU61
+ 229 00b8 084A     	 ldr r2,.L18+4
+ 230 00ba 1049     	 ldr r1,.L18+36
+ 231 00bc 104B     	 ldr r3,.L18+40
+ 232 00be 0D48     	 ldr r0,.L18+28
+ 233 00c0 9847     	 blx r3
+ 234              	.LVL33:
+ 203:simpleserial-ml-kem-512.c ****         
+ 235              	 .loc 1 203 9 view .LVU62
+ 236 00c2 094B     	 ldr r3,.L18+16
+ 237 00c4 9847     	 blx r3
+ 238              	.LVL34:
+ 206:simpleserial-ml-kem-512.c ****         return 0x00;
+ 239              	 .loc 1 206 9 view .LVU63
+ 240 00c6 0B4A     	 ldr r2,.L18+28
+ 241 00c8 2021     	 movs r1,#32
+ 242 00ca 7320     	 movs r0,#115
+ 243 00cc AAE7     	 b .L17
+ 244              	.LVL35:
+ 245              	.L11:
+ 206:simpleserial-ml-kem-512.c ****         return 0x00;
+ 246              	 .loc 1 206 9 is_stmt 0 view .LVU64
+ 247              	.LBE4:
+ 210:simpleserial-ml-kem-512.c ****         return SS_ERR_LEN;
+ 248              	 .loc 1 210 5 is_stmt 1 view .LVU65
+ 210:simpleserial-ml-kem-512.c ****         return SS_ERR_LEN;
+ 249              	 .loc 1 210 8 is_stmt 0 view .LVU66
+ 250 00ce E01B     	 subs r0,r4,r7
+ 251 00d0 18BF     	 it ne
+ 252 00d2 0120     	 movne r0,#1
+ 253 00d4 8000     	 lsls r0,r0,#2
+ 254 00d6 AFE7     	 b .L6
+ 255              	.L19:
+ 256              	 .align 2
+ 257              	.L18:
+ 258 00d8 00000000 	 .word trigger_high
+ 259 00dc 00000000 	 .word kem_secret_key
+ 260 00e0 00000000 	 .word crypto_kem_keypair
+ 261 00e4 00000000 	 .word kem_public_key
+ 262 00e8 00000000 	 .word trigger_low
+ 263 00ec 00000000 	 .word simpleserial_put
+ 264 00f0 00000000 	 .word memcpy
+ 265 00f4 00000000 	 .word kem_shared_secret
+ 266 00f8 00000000 	 .word crypto_kem_enc
+ 267 00fc 00000000 	 .word kem_ciphertext
+ 268 0100 00000000 	 .word crypto_kem_dec
+ 269              	 .cfi_endproc
+ 270              	.LFE6:
+ 272              	 .section .text.kem_keygen,"ax",%progbits
+ 273              	 .align 1
+ 274              	 .global kem_keygen
+ 275              	 .syntax unified
+ 276              	 .thumb
+ 277              	 .thumb_func
+ 279              	kem_keygen:
+ 280              	.LVL36:
+ 281              	.LFB0:
+  40:simpleserial-ml-kem-512.c ****     (void)len;
+ 282              	 .loc 1 40 1 is_stmt 1 view-0
+ 283              	 .cfi_startproc
+ 284              	 
+ 285              	 
+  41:simpleserial-ml-kem-512.c ****     (void)x;
+ 286              	 .loc 1 41 5 view .LVU68
+  42:simpleserial-ml-kem-512.c ****     
+ 287              	 .loc 1 42 5 view .LVU69
+  45:simpleserial-ml-kem-512.c ****     
+ 288              	 .loc 1 45 5 view .LVU70
+  40:simpleserial-ml-kem-512.c ****     (void)len;
+ 289              	 .loc 1 40 1 is_stmt 0 view .LVU71
+ 290 0000 10B5     	 push {r4,lr}
+ 291              	.LCFI1:
+ 292              	 .cfi_def_cfa_offset 8
+ 293              	 .cfi_offset 4,-8
+ 294              	 .cfi_offset 14,-4
+  45:simpleserial-ml-kem-512.c ****     
+ 295              	 .loc 1 45 5 view .LVU72
+ 296 0002 064C     	 ldr r4,.L21
+ 297 0004 0649     	 ldr r1,.L21+4
+ 298              	.LVL37:
+  45:simpleserial-ml-kem-512.c ****     
+ 299              	 .loc 1 45 5 view .LVU73
+ 300 0006 074B     	 ldr r3,.L21+8
+ 301 0008 2046     	 mov r0,r4
+ 302              	.LVL38:
+  45:simpleserial-ml-kem-512.c ****     
+ 303              	 .loc 1 45 5 view .LVU74
+ 304 000a 9847     	 blx r3
+ 305              	.LVL39:
+  48:simpleserial-ml-kem-512.c ****     return 0x00;
+ 306              	 .loc 1 48 5 is_stmt 1 view .LVU75
+ 307 000c 064B     	 ldr r3,.L21+12
+ 308 000e 2246     	 mov r2,r4
+ 309 0010 2021     	 movs r1,#32
+ 310 0012 7020     	 movs r0,#112
+ 311 0014 9847     	 blx r3
+ 312              	.LVL40:
+  49:simpleserial-ml-kem-512.c **** }
+ 313              	 .loc 1 49 5 view .LVU76
+  50:simpleserial-ml-kem-512.c **** 
+ 314              	 .loc 1 50 1 is_stmt 0 view .LVU77
+ 315 0016 0020     	 movs r0,#0
+ 316 0018 10BD     	 pop {r4,pc}
+ 317              	.L22:
+ 318 001a 00BF     	 .align 2
+ 319              	.L21:
+ 320 001c 00000000 	 .word kem_public_key
+ 321 0020 00000000 	 .word kem_secret_key
+ 322 0024 00000000 	 .word crypto_kem_keypair
+ 323 0028 00000000 	 .word simpleserial_put
+ 324              	 .cfi_endproc
+ 325              	.LFE0:
+ 327              	 .section .text.kem_encaps,"ax",%progbits
+ 328              	 .align 1
+ 329              	 .global kem_encaps
+ 330              	 .syntax unified
+ 331              	 .thumb
+ 332              	 .thumb_func
+ 334              	kem_encaps:
+ 335              	.LVL41:
+ 336              	.LFB1:
+  54:simpleserial-ml-kem-512.c ****     // Input should be public key (or use stored public key if empty)
+ 337              	 .loc 1 54 1 is_stmt 1 view-0
+ 338              	 .cfi_startproc
+ 339              	 
+ 340              	 
+  56:simpleserial-ml-kem-512.c ****         memcpy(kem_public_key, pt, KEM_PUBLIC_KEY_BYTES);
+ 341              	 .loc 1 56 5 view .LVU79
+  58:simpleserial-ml-kem-512.c ****         return SS_ERR_LEN;
+ 342              	 .loc 1 58 12 view .LVU80
+  54:simpleserial-ml-kem-512.c ****     // Input should be public key (or use stored public key if empty)
+ 343              	 .loc 1 54 1 is_stmt 0 view .LVU81
+ 344 0000 10B5     	 push {r4,lr}
+ 345              	.LCFI2:
+ 346              	 .cfi_def_cfa_offset 8
+ 347              	 .cfi_offset 4,-8
+ 348              	 .cfi_offset 14,-4
+  58:simpleserial-ml-kem-512.c ****         return SS_ERR_LEN;
+ 349              	 .loc 1 58 15 view .LVU82
+ 350 0002 0C46     	 mov r4,r1
+ 351 0004 79B9     	 cbnz r1,.L25
+  62:simpleserial-ml-kem-512.c ****     
+ 352              	 .loc 1 62 5 is_stmt 1 view .LVU83
+ 353 0006 094B     	 ldr r3,.L26
+ 354 0008 9847     	 blx r3
+ 355              	.LVL42:
+  65:simpleserial-ml-kem-512.c ****     
+ 356              	 .loc 1 65 5 view .LVU84
+ 357 000a 094A     	 ldr r2,.L26+4
+ 358 000c 0949     	 ldr r1,.L26+8
+ 359 000e 0A4B     	 ldr r3,.L26+12
+ 360 0010 0A48     	 ldr r0,.L26+16
+ 361 0012 9847     	 blx r3
+ 362              	.LVL43:
+  67:simpleserial-ml-kem-512.c ****     
+ 363              	 .loc 1 67 5 view .LVU85
+ 364 0014 0A4B     	 ldr r3,.L26+20
+ 365 0016 9847     	 blx r3
+ 366              	.LVL44:
+  70:simpleserial-ml-kem-512.c ****     return 0x00;
+ 367              	 .loc 1 70 5 view .LVU86
+ 368 0018 084A     	 ldr r2,.L26+16
+ 369 001a 0A4B     	 ldr r3,.L26+24
+ 370 001c 2021     	 movs r1,#32
+ 371 001e 6320     	 movs r0,#99
+ 372 0020 9847     	 blx r3
+ 373              	.LVL45:
+  71:simpleserial-ml-kem-512.c **** }
+ 374              	 .loc 1 71 5 view .LVU87
+ 375              	.L24:
+  72:simpleserial-ml-kem-512.c **** 
+ 376              	 .loc 1 72 1 is_stmt 0 view .LVU88
+ 377 0022 2046     	 mov r0,r4
+ 378 0024 10BD     	 pop {r4,pc}
+ 379              	.LVL46:
+ 380              	.L25:
+  59:simpleserial-ml-kem-512.c ****     }
+ 381              	 .loc 1 59 16 view .LVU89
+ 382 0026 0424     	 movs r4,#4
+ 383 0028 FBE7     	 b .L24
+ 384              	.L27:
+ 385 002a 00BF     	 .align 2
+ 386              	.L26:
+ 387 002c 00000000 	 .word trigger_high
+ 388 0030 00000000 	 .word kem_public_key
+ 389 0034 00000000 	 .word kem_shared_secret
+ 390 0038 00000000 	 .word crypto_kem_enc
+ 391 003c 00000000 	 .word kem_ciphertext
+ 392 0040 00000000 	 .word trigger_low
+ 393 0044 00000000 	 .word simpleserial_put
+ 394              	 .cfi_endproc
+ 395              	.LFE1:
+ 397              	 .section .text.kem_decaps,"ax",%progbits
+ 398              	 .align 1
+ 399              	 .global kem_decaps
+ 400              	 .syntax unified
+ 401              	 .thumb
+ 402              	 .thumb_func
+ 404              	kem_decaps:
+ 405              	.LVL47:
+ 406              	.LFB2:
+  76:simpleserial-ml-kem-512.c ****     // Input should be ciphertext
+ 407              	 .loc 1 76 1 is_stmt 1 view-0
+ 408              	 .cfi_startproc
+ 409              	 
+ 410              	 
+ 411              	 
+  78:simpleserial-ml-kem-512.c ****         return SS_ERR_LEN;
+ 412              	 .loc 1 78 5 view .LVU91
+  79:simpleserial-ml-kem-512.c ****     }
+ 413              	 .loc 1 79 9 view .LVU92
+  94:simpleserial-ml-kem-512.c **** 
+ 414              	 .loc 1 94 1 is_stmt 0 view .LVU93
+ 415 0000 0420     	 movs r0,#4
+ 416              	.LVL48:
+  94:simpleserial-ml-kem-512.c **** 
+ 417              	 .loc 1 94 1 view .LVU94
+ 418 0002 7047     	 bx lr
+ 419              	 .cfi_endproc
+ 420              	.LFE2:
+ 422              	 .section .text.get_pk,"ax",%progbits
+ 423              	 .align 1
+ 424              	 .global get_pk
+ 425              	 .syntax unified
+ 426              	 .thumb
+ 427              	 .thumb_func
+ 429              	get_pk:
+ 430              	.LFB9:
+ 431              	 .cfi_startproc
+  97:simpleserial-ml-kem-512.c **** {
+ 432              	 .loc 1 97 9 is_stmt 1 view-0
+ 433              	 
+ 434              	 
+ 435              	 
+ 436 0000 0420     	 movs r0,#4
+ 437 0002 7047     	 bx lr
+ 438              	 .cfi_endproc
+ 439              	.LFE9:
+ 441              	 .section .text.get_sk,"ax",%progbits
+ 442              	 .align 1
+ 443              	 .global get_sk
+ 444              	 .syntax unified
+ 445              	 .thumb
+ 446              	 .thumb_func
+ 448              	get_sk:
+ 449              	.LFB11:
+ 450              	 .cfi_startproc
+ 107:simpleserial-ml-kem-512.c **** {
+ 451              	 .loc 1 107 9 view-0
+ 452              	 
+ 453              	 
+ 454              	 
+ 455 0000 0420     	 movs r0,#4
+ 456 0002 7047     	 bx lr
+ 457              	 .cfi_endproc
+ 458              	.LFE11:
+ 460              	 .section .text.reset,"ax",%progbits
+ 461              	 .align 1
+ 462              	 .global reset
+ 463              	 .syntax unified
+ 464              	 .thumb
+ 465              	 .thumb_func
+ 467              	reset:
+ 468              	.LVL49:
+ 469              	.LFB5:
+ 118:simpleserial-ml-kem-512.c ****     (void)x;
+ 470              	 .loc 1 118 1 view-0
+ 471              	 .cfi_startproc
+ 472              	 
+ 473              	 
+ 119:simpleserial-ml-kem-512.c ****     (void)len;
+ 474              	 .loc 1 119 5 view .LVU98
+ 120:simpleserial-ml-kem-512.c ****     // Clear keys on reset
+ 475              	 .loc 1 120 5 view .LVU99
+ 122:simpleserial-ml-kem-512.c ****     memset(kem_secret_key, 0, KEM_SECRET_KEY_BYTES);
+ 476              	 .loc 1 122 5 view .LVU100
+ 118:simpleserial-ml-kem-512.c ****     (void)x;
+ 477              	 .loc 1 118 1 is_stmt 0 view .LVU101
+ 478 0000 10B5     	 push {r4,lr}
+ 479              	.LCFI3:
+ 480              	 .cfi_def_cfa_offset 8
+ 481              	 .cfi_offset 4,-8
+ 482              	 .cfi_offset 14,-4
+ 122:simpleserial-ml-kem-512.c ****     memset(kem_secret_key, 0, KEM_SECRET_KEY_BYTES);
+ 483              	 .loc 1 122 5 view .LVU102
+ 484 0002 4FF44872 	 mov r2,#800
+ 485 0006 0A4C     	 ldr r4,.L32
+ 486 0008 0A48     	 ldr r0,.L32+4
+ 487              	.LVL50:
+ 122:simpleserial-ml-kem-512.c ****     memset(kem_secret_key, 0, KEM_SECRET_KEY_BYTES);
+ 488              	 .loc 1 122 5 view .LVU103
+ 489 000a 0021     	 movs r1,#0
+ 490              	.LVL51:
+ 122:simpleserial-ml-kem-512.c ****     memset(kem_secret_key, 0, KEM_SECRET_KEY_BYTES);
+ 491              	 .loc 1 122 5 view .LVU104
+ 492 000c A047     	 blx r4
+ 493              	.LVL52:
+ 123:simpleserial-ml-kem-512.c ****     memset(kem_ciphertext, 0, KEM_CIPHERTEXT_BYTES);
+ 494              	 .loc 1 123 5 is_stmt 1 view .LVU105
+ 495 000e 4FF4CC62 	 mov r2,#1632
+ 496 0012 0021     	 movs r1,#0
+ 497 0014 0848     	 ldr r0,.L32+8
+ 498 0016 A047     	 blx r4
+ 499              	.LVL53:
+ 124:simpleserial-ml-kem-512.c ****     memset(kem_shared_secret, 0, KEM_SHARED_SECRET_BYTES);
+ 500              	 .loc 1 124 5 view .LVU106
+ 501 0018 4FF44072 	 mov r2,#768
+ 502 001c 0021     	 movs r1,#0
+ 503 001e 0748     	 ldr r0,.L32+12
+ 504 0020 A047     	 blx r4
+ 505              	.LVL54:
+ 125:simpleserial-ml-kem-512.c ****     return 0x00;
+ 506              	 .loc 1 125 5 view .LVU107
+ 507 0022 2022     	 movs r2,#32
+ 508 0024 0021     	 movs r1,#0
+ 509 0026 0648     	 ldr r0,.L32+16
+ 510 0028 A047     	 blx r4
+ 511              	.LVL55:
+ 126:simpleserial-ml-kem-512.c **** }
+ 512              	 .loc 1 126 5 view .LVU108
+ 127:simpleserial-ml-kem-512.c **** 
+ 513              	 .loc 1 127 1 is_stmt 0 view .LVU109
+ 514 002a 0020     	 movs r0,#0
+ 515 002c 10BD     	 pop {r4,pc}
+ 516              	.L33:
+ 517 002e 00BF     	 .align 2
+ 518              	.L32:
+ 519 0030 00000000 	 .word memset
+ 520 0034 00000000 	 .word kem_public_key
+ 521 0038 00000000 	 .word kem_secret_key
+ 522 003c 00000000 	 .word kem_ciphertext
+ 523 0040 00000000 	 .word kem_shared_secret
+ 524              	 .cfi_endproc
+ 525              	.LFE5:
+ 527              	 .section .text.startup.main,"ax",%progbits
+ 528              	 .align 1
+ 529              	 .global main
+ 530              	 .syntax unified
+ 531              	 .thumb
+ 532              	 .thumb_func
+ 534              	main:
+ 535              	.LFB7:
+ 216:simpleserial-ml-kem-512.c **** #endif
+ 217:simpleserial-ml-kem-512.c **** 
+ 218:simpleserial-ml-kem-512.c **** int main(void)
+ 219:simpleserial-ml-kem-512.c **** {
+ 536              	 .loc 1 219 1 is_stmt 1 view-0
+ 537              	 .cfi_startproc
+ 538              	 
+ 539              	 
+ 540              	 
+ 220:simpleserial-ml-kem-512.c ****     platform_init();
+ 541              	 .loc 1 220 5 view .LVU111
+ 219:simpleserial-ml-kem-512.c ****     platform_init();
+ 542              	 .loc 1 219 1 is_stmt 0 view .LVU112
+ 543 0000 08B5     	 push {r3,lr}
+ 544              	.LCFI4:
+ 545              	 .cfi_def_cfa_offset 8
+ 546              	 .cfi_offset 3,-8
+ 547              	 .cfi_offset 14,-4
+ 548              	 .loc 1 220 5 view .LVU113
+ 549 0002 124B     	 ldr r3,.L36
+ 221:simpleserial-ml-kem-512.c ****     init_uart();
+ 222:simpleserial-ml-kem-512.c ****     trigger_setup();
+ 223:simpleserial-ml-kem-512.c **** 
+ 224:simpleserial-ml-kem-512.c ****     // Clear all key storage
+ 225:simpleserial-ml-kem-512.c ****     memset(kem_public_key, 0, KEM_PUBLIC_KEY_BYTES);
+ 550              	 .loc 1 225 5 view .LVU114
+ 551 0004 124C     	 ldr r4,.L36+4
+ 220:simpleserial-ml-kem-512.c ****     init_uart();
+ 552              	 .loc 1 220 5 view .LVU115
+ 553 0006 9847     	 blx r3
+ 554              	.LVL56:
+ 221:simpleserial-ml-kem-512.c ****     init_uart();
+ 555              	 .loc 1 221 5 is_stmt 1 view .LVU116
+ 556 0008 124B     	 ldr r3,.L36+8
+ 557 000a 9847     	 blx r3
+ 558              	.LVL57:
+ 222:simpleserial-ml-kem-512.c **** 
+ 559              	 .loc 1 222 5 view .LVU117
+ 560 000c 124B     	 ldr r3,.L36+12
+ 561 000e 9847     	 blx r3
+ 562              	.LVL58:
+ 563              	 .loc 1 225 5 view .LVU118
+ 564 0010 4FF44872 	 mov r2,#800
+ 565 0014 0021     	 movs r1,#0
+ 566 0016 1148     	 ldr r0,.L36+16
+ 567 0018 A047     	 blx r4
+ 568              	.LVL59:
+ 226:simpleserial-ml-kem-512.c ****     memset(kem_secret_key, 0, KEM_SECRET_KEY_BYTES);
+ 569              	 .loc 1 226 5 view .LVU119
+ 570 001a 4FF4CC62 	 mov r2,#1632
+ 571 001e 0021     	 movs r1,#0
+ 572 0020 0F48     	 ldr r0,.L36+20
+ 573 0022 A047     	 blx r4
+ 574              	.LVL60:
+ 227:simpleserial-ml-kem-512.c ****     memset(kem_ciphertext, 0, KEM_CIPHERTEXT_BYTES);
+ 575              	 .loc 1 227 5 view .LVU120
+ 576 0024 4FF44072 	 mov r2,#768
+ 577 0028 0021     	 movs r1,#0
+ 578 002a 0E48     	 ldr r0,.L36+24
+ 579 002c A047     	 blx r4
+ 580              	.LVL61:
+ 228:simpleserial-ml-kem-512.c ****     memset(kem_shared_secret, 0, KEM_SHARED_SECRET_BYTES);
+ 581              	 .loc 1 228 5 view .LVU121
+ 582 002e 2022     	 movs r2,#32
+ 583 0030 0021     	 movs r1,#0
+ 584 0032 0D48     	 ldr r0,.L36+28
+ 585 0034 A047     	 blx r4
+ 586              	.LVL62:
+ 229:simpleserial-ml-kem-512.c **** 
+ 230:simpleserial-ml-kem-512.c ****     /* Uncomment this to get a HELLO message for debug */
+ 231:simpleserial-ml-kem-512.c ****     // putch('h');
+ 232:simpleserial-ml-kem-512.c ****     // putch('e');
+ 233:simpleserial-ml-kem-512.c ****     // putch('l');
+ 234:simpleserial-ml-kem-512.c ****     // putch('l');
+ 235:simpleserial-ml-kem-512.c ****     // putch('o');
+ 236:simpleserial-ml-kem-512.c ****     // putch('\n');
+ 237:simpleserial-ml-kem-512.c **** 
+ 238:simpleserial-ml-kem-512.c ****     simpleserial_init();
+ 587              	 .loc 1 238 5 view .LVU122
+ 588 0036 0D4B     	 ldr r3,.L36+32
+ 239:simpleserial-ml-kem-512.c ****     
+ 240:simpleserial-ml-kem-512.c **** #if SS_VER == SS_VER_2_1
+ 241:simpleserial-ml-kem-512.c ****     // Unified KEM command (cmd=0x02 to avoid conflict with AES 0x01)
+ 242:simpleserial-ml-kem-512.c ****     simpleserial_addcmd(0x02, KEM_PUBLIC_KEY_BYTES + KEM_SECRET_KEY_BYTES + KEM_CIPHERTEXT_BYTES, k
+ 243:simpleserial-ml-kem-512.c **** #else
+ 244:simpleserial-ml-kem-512.c ****     // Individual commands for SS_VER_1
+ 245:simpleserial-ml-kem-512.c ****     simpleserial_addcmd('k', KEM_PUBLIC_KEY_BYTES, kem_keygen);
+ 246:simpleserial-ml-kem-512.c ****     simpleserial_addcmd('e', KEM_PUBLIC_KEY_BYTES, kem_encaps);
+ 247:simpleserial-ml-kem-512.c ****     simpleserial_addcmd('d', KEM_CIPHERTEXT_BYTES, kem_decaps);
+ 248:simpleserial-ml-kem-512.c ****     simpleserial_addcmd('p', KEM_PUBLIC_KEY_BYTES, get_pk);
+ 249:simpleserial-ml-kem-512.c ****     simpleserial_addcmd('s', KEM_SECRET_KEY_BYTES, get_sk);
+ 250:simpleserial-ml-kem-512.c ****     simpleserial_addcmd('x', 0, reset);
+ 251:simpleserial-ml-kem-512.c **** #endif
+ 252:simpleserial-ml-kem-512.c ****     
+ 253:simpleserial-ml-kem-512.c ****     while(1)
+ 254:simpleserial-ml-kem-512.c ****         simpleserial_get();
+ 589              	 .loc 1 254 9 is_stmt 0 discriminator 1 view .LVU123
+ 590 0038 0D4C     	 ldr r4,.L36+36
+ 238:simpleserial-ml-kem-512.c ****     
+ 591              	 .loc 1 238 5 view .LVU124
+ 592 003a 9847     	 blx r3
+ 593              	.LVL63:
+ 242:simpleserial-ml-kem-512.c **** #else
+ 594              	 .loc 1 242 5 is_stmt 1 view .LVU125
+ 595 003c 0D4A     	 ldr r2,.L36+40
+ 596 003e 0E4B     	 ldr r3,.L36+44
+ 597 0040 4FF44861 	 mov r1,#3200
+ 598 0044 0220     	 movs r0,#2
+ 599 0046 9847     	 blx r3
+ 600              	.LVL64:
+ 601              	.L35:
+ 253:simpleserial-ml-kem-512.c ****         simpleserial_get();
+ 602              	 .loc 1 253 5 view .LVU126
+ 603              	 .loc 1 254 9 discriminator 1 view .LVU127
+ 604 0048 A047     	 blx r4
+ 605              	.LVL65:
+ 253:simpleserial-ml-kem-512.c ****         simpleserial_get();
+ 606              	 .loc 1 253 10 view .LVU128
+ 607 004a FDE7     	 b .L35
+ 608              	.L37:
+ 609              	 .align 2
+ 610              	.L36:
+ 611 004c 00000000 	 .word platform_init
+ 612 0050 00000000 	 .word memset
+ 613 0054 00000000 	 .word init_uart
+ 614 0058 00000000 	 .word trigger_setup
+ 615 005c 00000000 	 .word kem_public_key
+ 616 0060 00000000 	 .word kem_secret_key
+ 617 0064 00000000 	 .word kem_ciphertext
+ 618 0068 00000000 	 .word kem_shared_secret
+ 619 006c 00000000 	 .word simpleserial_init
+ 620 0070 00000000 	 .word simpleserial_get
+ 621 0074 00000000 	 .word kem
+ 622 0078 00000000 	 .word simpleserial_addcmd
+ 623              	 .cfi_endproc
+ 624              	.LFE7:
+ 626              	 .section .bss.kem_shared_secret,"aw",%nobits
+ 629              	kem_shared_secret:
+ 630 0000 00000000 	 .space 32
+ 630      00000000 
+ 630      00000000 
+ 630      00000000 
+ 630      00000000 
+ 631              	 .section .bss.kem_ciphertext,"aw",%nobits
+ 634              	kem_ciphertext:
+ 635 0000 00000000 	 .space 768
+ 635      00000000 
+ 635      00000000 
+ 635      00000000 
+ 635      00000000 
+ 636              	 .section .bss.kem_secret_key,"aw",%nobits
+ 639              	kem_secret_key:
+ 640 0000 00000000 	 .space 1632
+ 640      00000000 
+ 640      00000000 
+ 640      00000000 
+ 640      00000000 
+ 641              	 .section .bss.kem_public_key,"aw",%nobits
+ 644              	kem_public_key:
+ 645 0000 00000000 	 .space 800
+ 645      00000000 
+ 645      00000000 
+ 645      00000000 
+ 645      00000000 
+ 646              	 .text
+ 647              	.Letext0:
+ 648              	 .file 2 "/usr/lib/gcc/arm-none-eabi/13.2.1/include/stdint.h"
+ 649              	 .file 3 "/usr/lib/gcc/arm-none-eabi/13.2.1/include/stddef.h"
+ 650              	 .file 4 ".././simpleserial/simpleserial.h"
+ 651              	 .file 5 ".././hal/sam4s/sam4s_hal.h"
+ 652              	 .file 6 ".././hal/hal.h"
+ 653              	 .file 7 "api.h"
+ 654              	 .file 8 "/usr/include/newlib/string.h"
+ 655              	 .file 9 "<built-in>"
+DEFINED SYMBOLS
+                            *ABS*:00000000 simpleserial-ml-kem-512.c
+    {standard input}:19     .text.kem:00000000 $t
+    {standard input}:25     .text.kem:00000000 kem
+    {standard input}:258    .text.kem:000000d8 $d
+    {standard input}:639    .bss.kem_secret_key:00000000 kem_secret_key
+    {standard input}:644    .bss.kem_public_key:00000000 kem_public_key
+    {standard input}:629    .bss.kem_shared_secret:00000000 kem_shared_secret
+    {standard input}:634    .bss.kem_ciphertext:00000000 kem_ciphertext
+    {standard input}:273    .text.kem_keygen:00000000 $t
+    {standard input}:279    .text.kem_keygen:00000000 kem_keygen
+    {standard input}:320    .text.kem_keygen:0000001c $d
+    {standard input}:328    .text.kem_encaps:00000000 $t
+    {standard input}:334    .text.kem_encaps:00000000 kem_encaps
+    {standard input}:387    .text.kem_encaps:0000002c $d
+    {standard input}:398    .text.kem_decaps:00000000 $t
+    {standard input}:404    .text.kem_decaps:00000000 kem_decaps
+    {standard input}:423    .text.get_pk:00000000 $t
+    {standard input}:429    .text.get_pk:00000000 get_pk
+    {standard input}:442    .text.get_sk:00000000 $t
+    {standard input}:448    .text.get_sk:00000000 get_sk
+    {standard input}:461    .text.reset:00000000 $t
+    {standard input}:467    .text.reset:00000000 reset
+    {standard input}:519    .text.reset:00000030 $d
+    {standard input}:528    .text.startup.main:00000000 $t
+    {standard input}:534    .text.startup.main:00000000 main
+    {standard input}:611    .text.startup.main:0000004c $d
+    {standard input}:630    .bss.kem_shared_secret:00000000 $d
+    {standard input}:635    .bss.kem_ciphertext:00000000 $d
+    {standard input}:640    .bss.kem_secret_key:00000000 $d
+    {standard input}:645    .bss.kem_public_key:00000000 $d
+                           .group:00000000 wm4.0.ade4f9eb57a3e60dd8a456a9e838da1f
+                           .group:00000000 wm4.params.h.2.d902bb26d9fbc1e1d74ad483d256421a
+                           .group:00000000 wm4.api.h.6.b2a540ebb4f35a075c4a5b93fef438a9
+                           .group:00000000 wm4.stdint.h.29.6d480f4ba0f60596e88234283d42444f
+                           .group:00000000 wm4.hal.h.27.7074d56fee637e30bfe28f5452443c14
+                           .group:00000000 wm4.simpleserial.h.5.c96c6e95969d4c6e0b7b683e18b3c16d
+                           .group:00000000 wm4.ieeefp.h.77.fbf6f2f498a71d39a0aaf172d6680419
+                           .group:00000000 wm4._newlib_version.h.4.411db44ea2338a62eca2f0777f81481b
+                           .group:00000000 wm4.newlib.h.27.07bf1b8b16da454ae07478107717878b
+                           .group:00000000 wm4.features.h.22.c11ecc6cb8b914ead0c0895c00b4b4d5
+                           .group:00000000 wm4.config.h.224.10ee1ad185d877c6e334e6581faab44d
+                           .group:00000000 wm4._ansi.h.31.de524f58584151836e90d8620a16f8e8
+                           .group:00000000 wm4.stdlib.h.13.4ed386f5c1a80d71e72172885d946ef2
+                           .group:00000000 wm4.stddef.h.185.882514a1a6169ceba9142f401cbe27c6
+                           .group:00000000 wm4.stddef.h.39.ce75d04d8242e588a8427ce8922e2e35
+                           .group:00000000 wm4._default_types.h.6.959254cf5f09734ea7516c89e8bb21bd
+                           .group:00000000 wm4.cdefs.h.49.a0dc0a4a6c7d01e2e5d0aade9399215f
+                           .group:00000000 wm4._types.h.20.dd0d04dca3800a0d2a6129b87f3adbb2
+                           .group:00000000 wm4.stddef.h.158.6f8e08a347b1cff664332fa350bfceb3
+                           .group:00000000 wm4._types.h.127.3bdfe3ff8ea2d0985b03d9cbe93480e3
+                           .group:00000000 wm4.reent.h.18.25503cdc8b7e55dd0d6ea7b3e5af7a03
+                           .group:00000000 wm4.lock.h.2.c0958401bd0ce484d507ee19aacab817
+                           .group:00000000 wm4.reent.h.78.7f0775353a33c852a1479c008f68cd03
+                           .group:00000000 wm4.alloca.h.8.dfc0c703c47ec3e69746825b17d9e66d
+                           .group:00000000 wm4.stdlib.h.56.f4862cfbf4363a1db01842d5bdf72c18
+                           .group:00000000 wm4.string.h.8.c4b8571ce60dff2817f43fec8b86aecd
+                           .group:00000000 wm4.stddef.h.158.eec8bf00b5213f43d095cb984c5f22e3
+
+UNDEFINED SYMBOLS
+trigger_high
+crypto_kem_keypair
+trigger_low
+simpleserial_put
+memcpy
+crypto_kem_enc
+crypto_kem_dec
+memset
+platform_init
+init_uart
+trigger_setup
+simpleserial_init
+simpleserial_get
+simpleserial_addcmd

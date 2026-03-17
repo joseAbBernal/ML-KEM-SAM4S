@@ -1,0 +1,551 @@
+   1              	 .cpu cortex-m4
+   2              	 .arch armv7e-m
+   3              	 .fpu softvfp
+   4              	 .eabi_attribute 20,1
+   5              	 .eabi_attribute 21,1
+   6              	 .eabi_attribute 23,3
+   7              	 .eabi_attribute 24,1
+   8              	 .eabi_attribute 25,1
+   9              	 .eabi_attribute 26,1
+  10              	 .eabi_attribute 30,4
+  11              	 .eabi_attribute 34,1
+  12              	 .eabi_attribute 18,4
+  13              	 .file "ml-kem-stubs.c"
+  14              	 .text
+  15              	.Ltext0:
+  16              	 .cfi_sections .debug_frame
+  17              	 .file 1 "ml-kem-stubs.c"
+  18              	 .section .text.asm_barrett_reduce,"ax",%progbits
+  19              	 .align 1
+  20              	 .global asm_barrett_reduce
+  21              	 .syntax unified
+  22              	 .thumb
+  23              	 .thumb_func
+  25              	asm_barrett_reduce:
+  26              	.LVL0:
+  27              	.LFB0:
+   1:ml-kem-stubs.c **** /*
+   2:ml-kem-stubs.c ****  * ML-KEM-512 stub implementations for non-FPU platforms
+   3:ml-kem-stubs.c ****  * These are slower than assembly but work on any ARM Cortex-M4 without FPU
+   4:ml-kem-stubs.c ****  */
+   5:ml-kem-stubs.c **** 
+   6:ml-kem-stubs.c **** #include "params.h"
+   7:ml-kem-stubs.c **** #include "poly.h"
+   8:ml-kem-stubs.c **** #include <stdint.h>
+   9:ml-kem-stubs.c **** #include <string.h>
+  10:ml-kem-stubs.c **** 
+  11:ml-kem-stubs.c **** // Barrett reduction - simple C implementation
+  12:ml-kem-stubs.c **** uint16_t asm_barrett_reduce(uint16_t a) {
+  28              	 .loc 1 12 41 view-0
+  29              	 .cfi_startproc
+  30              	 
+  31              	 
+  32              	 
+  13:ml-kem-stubs.c ****     uint32_t t;
+  33              	 .loc 1 13 5 view .LVU1
+  14:ml-kem-stubs.c ****     const uint16_t q = KYBER_Q;
+  34              	 .loc 1 14 5 view .LVU2
+  15:ml-kem-stubs.c ****     const uint32_t mu = (1 << 26) / q; // (2^26)/q
+  35              	 .loc 1 15 5 view .LVU3
+  16:ml-kem-stubs.c ****     t = (uint32_t)a * mu;
+  36              	 .loc 1 16 5 view .LVU4
+  37              	 .loc 1 16 7 is_stmt 0 view .LVU5
+  38 0000 44F6BE63 	 movw r3,#20158
+  39 0004 4343     	 muls r3,r0,r3
+  40              	.LVL1:
+  17:ml-kem-stubs.c ****     t >>= 26;
+  41              	 .loc 1 17 5 is_stmt 1 view .LVU6
+  42              	 .loc 1 17 7 is_stmt 0 view .LVU7
+  43 0006 9B0E     	 lsrs r3,r3,#26
+  44              	.LVL2:
+  18:ml-kem-stubs.c ****     t *= q;
+  45              	 .loc 1 18 5 is_stmt 1 view .LVU8
+  19:ml-kem-stubs.c ****     return a - t;
+  46              	 .loc 1 19 5 view .LVU9
+  47              	 .loc 1 19 14 is_stmt 0 view .LVU10
+  48 0008 40F60152 	 movw r2,#3329
+  49 000c 02FB1300 	 mls r0,r2,r3,r0
+  50              	.LVL3:
+  20:ml-kem-stubs.c **** }
+  51              	 .loc 1 20 1 view .LVU11
+  52 0010 80B2     	 uxth r0,r0
+  53 0012 7047     	 bx lr
+  54              	 .cfi_endproc
+  55              	.LFE0:
+  57              	 .section .text.frombytes_mul_asm,"ax",%progbits
+  58              	 .align 1
+  59              	 .global frombytes_mul_asm
+  60              	 .syntax unified
+  61              	 .thumb
+  62              	 .thumb_func
+  64              	frombytes_mul_asm:
+  65              	.LVL4:
+  66              	.LFB1:
+  21:ml-kem-stubs.c **** 
+  22:ml-kem-stubs.c **** // Frombytes multiplication - stub
+  23:ml-kem-stubs.c **** void frombytes_mul_asm(int16_t *r, const uint8_t *a, const int16_t *b) {
+  67              	 .loc 1 23 72 is_stmt 1 view-0
+  68              	 .cfi_startproc
+  69              	 
+  70              	 
+  71              	 
+  24:ml-kem-stubs.c ****     // Simplified - not optimized
+  25:ml-kem-stubs.c ****     (void)r; (void)a; (void)b;
+  72              	 .loc 1 25 5 view .LVU13
+  73              	 .loc 1 25 14 view .LVU14
+  74              	 .loc 1 25 23 view .LVU15
+  26:ml-kem-stubs.c **** }
+  75              	 .loc 1 26 1 is_stmt 0 view .LVU16
+  76 0000 7047     	 bx lr
+  77              	 .cfi_endproc
+  78              	.LFE1:
+  80              	 .section .text.frombytes_mul_asm_acc,"ax",%progbits
+  81              	 .align 1
+  82              	 .global frombytes_mul_asm_acc
+  83              	 .syntax unified
+  84              	 .thumb
+  85              	 .thumb_func
+  87              	frombytes_mul_asm_acc:
+  88              	.LFB13:
+  89              	 .cfi_startproc
+  27:ml-kem-stubs.c **** 
+  28:ml-kem-stubs.c **** void frombytes_mul_asm_acc(int16_t *r, const uint8_t *a, const int16_t *b) {
+  90              	 .loc 1 28 6 is_stmt 1 view-0
+  91              	 
+  92              	 
+  93              	 
+  94 0000 7047     	 bx lr
+  95              	 .cfi_endproc
+  96              	.LFE13:
+  98              	 .section .text.basemul_asm,"ax",%progbits
+  99              	 .align 1
+ 100              	 .global basemul_asm
+ 101              	 .syntax unified
+ 102              	 .thumb
+ 103              	 .thumb_func
+ 105              	basemul_asm:
+ 106              	.LVL5:
+ 107              	.LFB3:
+  29:ml-kem-stubs.c ****     (void)r; (void)a; (void)b;
+  30:ml-kem-stubs.c **** }
+  31:ml-kem-stubs.c **** 
+  32:ml-kem-stubs.c **** // Poly basemul - simple C implementation  
+  33:ml-kem-stubs.c **** void basemul_asm(int16_t *r, const int16_t *a, const int16_t *b, const int16_t *zetas) {
+ 108              	 .loc 1 33 88 view-0
+ 109              	 .cfi_startproc
+ 110              	 
+ 111              	 
+ 112              	 
+  34:ml-kem-stubs.c ****     // Simplified implementation
+  35:ml-kem-stubs.c ****     (void)r; (void)a; (void)b; (void)zetas;
+ 113              	 .loc 1 35 5 view .LVU19
+ 114              	 .loc 1 35 14 view .LVU20
+ 115              	 .loc 1 35 23 view .LVU21
+ 116              	 .loc 1 35 32 view .LVU22
+  36:ml-kem-stubs.c **** }
+ 117              	 .loc 1 36 1 is_stmt 0 view .LVU23
+ 118 0000 7047     	 bx lr
+ 119              	 .cfi_endproc
+ 120              	.LFE3:
+ 122              	 .section .text.basemul_asm_acc,"ax",%progbits
+ 123              	 .align 1
+ 124              	 .global basemul_asm_acc
+ 125              	 .syntax unified
+ 126              	 .thumb
+ 127              	 .thumb_func
+ 129              	basemul_asm_acc:
+ 130              	.LFB15:
+ 131              	 .cfi_startproc
+  37:ml-kem-stubs.c **** 
+  38:ml-kem-stubs.c **** void basemul_asm_acc(int16_t *r, const int16_t *a, const int16_t *b, const int16_t *zetas) {
+ 132              	 .loc 1 38 6 is_stmt 1 view-0
+ 133              	 
+ 134              	 
+ 135              	 
+ 136 0000 7047     	 bx lr
+ 137              	 .cfi_endproc
+ 138              	.LFE15:
+ 140              	 .section .text.pointwise_add,"ax",%progbits
+ 141              	 .align 1
+ 142              	 .global pointwise_add
+ 143              	 .syntax unified
+ 144              	 .thumb
+ 145              	 .thumb_func
+ 147              	pointwise_add:
+ 148              	.LVL6:
+ 149              	.LFB5:
+  39:ml-kem-stubs.c ****     (void)r; (void)a; (void)b; (void)zetas;
+  40:ml-kem-stubs.c **** }
+  41:ml-kem-stubs.c **** 
+  42:ml-kem-stubs.c **** // Pointwise operations
+  43:ml-kem-stubs.c **** void pointwise_add(int16_t *r, const int16_t *a, const int16_t *b) {
+ 150              	 .loc 1 43 68 view-0
+ 151              	 .cfi_startproc
+ 152              	 
+ 153              	 
+  44:ml-kem-stubs.c ****     for (int i = 0; i < 128; i++) {
+ 154              	 .loc 1 44 5 view .LVU26
+ 155              	.LBB2:
+ 156              	 .loc 1 44 10 view .LVU27
+ 157              	 .loc 1 44 23 discriminator 1 view .LVU28
+ 158              	.LBE2:
+  43:ml-kem-stubs.c ****     for (int i = 0; i < 128; i++) {
+ 159              	 .loc 1 43 68 is_stmt 0 view .LVU29
+ 160 0000 30B5     	 push {r4,r5,lr}
+ 161              	.LCFI0:
+ 162              	 .cfi_def_cfa_offset 12
+ 163              	 .cfi_offset 4,-12
+ 164              	 .cfi_offset 5,-8
+ 165              	 .cfi_offset 14,-4
+ 166              	.LBB3:
+ 167              	 .loc 1 44 14 view .LVU30
+ 168 0002 0024     	 movs r4,#0
+ 169              	.LVL7:
+ 170              	.L8:
+  45:ml-kem-stubs.c ****         r[i] = a[i] + b[i];
+ 171              	 .loc 1 45 9 is_stmt 1 view .LVU31
+ 172              	 .loc 1 45 21 is_stmt 0 view .LVU32
+ 173 0004 32F81450 	 ldrh r5,[r2,r4,lsl#1]
+ 174 0008 31F81430 	 ldrh r3,[r1,r4,lsl#1]
+ 175 000c 2B44     	 add r3,r3,r5
+ 176 000e 9DB2     	 uxth r5,r3
+ 177 0010 1BB2     	 sxth r3,r3
+  46:ml-kem-stubs.c ****         if (r[i] >= KYBER_Q) r[i] -= KYBER_Q;
+ 178              	 .loc 1 46 9 is_stmt 1 view .LVU33
+ 179              	 .loc 1 46 12 is_stmt 0 view .LVU34
+ 180 0012 B3F5506F 	 cmp r3,#3328
+ 181              	 .loc 1 46 30 is_stmt 1 discriminator 1 view .LVU35
+ 182              	 .loc 1 46 35 is_stmt 0 discriminator 1 view .LVU36
+ 183 0016 C2BF     	 ittt gt
+ 184 0018 6FF45063 	 mvngt r3,#3328
+ 185 001c EB18     	 addgt r3,r5,r3
+ 186 001e 1BB2     	 sxthgt r3,r3
+  45:ml-kem-stubs.c ****         r[i] = a[i] + b[i];
+ 187              	 .loc 1 45 14 view .LVU37
+ 188 0020 20F81430 	 strh r3,[r0,r4,lsl#1]
+  44:ml-kem-stubs.c ****         r[i] = a[i] + b[i];
+ 189              	 .loc 1 44 31 is_stmt 1 discriminator 2 view .LVU38
+ 190 0024 0134     	 adds r4,r4,#1
+ 191              	.LVL8:
+  44:ml-kem-stubs.c ****         r[i] = a[i] + b[i];
+ 192              	 .loc 1 44 23 discriminator 1 view .LVU39
+ 193 0026 802C     	 cmp r4,#128
+ 194 0028 ECD1     	 bne .L8
+ 195              	.LBE3:
+  47:ml-kem-stubs.c ****     }
+  48:ml-kem-stubs.c **** }
+ 196              	 .loc 1 48 1 is_stmt 0 view .LVU40
+ 197 002a 30BD     	 pop {r4,r5,pc}
+ 198              	 .loc 1 48 1 view .LVU41
+ 199              	 .cfi_endproc
+ 200              	.LFE5:
+ 202              	 .section .text.pointwise_sub,"ax",%progbits
+ 203              	 .align 1
+ 204              	 .global pointwise_sub
+ 205              	 .syntax unified
+ 206              	 .thumb
+ 207              	 .thumb_func
+ 209              	pointwise_sub:
+ 210              	.LVL9:
+ 211              	.LFB6:
+  49:ml-kem-stubs.c **** 
+  50:ml-kem-stubs.c **** void pointwise_sub(int16_t *r, const int16_t *a, const int16_t *b) {
+ 212              	 .loc 1 50 68 is_stmt 1 view-0
+ 213              	 .cfi_startproc
+ 214              	 
+ 215              	 
+  51:ml-kem-stubs.c ****     for (int i = 0; i < 128; i++) {
+ 216              	 .loc 1 51 5 view .LVU43
+ 217              	.LBB4:
+ 218              	 .loc 1 51 10 view .LVU44
+ 219              	 .loc 1 51 23 discriminator 1 view .LVU45
+ 220              	.LBE4:
+  50:ml-kem-stubs.c ****     for (int i = 0; i < 128; i++) {
+ 221              	 .loc 1 50 68 is_stmt 0 view .LVU46
+ 222 0000 30B5     	 push {r4,r5,lr}
+ 223              	.LCFI1:
+ 224              	 .cfi_def_cfa_offset 12
+ 225              	 .cfi_offset 4,-12
+ 226              	 .cfi_offset 5,-8
+ 227              	 .cfi_offset 14,-4
+ 228              	.LBB5:
+ 229              	 .loc 1 51 14 view .LVU47
+ 230 0002 0024     	 movs r4,#0
+ 231              	.LVL10:
+ 232              	.L12:
+  52:ml-kem-stubs.c ****         r[i] = a[i] - b[i];
+ 233              	 .loc 1 52 9 is_stmt 1 view .LVU48
+ 234              	 .loc 1 52 21 is_stmt 0 view .LVU49
+ 235 0004 32F81450 	 ldrh r5,[r2,r4,lsl#1]
+ 236 0008 31F81430 	 ldrh r3,[r1,r4,lsl#1]
+ 237 000c 5B1B     	 subs r3,r3,r5
+ 238 000e 9DB2     	 uxth r5,r3
+ 239 0010 1BB2     	 sxth r3,r3
+  53:ml-kem-stubs.c ****         if (r[i] < 0) r[i] += KYBER_Q;
+ 240              	 .loc 1 53 9 is_stmt 1 view .LVU50
+ 241              	 .loc 1 53 12 is_stmt 0 view .LVU51
+ 242 0012 002B     	 cmp r3,#0
+ 243              	 .loc 1 53 23 is_stmt 1 discriminator 1 view .LVU52
+ 244              	 .loc 1 53 28 is_stmt 0 discriminator 1 view .LVU53
+ 245 0014 BCBF     	 itt lt
+ 246 0016 05F60153 	 addwlt r3,r5,#3329
+ 247 001a 1BB2     	 sxthlt r3,r3
+  52:ml-kem-stubs.c ****         r[i] = a[i] - b[i];
+ 248              	 .loc 1 52 14 view .LVU54
+ 249 001c 20F81430 	 strh r3,[r0,r4,lsl#1]
+  51:ml-kem-stubs.c ****         r[i] = a[i] - b[i];
+ 250              	 .loc 1 51 31 is_stmt 1 discriminator 2 view .LVU55
+ 251 0020 0134     	 adds r4,r4,#1
+ 252              	.LVL11:
+  51:ml-kem-stubs.c ****         r[i] = a[i] - b[i];
+ 253              	 .loc 1 51 23 discriminator 1 view .LVU56
+ 254 0022 802C     	 cmp r4,#128
+ 255 0024 EED1     	 bne .L12
+ 256              	.LBE5:
+  54:ml-kem-stubs.c ****     }
+  55:ml-kem-stubs.c **** }
+ 257              	 .loc 1 55 1 is_stmt 0 view .LVU57
+ 258 0026 30BD     	 pop {r4,r5,pc}
+ 259              	 .loc 1 55 1 view .LVU58
+ 260              	 .cfi_endproc
+ 261              	.LFE6:
+ 263              	 .section .text.cmov_int16,"ax",%progbits
+ 264              	 .align 1
+ 265              	 .global cmov_int16
+ 266              	 .syntax unified
+ 267              	 .thumb
+ 268              	 .thumb_func
+ 270              	cmov_int16:
+ 271              	.LVL12:
+ 272              	.LFB7:
+  56:ml-kem-stubs.c **** 
+  57:ml-kem-stubs.c **** // CMOV - constant time conditional move
+  58:ml-kem-stubs.c **** void cmov_int16(int16_t *r, const int16_t *x, size_t len, int16_t b) {
+ 273              	 .loc 1 58 70 is_stmt 1 view-0
+ 274              	 .cfi_startproc
+ 275              	 
+ 276              	 
+  59:ml-kem-stubs.c ****     size_t i;
+ 277              	 .loc 1 59 5 view .LVU60
+  60:ml-kem-stubs.c ****     b = -b;
+ 278              	 .loc 1 60 5 view .LVU61
+ 279              	 .loc 1 60 7 is_stmt 0 view .LVU62
+ 280 0000 5B42     	 rsbs r3,r3,#0
+ 281              	.LVL13:
+  58:ml-kem-stubs.c ****     size_t i;
+ 282              	 .loc 1 58 70 view .LVU63
+ 283 0002 70B5     	 push {r4,r5,r6,lr}
+ 284              	.LCFI2:
+ 285              	 .cfi_def_cfa_offset 16
+ 286              	 .cfi_offset 4,-16
+ 287              	 .cfi_offset 5,-12
+ 288              	 .cfi_offset 6,-8
+ 289              	 .cfi_offset 14,-4
+ 290              	 .loc 1 60 7 view .LVU64
+ 291 0004 1BB2     	 sxth r3,r3
+ 292              	.LVL14:
+  61:ml-kem-stubs.c ****     for (i = 0; i < len; i++) {
+ 293              	 .loc 1 61 5 is_stmt 1 view .LVU65
+ 294              	 .loc 1 61 5 is_stmt 0 view .LVU66
+ 295 0006 0238     	 subs r0,r0,#2
+ 296              	.LVL15:
+ 297              	 .loc 1 61 12 view .LVU67
+ 298 0008 0025     	 movs r5,#0
+ 299              	.LVL16:
+ 300              	.L15:
+ 301              	 .loc 1 61 19 is_stmt 1 discriminator 1 view .LVU68
+ 302 000a 9542     	 cmp r5,r2
+ 303 000c 00D1     	 bne .L16
+  62:ml-kem-stubs.c ****         r[i] ^= b & (x[i] ^ r[i]);
+  63:ml-kem-stubs.c ****     }
+  64:ml-kem-stubs.c **** }
+ 304              	 .loc 1 64 1 is_stmt 0 view .LVU69
+ 305 000e 70BD     	 pop {r4,r5,r6,pc}
+ 306              	.LVL17:
+ 307              	.L16:
+  62:ml-kem-stubs.c ****         r[i] ^= b & (x[i] ^ r[i]);
+ 308              	 .loc 1 62 9 is_stmt 1 view .LVU70
+  62:ml-kem-stubs.c ****         r[i] ^= b & (x[i] ^ r[i]);
+ 309              	 .loc 1 62 10 is_stmt 0 view .LVU71
+ 310 0010 30F9026F 	 ldrsh r6,[r0,#2]!
+  62:ml-kem-stubs.c ****         r[i] ^= b & (x[i] ^ r[i]);
+ 311              	 .loc 1 62 14 view .LVU72
+ 312 0014 31F81540 	 ldrh r4,[r1,r5,lsl#1]
+ 313 0018 7440     	 eors r4,r4,r6
+ 314 001a 1C40     	 ands r4,r4,r3
+ 315 001c 6640     	 eors r6,r6,r4
+ 316 001e 0680     	 strh r6,[r0]
+  61:ml-kem-stubs.c ****     for (i = 0; i < len; i++) {
+ 317              	 .loc 1 61 27 is_stmt 1 discriminator 3 view .LVU73
+ 318 0020 0135     	 adds r5,r5,#1
+ 319              	.LVL18:
+  61:ml-kem-stubs.c ****     for (i = 0; i < len; i++) {
+ 320              	 .loc 1 61 27 is_stmt 0 discriminator 3 view .LVU74
+ 321 0022 F2E7     	 b .L15
+ 322              	 .cfi_endproc
+ 323              	.LFE7:
+ 325              	 .section .text.ntt_fast,"ax",%progbits
+ 326              	 .align 1
+ 327              	 .global ntt_fast
+ 328              	 .syntax unified
+ 329              	 .thumb
+ 330              	 .thumb_func
+ 332              	ntt_fast:
+ 333              	.LVL19:
+ 334              	.LFB8:
+  65:ml-kem-stubs.c **** 
+  66:ml-kem-stubs.c **** // NTT fast - stub that calls slow version
+  67:ml-kem-stubs.c **** void ntt_fast(int16_t *a) {
+ 335              	 .loc 1 67 27 is_stmt 1 view-0
+ 336              	 .cfi_startproc
+ 337              	 
+ 338              	 
+ 339              	 
+  68:ml-kem-stubs.c ****     extern void ntt(int16_t *a);
+ 340              	 .loc 1 68 5 view .LVU76
+  69:ml-kem-stubs.c ****     ntt(a);
+ 341              	 .loc 1 69 5 view .LVU77
+ 342 0000 004B     	 ldr r3,.L18
+ 343 0002 1847     	 bx r3
+ 344              	.LVL20:
+ 345              	.L19:
+ 346              	 .loc 1 69 5 is_stmt 0 view .LVU78
+ 347              	 .align 2
+ 348              	.L18:
+ 349 0004 00000000 	 .word ntt
+ 350              	 .cfi_endproc
+ 351              	.LFE8:
+ 353              	 .section .text.invntt_fast,"ax",%progbits
+ 354              	 .align 1
+ 355              	 .global invntt_fast
+ 356              	 .syntax unified
+ 357              	 .thumb
+ 358              	 .thumb_func
+ 360              	invntt_fast:
+ 361              	.LVL21:
+ 362              	.LFB9:
+  70:ml-kem-stubs.c **** }
+  71:ml-kem-stubs.c **** 
+  72:ml-kem-stubs.c **** void invntt_fast(int16_t *a) {
+ 363              	 .loc 1 72 30 is_stmt 1 view-0
+ 364              	 .cfi_startproc
+ 365              	 
+ 366              	 
+ 367              	 
+  73:ml-kem-stubs.c ****     extern void invntt(int16_t *a);
+ 368              	 .loc 1 73 5 view .LVU80
+  74:ml-kem-stubs.c ****     invntt(a);
+ 369              	 .loc 1 74 5 view .LVU81
+ 370 0000 004B     	 ldr r3,.L21
+ 371 0002 1847     	 bx r3
+ 372              	.LVL22:
+ 373              	.L22:
+ 374              	 .loc 1 74 5 is_stmt 0 view .LVU82
+ 375              	 .align 2
+ 376              	.L21:
+ 377 0004 00000000 	 .word invntt
+ 378              	 .cfi_endproc
+ 379              	.LFE9:
+ 381              	 .section .text.matacc_asm,"ax",%progbits
+ 382              	 .align 1
+ 383              	 .global matacc_asm
+ 384              	 .syntax unified
+ 385              	 .thumb
+ 386              	 .thumb_func
+ 388              	matacc_asm:
+ 389              	.LVL23:
+ 390              	.LFB10:
+  75:ml-kem-stubs.c **** }
+  76:ml-kem-stubs.c **** 
+  77:ml-kem-stubs.c **** // Matacc - stub
+  78:ml-kem-stubs.c **** void matacc_asm(int16_t *r, const int16_t *a, const int16_t *b, int16_t zeta) {
+ 391              	 .loc 1 78 79 is_stmt 1 view-0
+ 392              	 .cfi_startproc
+ 393              	 
+ 394              	 
+ 395              	 
+  79:ml-kem-stubs.c ****     (void)r; (void)a; (void)b; (void)zeta;
+ 396              	 .loc 1 79 5 view .LVU84
+ 397              	 .loc 1 79 14 view .LVU85
+ 398              	 .loc 1 79 23 view .LVU86
+ 399              	 .loc 1 79 32 view .LVU87
+  80:ml-kem-stubs.c **** }
+ 400              	 .loc 1 80 1 is_stmt 0 view .LVU88
+ 401 0000 7047     	 bx lr
+ 402              	 .cfi_endproc
+ 403              	.LFE10:
+ 405              	 .section .text.matacc_asm_acc,"ax",%progbits
+ 406              	 .align 1
+ 407              	 .global matacc_asm_acc
+ 408              	 .syntax unified
+ 409              	 .thumb
+ 410              	 .thumb_func
+ 412              	matacc_asm_acc:
+ 413              	.LFB17:
+ 414              	 .cfi_startproc
+  81:ml-kem-stubs.c **** 
+  82:ml-kem-stubs.c **** void matacc_asm_acc(int16_t *r, const int16_t *a, const int16_t *b, int16_t zeta) {
+ 415              	 .loc 1 82 6 is_stmt 1 view-0
+ 416              	 
+ 417              	 
+ 418              	 
+ 419 0000 7047     	 bx lr
+ 420              	 .cfi_endproc
+ 421              	.LFE17:
+ 423              	 .text
+ 424              	.Letext0:
+ 425              	 .file 2 "/usr/lib/gcc/arm-none-eabi/13.2.1/include/stdint.h"
+ 426              	 .file 3 "/usr/lib/gcc/arm-none-eabi/13.2.1/include/stddef.h"
+DEFINED SYMBOLS
+                            *ABS*:00000000 ml-kem-stubs.c
+    {standard input}:19     .text.asm_barrett_reduce:00000000 $t
+    {standard input}:25     .text.asm_barrett_reduce:00000000 asm_barrett_reduce
+    {standard input}:58     .text.frombytes_mul_asm:00000000 $t
+    {standard input}:64     .text.frombytes_mul_asm:00000000 frombytes_mul_asm
+    {standard input}:81     .text.frombytes_mul_asm_acc:00000000 $t
+    {standard input}:87     .text.frombytes_mul_asm_acc:00000000 frombytes_mul_asm_acc
+    {standard input}:99     .text.basemul_asm:00000000 $t
+    {standard input}:105    .text.basemul_asm:00000000 basemul_asm
+    {standard input}:123    .text.basemul_asm_acc:00000000 $t
+    {standard input}:129    .text.basemul_asm_acc:00000000 basemul_asm_acc
+    {standard input}:141    .text.pointwise_add:00000000 $t
+    {standard input}:147    .text.pointwise_add:00000000 pointwise_add
+    {standard input}:203    .text.pointwise_sub:00000000 $t
+    {standard input}:209    .text.pointwise_sub:00000000 pointwise_sub
+    {standard input}:264    .text.cmov_int16:00000000 $t
+    {standard input}:270    .text.cmov_int16:00000000 cmov_int16
+    {standard input}:326    .text.ntt_fast:00000000 $t
+    {standard input}:332    .text.ntt_fast:00000000 ntt_fast
+    {standard input}:349    .text.ntt_fast:00000004 $d
+    {standard input}:354    .text.invntt_fast:00000000 $t
+    {standard input}:360    .text.invntt_fast:00000000 invntt_fast
+    {standard input}:377    .text.invntt_fast:00000004 $d
+    {standard input}:382    .text.matacc_asm:00000000 $t
+    {standard input}:388    .text.matacc_asm:00000000 matacc_asm
+    {standard input}:406    .text.matacc_asm_acc:00000000 $t
+    {standard input}:412    .text.matacc_asm_acc:00000000 matacc_asm_acc
+                           .group:00000000 wm4.0.ade4f9eb57a3e60dd8a456a9e838da1f
+                           .group:00000000 wm4.params.h.2.d902bb26d9fbc1e1d74ad483d256421a
+                           .group:00000000 wm4.stdint.h.29.6d480f4ba0f60596e88234283d42444f
+                           .group:00000000 wm4.poly.h.8.0e764e15c31dfc33946fce8d19340767
+                           .group:00000000 wm4._newlib_version.h.4.411db44ea2338a62eca2f0777f81481b
+                           .group:00000000 wm4.newlib.h.27.07bf1b8b16da454ae07478107717878b
+                           .group:00000000 wm4.ieeefp.h.77.fbf6f2f498a71d39a0aaf172d6680419
+                           .group:00000000 wm4.features.h.22.c11ecc6cb8b914ead0c0895c00b4b4d5
+                           .group:00000000 wm4.config.h.224.10ee1ad185d877c6e334e6581faab44d
+                           .group:00000000 wm4._ansi.h.31.de524f58584151836e90d8620a16f8e8
+                           .group:00000000 wm4.stddef.h.39.38eb7ec030421799c657b13be5aa21c7
+                           .group:00000000 wm4._default_types.h.6.959254cf5f09734ea7516c89e8bb21bd
+                           .group:00000000 wm4.cdefs.h.49.a0dc0a4a6c7d01e2e5d0aade9399215f
+                           .group:00000000 wm4._types.h.20.dd0d04dca3800a0d2a6129b87f3adbb2
+                           .group:00000000 wm4.stddef.h.158.6f8e08a347b1cff664332fa350bfceb3
+                           .group:00000000 wm4._types.h.127.3bdfe3ff8ea2d0985b03d9cbe93480e3
+                           .group:00000000 wm4.reent.h.18.25503cdc8b7e55dd0d6ea7b3e5af7a03
+                           .group:00000000 wm4.lock.h.2.c0958401bd0ce484d507ee19aacab817
+                           .group:00000000 wm4.reent.h.78.7f0775353a33c852a1479c008f68cd03
+                           .group:00000000 wm4.string.h.15.dab3980bf35408a4c507182805e2de3a
+                           .group:00000000 wm4.stddef.h.158.eec8bf00b5213f43d095cb984c5f22e3
+
+UNDEFINED SYMBOLS
+ntt
+invntt
