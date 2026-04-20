@@ -1,0 +1,928 @@
+   1              	 .cpu cortex-m4
+   2              	 .arch armv7e-m
+   3              	 .fpu softvfp
+   4              	 .eabi_attribute 20,1
+   5              	 .eabi_attribute 21,1
+   6              	 .eabi_attribute 23,3
+   7              	 .eabi_attribute 24,1
+   8              	 .eabi_attribute 25,1
+   9              	 .eabi_attribute 26,1
+  10              	 .eabi_attribute 30,4
+  11              	 .eabi_attribute 34,1
+  12              	 .eabi_attribute 18,4
+  13              	 .file "ntt.c"
+  14              	 .text
+  15              	.Ltext0:
+  16              	 .cfi_sections .debug_frame
+  17              	 .file 1 "ntt.c"
+  18              	 .section .text.PQCLEAN_MLKEM768_CLEAN_ntt,"ax",%progbits
+  19              	 .align 1
+  20              	 .global PQCLEAN_MLKEM768_CLEAN_ntt
+  21              	 .syntax unified
+  22              	 .thumb
+  23              	 .thumb_func
+  25              	PQCLEAN_MLKEM768_CLEAN_ntt:
+  26              	.LVL0:
+  27              	.LFB1:
+   1:ntt.c         **** #include "ntt.h"
+   2:ntt.c         **** #include "params.h"
+   3:ntt.c         **** #include "reduce.h"
+   4:ntt.c         **** #include <stdint.h>
+   5:ntt.c         **** 
+   6:ntt.c         **** /* Code to generate PQCLEAN_MLKEM768_CLEAN_zetas and zetas_inv used in the number-theoretic transfo
+   7:ntt.c         **** 
+   8:ntt.c         **** #define KYBER_ROOT_OF_UNITY 17
+   9:ntt.c         **** 
+  10:ntt.c         **** static const uint8_t tree[128] = {
+  11:ntt.c         ****   0, 64, 32, 96, 16, 80, 48, 112, 8, 72, 40, 104, 24, 88, 56, 120,
+  12:ntt.c         ****   4, 68, 36, 100, 20, 84, 52, 116, 12, 76, 44, 108, 28, 92, 60, 124,
+  13:ntt.c         ****   2, 66, 34, 98, 18, 82, 50, 114, 10, 74, 42, 106, 26, 90, 58, 122,
+  14:ntt.c         ****   6, 70, 38, 102, 22, 86, 54, 118, 14, 78, 46, 110, 30, 94, 62, 126,
+  15:ntt.c         ****   1, 65, 33, 97, 17, 81, 49, 113, 9, 73, 41, 105, 25, 89, 57, 121,
+  16:ntt.c         ****   5, 69, 37, 101, 21, 85, 53, 117, 13, 77, 45, 109, 29, 93, 61, 125,
+  17:ntt.c         ****   3, 67, 35, 99, 19, 83, 51, 115, 11, 75, 43, 107, 27, 91, 59, 123,
+  18:ntt.c         ****   7, 71, 39, 103, 23, 87, 55, 119, 15, 79, 47, 111, 31, 95, 63, 127
+  19:ntt.c         **** };
+  20:ntt.c         **** 
+  21:ntt.c         **** void init_ntt() {
+  22:ntt.c         ****   unsigned int i;
+  23:ntt.c         ****   int16_t tmp[128];
+  24:ntt.c         **** 
+  25:ntt.c         ****   tmp[0] = MONT;
+  26:ntt.c         ****   for(i=1;i<128;i++)
+  27:ntt.c         ****     tmp[i] = fqmul(tmp[i-1],MONT*KYBER_ROOT_OF_UNITY % KYBER_Q);
+  28:ntt.c         **** 
+  29:ntt.c         ****   for(i=0;i<128;i++) {
+  30:ntt.c         ****     PQCLEAN_MLKEM768_CLEAN_zetas[i] = tmp[tree[i]];
+  31:ntt.c         ****     if(PQCLEAN_MLKEM768_CLEAN_zetas[i] > KYBER_Q/2)
+  32:ntt.c         ****       PQCLEAN_MLKEM768_CLEAN_zetas[i] -= KYBER_Q;
+  33:ntt.c         ****     if(PQCLEAN_MLKEM768_CLEAN_zetas[i] < -KYBER_Q/2)
+  34:ntt.c         ****       PQCLEAN_MLKEM768_CLEAN_zetas[i] += KYBER_Q;
+  35:ntt.c         ****   }
+  36:ntt.c         **** }
+  37:ntt.c         **** */
+  38:ntt.c         **** 
+  39:ntt.c         **** const int16_t PQCLEAN_MLKEM768_CLEAN_zetas[128] = {
+  40:ntt.c         ****     -1044,  -758,  -359, -1517,  1493,  1422,   287,   202,
+  41:ntt.c         ****     -171,   622,  1577,   182,   962, -1202, -1474,  1468,
+  42:ntt.c         ****     573, -1325,   264,   383,  -829,  1458, -1602,  -130,
+  43:ntt.c         ****     -681,  1017,   732,   608, -1542,   411,  -205, -1571,
+  44:ntt.c         ****     1223,   652,  -552,  1015, -1293,  1491,  -282, -1544,
+  45:ntt.c         ****     516,    -8,  -320,  -666, -1618, -1162,   126,  1469,
+  46:ntt.c         ****     -853,   -90,  -271,   830,   107, -1421,  -247,  -951,
+  47:ntt.c         ****     -398,   961, -1508,  -725,   448, -1065,   677, -1275,
+  48:ntt.c         ****     -1103,   430,   555,   843, -1251,   871,  1550,   105,
+  49:ntt.c         ****     422,   587,   177,  -235,  -291,  -460,  1574,  1653,
+  50:ntt.c         ****     -246,   778,  1159,  -147,  -777,  1483,  -602,  1119,
+  51:ntt.c         ****     -1590,   644,  -872,   349,   418,   329,  -156,   -75,
+  52:ntt.c         ****     817,  1097,   603,   610,  1322, -1285, -1465,   384,
+  53:ntt.c         ****     -1215,  -136,  1218, -1335,  -874,   220, -1187, -1659,
+  54:ntt.c         ****     -1185, -1530, -1278,   794, -1510,  -854,  -870,   478,
+  55:ntt.c         ****     -108,  -308,   996,   991,   958, -1460,  1522,  1628
+  56:ntt.c         **** };
+  57:ntt.c         **** 
+  58:ntt.c         **** /*************************************************
+  59:ntt.c         **** * Name:        fqmul
+  60:ntt.c         **** *
+  61:ntt.c         **** * Description: Multiplication followed by Montgomery reduction
+  62:ntt.c         **** *
+  63:ntt.c         **** * Arguments:   - int16_t a: first factor
+  64:ntt.c         **** *              - int16_t b: second factor
+  65:ntt.c         **** *
+  66:ntt.c         **** * Returns 16-bit integer congruent to a*b*R^{-1} mod q
+  67:ntt.c         **** **************************************************/
+  68:ntt.c         **** static int16_t fqmul(int16_t a, int16_t b) {
+  69:ntt.c         ****     return PQCLEAN_MLKEM768_CLEAN_montgomery_reduce((int32_t)a * b);
+  70:ntt.c         **** }
+  71:ntt.c         **** 
+  72:ntt.c         **** /*************************************************
+  73:ntt.c         **** * Name:        PQCLEAN_MLKEM768_CLEAN_ntt
+  74:ntt.c         **** *
+  75:ntt.c         **** * Description: Inplace number-theoretic transform (NTT) in Rq.
+  76:ntt.c         **** *              input is in standard order, output is in bitreversed order
+  77:ntt.c         **** *
+  78:ntt.c         **** * Arguments:   - int16_t r[256]: pointer to input/output vector of elements of Zq
+  79:ntt.c         **** **************************************************/
+  80:ntt.c         **** void PQCLEAN_MLKEM768_CLEAN_ntt(int16_t r[256]) {
+  28              	 .loc 1 80 49 view-0
+  29              	 .cfi_startproc
+  30              	 
+  31              	 
+  81:ntt.c         ****     unsigned int len, start, j, k;
+  32              	 .loc 1 81 5 view .LVU1
+  82:ntt.c         ****     int16_t t, zeta;
+  33              	 .loc 1 82 5 view .LVU2
+  83:ntt.c         **** 
+  84:ntt.c         ****     k = 1;
+  34              	 .loc 1 84 5 view .LVU3
+  85:ntt.c         ****     for (len = 128; len >= 2; len >>= 1) {
+  35              	 .loc 1 85 5 view .LVU4
+  36              	 .loc 1 85 25 discriminator 1 view .LVU5
+  80:ntt.c         ****     unsigned int len, start, j, k;
+  37              	 .loc 1 80 49 is_stmt 0 view .LVU6
+  38 0000 2DE9F04F 	 push {r4,r5,r6,r7,r8,r9,r10,fp,lr}
+  39              	.LCFI0:
+  40              	 .cfi_def_cfa_offset 36
+  41              	 .cfi_offset 4,-36
+  42              	 .cfi_offset 5,-32
+  43              	 .cfi_offset 6,-28
+  44              	 .cfi_offset 7,-24
+  45              	 .cfi_offset 8,-20
+  46              	 .cfi_offset 9,-16
+  47              	 .cfi_offset 10,-12
+  48              	 .cfi_offset 11,-8
+  49              	 .cfi_offset 14,-4
+  50 0004 0646     	 mov r6,r0
+  51 0006 85B0     	 sub sp,sp,#20
+  52              	.LCFI1:
+  53              	 .cfi_def_cfa_offset 56
+  86:ntt.c         ****         for (start = 0; start < 256; start = j + len) {
+  87:ntt.c         ****             zeta = PQCLEAN_MLKEM768_CLEAN_zetas[k++];
+  88:ntt.c         ****             for (j = start; j < start + len; j++) {
+  54              	 .loc 1 88 20 view .LVU7
+  55 0008 4FF00709 	 mov r9,#7
+  84:ntt.c         ****     for (len = 128; len >= 2; len >>= 1) {
+  56              	 .loc 1 84 7 view .LVU8
+  57 000c 4FF00108 	 mov r8,#1
+  85:ntt.c         ****         for (start = 0; start < 256; start = j + len) {
+  58              	 .loc 1 85 14 view .LVU9
+  59 0010 8025     	 movs r5,#128
+  60              	.LVL1:
+  61              	.L2:
+  86:ntt.c         ****         for (start = 0; start < 256; start = j + len) {
+  62              	 .loc 1 86 31 is_stmt 1 discriminator 1 view .LVU10
+  63 0012 1F4B     	 ldr r3,.L8
+  64 0014 03EB4802 	 add r2,r3,r8,lsl#1
+  65 0018 6B1C     	 adds r3,r5,#1
+  86:ntt.c         ****         for (start = 0; start < 256; start = j + len) {
+  66              	 .loc 1 86 20 is_stmt 0 view .LVU11
+  67 001a 0024     	 movs r4,#0
+  68 001c 0093     	 str r3,[sp]
+  69              	.LVL2:
+  70              	.L4:
+  87:ntt.c         ****             for (j = start; j < start + len; j++) {
+  71              	 .loc 1 87 13 is_stmt 1 view .LVU12
+  72              	 .loc 1 88 39 is_stmt 0 discriminator 1 view .LVU13
+  73 001e 05EB040A 	 add r10,r5,r4
+  87:ntt.c         ****             for (j = start; j < start + len; j++) {
+  74              	 .loc 1 87 18 view .LVU14
+  75 0022 32F9021B 	 ldrsh r1,[r2],#2
+  87:ntt.c         ****             for (j = start; j < start + len; j++) {
+  76              	 .loc 1 87 50 view .LVU15
+  77 0026 08F10108 	 add r8,r8,#1
+  78              	.LVL3:
+  79              	 .loc 1 88 13 is_stmt 1 view .LVU16
+  80              	 .loc 1 88 31 discriminator 1 view .LVU17
+  81 002a 06EB4A03 	 add r3,r6,r10,lsl#1
+  82 002e 06EB4407 	 add r7,r6,r4,lsl#1
+  83              	 .loc 1 88 20 is_stmt 0 view .LVU18
+  84 0032 A346     	 mov fp,r4
+  85              	.LVL4:
+  86              	.L3:
+  89:ntt.c         ****                 t = fqmul(zeta, r[j + len]);
+  87              	 .loc 1 89 21 view .LVU19
+  88 0034 B3F90000 	 ldrsh r0,[r3]
+  89 0038 0293     	 str r3,[sp,#8]
+  90              	.LBB18:
+  91              	.LBB19:
+  69:ntt.c         **** }
+  92              	 .loc 1 69 12 view .LVU20
+  93 003a 4843     	 muls r0,r1,r0
+  94 003c 154B     	 ldr r3,.L8+4
+  95 003e 0392     	 str r2,[sp,#12]
+  69:ntt.c         **** }
+  96              	 .loc 1 69 12 view .LVU21
+  97              	.LBE19:
+  98              	.LBE18:
+  99              	 .loc 1 89 17 is_stmt 1 view .LVU22
+ 100              	.LVL5:
+ 101              	.LBB21:
+ 102              	.LBI18:
+  68:ntt.c         ****     return PQCLEAN_MLKEM768_CLEAN_montgomery_reduce((int32_t)a * b);
+ 103              	 .loc 1 68 16 view .LVU23
+ 104              	.LBB20:
+  69:ntt.c         **** }
+ 105              	 .loc 1 69 5 view .LVU24
+  69:ntt.c         **** }
+ 106              	 .loc 1 69 12 is_stmt 0 view .LVU25
+ 107 0040 0191     	 str r1,[sp,#4]
+ 108 0042 9847     	 blx r3
+ 109              	.LVL6:
+  69:ntt.c         **** }
+ 110              	 .loc 1 69 12 view .LVU26
+ 111              	.LBE20:
+ 112              	.LBE21:
+  90:ntt.c         ****                 r[j + len] = r[j] - t;
+ 113              	 .loc 1 90 17 is_stmt 1 view .LVU27
+ 114              	 .loc 1 90 31 is_stmt 0 view .LVU28
+ 115 0044 B7F900C0 	 ldrsh ip,[r7]
+ 116              	 .loc 1 90 28 view .LVU29
+ 117 0048 029B     	 ldr r3,[sp,#8]
+  88:ntt.c         ****                 t = fqmul(zeta, r[j + len]);
+ 118              	 .loc 1 88 31 discriminator 1 view .LVU30
+ 119 004a 0199     	 ldr r1,[sp,#4]
+ 120 004c 039A     	 ldr r2,[sp,#12]
+ 121              	 .loc 1 90 35 view .LVU31
+ 122 004e 80B2     	 uxth r0,r0
+ 123              	 .loc 1 90 35 view .LVU32
+ 124 0050 ACEB000C 	 sub ip,ip,r0
+ 125              	 .loc 1 90 28 view .LVU33
+ 126 0054 23F802CB 	 strh ip,[r3],#2
+  91:ntt.c         ****                 r[j] = r[j] + t;
+ 127              	 .loc 1 91 17 is_stmt 1 view .LVU34
+ 128              	 .loc 1 91 29 is_stmt 0 view .LVU35
+ 129 0058 37F802CB 	 ldrh ip,[r7],#2
+  88:ntt.c         ****                 t = fqmul(zeta, r[j + len]);
+ 130              	 .loc 1 88 47 discriminator 3 view .LVU36
+ 131 005c 0BF1010B 	 add fp,fp,#1
+ 132              	.LVL7:
+ 133              	 .loc 1 91 29 view .LVU37
+ 134 0060 6044     	 add r0,r0,ip
+ 135              	.LVL8:
+  88:ntt.c         ****                 t = fqmul(zeta, r[j + len]);
+ 136              	 .loc 1 88 31 discriminator 1 view .LVU38
+ 137 0062 D345     	 cmp fp,r10
+ 138              	 .loc 1 91 22 view .LVU39
+ 139 0064 27F8020C 	 strh r0,[r7,#-2]
+  88:ntt.c         ****                 t = fqmul(zeta, r[j + len]);
+ 140              	 .loc 1 88 47 is_stmt 1 discriminator 3 view .LVU40
+ 141              	.LVL9:
+  88:ntt.c         ****                 t = fqmul(zeta, r[j + len]);
+ 142              	 .loc 1 88 31 discriminator 1 view .LVU41
+ 143 0068 E4D3     	 bcc .L3
+ 144 006a 611C     	 adds r1,r4,#1
+ 145 006c 6B1E     	 subs r3,r5,#1
+ 146 006e 8A45     	 cmp r10,r1
+ 147 0070 38BF     	 it cc
+ 148 0072 0023     	 movcc r3,#0
+ 149 0074 0099     	 ldr r1,[sp]
+ 150 0076 0C44     	 add r4,r4,r1
+ 151              	.LVL10:
+  86:ntt.c         ****             zeta = PQCLEAN_MLKEM768_CLEAN_zetas[k++];
+ 152              	 .loc 1 86 44 discriminator 2 view .LVU42
+ 153 0078 1C44     	 add r4,r4,r3
+ 154              	.LVL11:
+  86:ntt.c         ****             zeta = PQCLEAN_MLKEM768_CLEAN_zetas[k++];
+ 155              	 .loc 1 86 31 discriminator 1 view .LVU43
+ 156 007a FF2C     	 cmp r4,#255
+ 157 007c CFD9     	 bls .L4
+  85:ntt.c         ****         for (start = 0; start < 256; start = j + len) {
+ 158              	 .loc 1 85 35 discriminator 2 view .LVU44
+  85:ntt.c         ****         for (start = 0; start < 256; start = j + len) {
+ 159              	 .loc 1 85 25 is_stmt 0 discriminator 1 view .LVU45
+ 160 007e B9F10109 	 subs r9,r9,#1
+  85:ntt.c         ****         for (start = 0; start < 256; start = j + len) {
+ 161              	 .loc 1 85 35 discriminator 2 view .LVU46
+ 162 0082 4FEA5505 	 lsr r5,r5,#1
+ 163              	.LVL12:
+  85:ntt.c         ****         for (start = 0; start < 256; start = j + len) {
+ 164              	 .loc 1 85 25 is_stmt 1 discriminator 1 view .LVU47
+ 165 0086 C4D1     	 bne .L2
+  92:ntt.c         ****             }
+  93:ntt.c         ****         }
+  94:ntt.c         ****     }
+  95:ntt.c         **** }
+ 166              	 .loc 1 95 1 is_stmt 0 view .LVU48
+ 167 0088 05B0     	 add sp,sp,#20
+ 168              	.LCFI2:
+ 169              	 .cfi_def_cfa_offset 36
+ 170              	 
+ 171 008a BDE8F08F 	 pop {r4,r5,r6,r7,r8,r9,r10,fp,pc}
+ 172              	.LVL13:
+ 173              	.L9:
+ 174              	 .loc 1 95 1 view .LVU49
+ 175 008e 00BF     	 .align 2
+ 176              	.L8:
+ 177 0090 00000000 	 .word PQCLEAN_MLKEM768_CLEAN_zetas
+ 178 0094 00000000 	 .word PQCLEAN_MLKEM768_CLEAN_montgomery_reduce
+ 179              	 .cfi_endproc
+ 180              	.LFE1:
+ 182              	 .section .text.PQCLEAN_MLKEM768_CLEAN_invntt,"ax",%progbits
+ 183              	 .align 1
+ 184              	 .global PQCLEAN_MLKEM768_CLEAN_invntt
+ 185              	 .syntax unified
+ 186              	 .thumb
+ 187              	 .thumb_func
+ 189              	PQCLEAN_MLKEM768_CLEAN_invntt:
+ 190              	.LVL14:
+ 191              	.LFB2:
+  96:ntt.c         **** 
+  97:ntt.c         **** /*************************************************
+  98:ntt.c         **** * Name:        invntt_tomont
+  99:ntt.c         **** *
+ 100:ntt.c         **** * Description: Inplace inverse number-theoretic transform in Rq and
+ 101:ntt.c         **** *              multiplication by Montgomery factor 2^16.
+ 102:ntt.c         **** *              Input is in bitreversed order, output is in standard order
+ 103:ntt.c         **** *
+ 104:ntt.c         **** * Arguments:   - int16_t r[256]: pointer to input/output vector of elements of Zq
+ 105:ntt.c         **** **************************************************/
+ 106:ntt.c         **** void PQCLEAN_MLKEM768_CLEAN_invntt(int16_t r[256]) {
+ 192              	 .loc 1 106 52 is_stmt 1 view-0
+ 193              	 .cfi_startproc
+ 194              	 
+ 195              	 
+ 107:ntt.c         ****     unsigned int start, len, j, k;
+ 196              	 .loc 1 107 5 view .LVU51
+ 108:ntt.c         ****     int16_t t, zeta;
+ 197              	 .loc 1 108 5 view .LVU52
+ 109:ntt.c         ****     const int16_t f = 1441; // mont^2/128
+ 198              	 .loc 1 109 5 view .LVU53
+ 110:ntt.c         **** 
+ 111:ntt.c         ****     k = 127;
+ 199              	 .loc 1 111 5 view .LVU54
+ 112:ntt.c         ****     for (len = 2; len <= 128; len <<= 1) {
+ 200              	 .loc 1 112 5 view .LVU55
+ 201              	 .loc 1 112 23 discriminator 1 view .LVU56
+ 106:ntt.c         ****     unsigned int start, len, j, k;
+ 202              	 .loc 1 106 52 is_stmt 0 view .LVU57
+ 203 0000 2DE9F04F 	 push {r4,r5,r6,r7,r8,r9,r10,fp,lr}
+ 204              	.LCFI3:
+ 205              	 .cfi_def_cfa_offset 36
+ 206              	 .cfi_offset 4,-36
+ 207              	 .cfi_offset 5,-32
+ 208              	 .cfi_offset 6,-28
+ 209              	 .cfi_offset 7,-24
+ 210              	 .cfi_offset 8,-20
+ 211              	 .cfi_offset 9,-16
+ 212              	 .cfi_offset 10,-12
+ 213              	 .cfi_offset 11,-8
+ 214              	 .cfi_offset 14,-4
+ 215 0004 0446     	 mov r4,r0
+ 216 0006 85B0     	 sub sp,sp,#20
+ 217              	.LCFI4:
+ 218              	 .cfi_def_cfa_offset 56
+ 113:ntt.c         ****         for (start = 0; start < 256; start = j + len) {
+ 219              	 .loc 1 113 20 view .LVU58
+ 220 0008 4FF00709 	 mov r9,#7
+ 111:ntt.c         ****     for (len = 2; len <= 128; len <<= 1) {
+ 221              	 .loc 1 111 7 view .LVU59
+ 222 000c 4FF07F08 	 mov r8,#127
+ 112:ntt.c         ****         for (start = 0; start < 256; start = j + len) {
+ 223              	 .loc 1 112 14 view .LVU60
+ 224 0010 0227     	 movs r7,#2
+ 225              	.LVL15:
+ 226              	.L11:
+ 227              	 .loc 1 113 31 is_stmt 1 discriminator 1 view .LVU61
+ 228 0012 234B     	 ldr r3,.L19
+ 229              	 .loc 1 113 20 is_stmt 0 view .LVU62
+ 230 0014 0025     	 movs r5,#0
+ 231 0016 03EB4802 	 add r2,r3,r8,lsl#1
+ 232              	.LVL16:
+ 233              	.L14:
+ 114:ntt.c         ****             zeta = PQCLEAN_MLKEM768_CLEAN_zetas[k--];
+ 234              	 .loc 1 114 13 is_stmt 1 view .LVU63
+ 235              	 .loc 1 114 18 is_stmt 0 view .LVU64
+ 236 001a 32F90239 	 ldrsh r3,[r2],#-2
+ 237 001e 0193     	 str r3,[sp,#4]
+ 238 0020 05EB070A 	 add r10,r5,r7
+ 239              	 .loc 1 114 50 view .LVU65
+ 240 0024 08F1FF38 	 add r8,r8,#-1
+ 241              	.LVL17:
+ 115:ntt.c         ****             for (j = start; j < start + len; j++) {
+ 242              	 .loc 1 115 13 is_stmt 1 view .LVU66
+ 243              	 .loc 1 115 13 is_stmt 0 view .LVU67
+ 244 0028 04EB450B 	 add fp,r4,r5,lsl#1
+ 245 002c 04EB4A06 	 add r6,r4,r10,lsl#1
+ 246              	.LVL18:
+ 247              	.L12:
+ 248              	 .loc 1 115 31 is_stmt 1 discriminator 1 view .LVU68
+ 249 0030 5545     	 cmp r5,r10
+ 250 0032 18D3     	 bcc .L13
+ 251 0034 07EB0A05 	 add r5,r7,r10
+ 252              	.LVL19:
+ 113:ntt.c         ****             zeta = PQCLEAN_MLKEM768_CLEAN_zetas[k--];
+ 253              	 .loc 1 113 44 discriminator 2 view .LVU69
+ 113:ntt.c         ****             zeta = PQCLEAN_MLKEM768_CLEAN_zetas[k--];
+ 254              	 .loc 1 113 31 discriminator 1 view .LVU70
+ 255 0038 FF2D     	 cmp r5,#255
+ 256 003a EED9     	 bls .L14
+ 112:ntt.c         ****         for (start = 0; start < 256; start = j + len) {
+ 257              	 .loc 1 112 35 discriminator 2 view .LVU71
+ 112:ntt.c         ****         for (start = 0; start < 256; start = j + len) {
+ 258              	 .loc 1 112 23 is_stmt 0 discriminator 1 view .LVU72
+ 259 003c B9F10109 	 subs r9,r9,#1
+ 112:ntt.c         ****         for (start = 0; start < 256; start = j + len) {
+ 260              	 .loc 1 112 35 discriminator 2 view .LVU73
+ 261 0040 4FEA4707 	 lsl r7,r7,#1
+ 262              	.LVL20:
+ 112:ntt.c         ****         for (start = 0; start < 256; start = j + len) {
+ 263              	 .loc 1 112 23 is_stmt 1 discriminator 1 view .LVU74
+ 264 0044 E5D1     	 bne .L11
+ 265              	.LBB22:
+ 266              	.LBB23:
+  69:ntt.c         **** }
+ 267              	 .loc 1 69 12 is_stmt 0 view .LVU75
+ 268 0046 174E     	 ldr r6,.L19+4
+ 269 0048 A51E     	 subs r5,r4,#2
+  69:ntt.c         **** }
+ 270              	 .loc 1 69 12 view .LVU76
+ 271 004a 40F2A157 	 movw r7,#1441
+ 272              	.LVL21:
+  69:ntt.c         **** }
+ 273              	 .loc 1 69 12 view .LVU77
+ 274 004e 04F5FF74 	 add r4,r4,#510
+ 275              	.LVL22:
+ 276              	.L16:
+  69:ntt.c         **** }
+ 277              	 .loc 1 69 12 view .LVU78
+ 278              	.LBE23:
+ 279              	.LBE22:
+ 116:ntt.c         ****                 t = r[j];
+ 117:ntt.c         ****                 r[j] = PQCLEAN_MLKEM768_CLEAN_barrett_reduce(t + r[j + len]);
+ 118:ntt.c         ****                 r[j + len] = r[j + len] - t;
+ 119:ntt.c         ****                 r[j + len] = fqmul(zeta, r[j + len]);
+ 120:ntt.c         ****             }
+ 121:ntt.c         ****         }
+ 122:ntt.c         ****     }
+ 123:ntt.c         **** 
+ 124:ntt.c         ****     for (j = 0; j < 256; j++) {
+ 125:ntt.c         ****         r[j] = fqmul(r[j], f);
+ 280              	 .loc 1 125 9 is_stmt 1 view .LVU79
+ 281              	.LBB25:
+ 282              	.LBI22:
+  68:ntt.c         ****     return PQCLEAN_MLKEM768_CLEAN_montgomery_reduce((int32_t)a * b);
+ 283              	 .loc 1 68 16 view .LVU80
+ 284              	.LBB24:
+  69:ntt.c         **** }
+ 285              	 .loc 1 69 5 view .LVU81
+  69:ntt.c         **** }
+ 286              	 .loc 1 69 12 is_stmt 0 view .LVU82
+ 287 0052 35F9020F 	 ldrsh r0,[r5,#2]!
+ 288              	.LVL23:
+  69:ntt.c         **** }
+ 289              	 .loc 1 69 12 view .LVU83
+ 290 0056 7843     	 muls r0,r7,r0
+ 291 0058 B047     	 blx r6
+ 292              	.LVL24:
+  69:ntt.c         **** }
+ 293              	 .loc 1 69 12 view .LVU84
+ 294              	.LBE24:
+ 295              	.LBE25:
+ 124:ntt.c         ****         r[j] = fqmul(r[j], f);
+ 296              	 .loc 1 124 19 discriminator 1 view .LVU85
+ 297 005a A542     	 cmp r5,r4
+ 298              	 .loc 1 125 14 discriminator 1 view .LVU86
+ 299 005c 2880     	 strh r0,[r5]
+ 124:ntt.c         ****         r[j] = fqmul(r[j], f);
+ 300              	 .loc 1 124 27 is_stmt 1 discriminator 3 view .LVU87
+ 124:ntt.c         ****         r[j] = fqmul(r[j], f);
+ 301              	 .loc 1 124 19 discriminator 1 view .LVU88
+ 302 005e F8D1     	 bne .L16
+ 126:ntt.c         ****     }
+ 127:ntt.c         **** }
+ 303              	 .loc 1 127 1 is_stmt 0 view .LVU89
+ 304 0060 05B0     	 add sp,sp,#20
+ 305              	.LCFI5:
+ 306              	 .cfi_remember_state
+ 307              	 .cfi_def_cfa_offset 36
+ 308              	 
+ 309 0062 BDE8F08F 	 pop {r4,r5,r6,r7,r8,r9,r10,fp,pc}
+ 310              	.LVL25:
+ 311              	.L13:
+ 312              	.LCFI6:
+ 313              	 .cfi_restore_state
+ 117:ntt.c         ****                 r[j + len] = r[j + len] - t;
+ 314              	 .loc 1 117 64 view .LVU90
+ 315 0066 BBF80010 	 ldrh r1,[fp]
+ 117:ntt.c         ****                 r[j + len] = r[j + len] - t;
+ 316              	 .loc 1 117 67 view .LVU91
+ 317 006a B6F90000 	 ldrsh r0,[r6]
+ 117:ntt.c         ****                 r[j + len] = r[j + len] - t;
+ 318              	 .loc 1 117 24 view .LVU92
+ 319 006e 0E4B     	 ldr r3,.L19+8
+ 320 0070 0392     	 str r2,[sp,#12]
+ 116:ntt.c         ****                 r[j] = PQCLEAN_MLKEM768_CLEAN_barrett_reduce(t + r[j + len]);
+ 321              	 .loc 1 116 17 is_stmt 1 view .LVU93
+ 322              	.LVL26:
+ 117:ntt.c         ****                 r[j + len] = r[j + len] - t;
+ 323              	 .loc 1 117 17 view .LVU94
+ 117:ntt.c         ****                 r[j + len] = r[j + len] - t;
+ 324              	 .loc 1 117 64 is_stmt 0 view .LVU95
+ 325 0072 0844     	 add r0,r0,r1
+ 117:ntt.c         ****                 r[j + len] = r[j + len] - t;
+ 326              	 .loc 1 117 24 view .LVU96
+ 327 0074 00B2     	 sxth r0,r0
+ 117:ntt.c         ****                 r[j + len] = r[j + len] - t;
+ 328              	 .loc 1 117 64 view .LVU97
+ 329 0076 0291     	 str r1,[sp,#8]
+ 117:ntt.c         ****                 r[j + len] = r[j + len] - t;
+ 330              	 .loc 1 117 24 view .LVU98
+ 331 0078 9847     	 blx r3
+ 332              	.LVL27:
+ 117:ntt.c         ****                 r[j + len] = r[j + len] - t;
+ 333              	 .loc 1 117 22 discriminator 1 view .LVU99
+ 334 007a 2BF8020B 	 strh r0,[fp],#2
+ 118:ntt.c         ****                 r[j + len] = fqmul(zeta, r[j + len]);
+ 335              	 .loc 1 118 17 is_stmt 1 view .LVU100
+ 118:ntt.c         ****                 r[j + len] = fqmul(zeta, r[j + len]);
+ 336              	 .loc 1 118 41 is_stmt 0 view .LVU101
+ 337 007e 0299     	 ldr r1,[sp,#8]
+ 338 0080 36F8020B 	 ldrh r0,[r6],#2
+ 339              	.LBB26:
+ 340              	.LBB27:
+  69:ntt.c         **** }
+ 341              	 .loc 1 69 12 view .LVU102
+ 342 0084 019B     	 ldr r3,[sp,#4]
+ 343              	.LBE27:
+ 344              	.LBE26:
+ 118:ntt.c         ****                 r[j + len] = fqmul(zeta, r[j + len]);
+ 345              	 .loc 1 118 41 view .LVU103
+ 346 0086 401A     	 subs r0,r0,r1
+ 347 0088 00B2     	 sxth r0,r0
+ 118:ntt.c         ****                 r[j + len] = fqmul(zeta, r[j + len]);
+ 348              	 .loc 1 118 28 view .LVU104
+ 349 008a 26F8020C 	 strh r0,[r6,#-2]
+ 119:ntt.c         ****             }
+ 350              	 .loc 1 119 17 is_stmt 1 view .LVU105
+ 351              	.LVL28:
+ 352              	.LBB29:
+ 353              	.LBI26:
+  68:ntt.c         ****     return PQCLEAN_MLKEM768_CLEAN_montgomery_reduce((int32_t)a * b);
+ 354              	 .loc 1 68 16 view .LVU106
+ 355              	.LBB28:
+  69:ntt.c         **** }
+ 356              	 .loc 1 69 5 view .LVU107
+  69:ntt.c         **** }
+ 357              	 .loc 1 69 12 is_stmt 0 view .LVU108
+ 358 008e 5843     	 muls r0,r3,r0
+ 359              	.LVL29:
+  69:ntt.c         **** }
+ 360              	 .loc 1 69 12 view .LVU109
+ 361 0090 044B     	 ldr r3,.L19+4
+ 362 0092 9847     	 blx r3
+ 363              	.LVL30:
+  69:ntt.c         **** }
+ 364              	 .loc 1 69 12 view .LVU110
+ 365              	.LBE28:
+ 366              	.LBE29:
+ 115:ntt.c         ****                 t = r[j];
+ 367              	 .loc 1 115 47 discriminator 3 view .LVU111
+ 368 0094 0135     	 adds r5,r5,#1
+ 369              	.LVL31:
+ 115:ntt.c         ****                 t = r[j];
+ 370              	 .loc 1 115 47 discriminator 3 view .LVU112
+ 371 0096 039A     	 ldr r2,[sp,#12]
+ 119:ntt.c         ****             }
+ 372              	 .loc 1 119 28 discriminator 1 view .LVU113
+ 373 0098 26F8020C 	 strh r0,[r6,#-2]
+ 115:ntt.c         ****                 t = r[j];
+ 374              	 .loc 1 115 47 is_stmt 1 discriminator 3 view .LVU114
+ 375 009c C8E7     	 b .L12
+ 376              	.L20:
+ 377 009e 00BF     	 .align 2
+ 378              	.L19:
+ 379 00a0 00000000 	 .word PQCLEAN_MLKEM768_CLEAN_zetas
+ 380 00a4 00000000 	 .word PQCLEAN_MLKEM768_CLEAN_montgomery_reduce
+ 381 00a8 00000000 	 .word PQCLEAN_MLKEM768_CLEAN_barrett_reduce
+ 382              	 .cfi_endproc
+ 383              	.LFE2:
+ 385              	 .section .text.PQCLEAN_MLKEM768_CLEAN_basemul,"ax",%progbits
+ 386              	 .align 1
+ 387              	 .global PQCLEAN_MLKEM768_CLEAN_basemul
+ 388              	 .syntax unified
+ 389              	 .thumb
+ 390              	 .thumb_func
+ 392              	PQCLEAN_MLKEM768_CLEAN_basemul:
+ 393              	.LVL32:
+ 394              	.LFB3:
+ 128:ntt.c         **** 
+ 129:ntt.c         **** /*************************************************
+ 130:ntt.c         **** * Name:        PQCLEAN_MLKEM768_CLEAN_basemul
+ 131:ntt.c         **** *
+ 132:ntt.c         **** * Description: Multiplication of polynomials in Zq[X]/(X^2-zeta)
+ 133:ntt.c         **** *              used for multiplication of elements in Rq in NTT domain
+ 134:ntt.c         **** *
+ 135:ntt.c         **** * Arguments:   - int16_t r[2]: pointer to the output polynomial
+ 136:ntt.c         **** *              - const int16_t a[2]: pointer to the first factor
+ 137:ntt.c         **** *              - const int16_t b[2]: pointer to the second factor
+ 138:ntt.c         **** *              - int16_t zeta: integer defining the reduction polynomial
+ 139:ntt.c         **** **************************************************/
+ 140:ntt.c         **** void PQCLEAN_MLKEM768_CLEAN_basemul(int16_t r[2], const int16_t a[2], const int16_t b[2], int16_t z
+ 395              	 .loc 1 140 105 view-0
+ 396              	 .cfi_startproc
+ 397              	 
+ 398              	 
+ 141:ntt.c         ****     r[0]  = fqmul(a[1], b[1]);
+ 399              	 .loc 1 141 5 view .LVU116
+ 400              	.LBB30:
+ 401              	.LBI30:
+  68:ntt.c         ****     return PQCLEAN_MLKEM768_CLEAN_montgomery_reduce((int32_t)a * b);
+ 402              	 .loc 1 68 16 view .LVU117
+ 403              	.LBB31:
+  69:ntt.c         **** }
+ 404              	 .loc 1 69 5 view .LVU118
+ 405              	.LBE31:
+ 406              	.LBE30:
+ 140:ntt.c         ****     r[0]  = fqmul(a[1], b[1]);
+ 407              	 .loc 1 140 105 is_stmt 0 view .LVU119
+ 408 0000 2DE9F041 	 push {r4,r5,r6,r7,r8,lr}
+ 409              	.LCFI7:
+ 410              	 .cfi_def_cfa_offset 24
+ 411              	 .cfi_offset 4,-24
+ 412              	 .cfi_offset 5,-20
+ 413              	 .cfi_offset 6,-16
+ 414              	 .cfi_offset 7,-12
+ 415              	 .cfi_offset 8,-8
+ 416              	 .cfi_offset 14,-4
+ 140:ntt.c         ****     r[0]  = fqmul(a[1], b[1]);
+ 417              	 .loc 1 140 105 view .LVU120
+ 418 0004 0446     	 mov r4,r0
+ 419 0006 9846     	 mov r8,r3
+ 420              	.LBB34:
+ 421              	.LBB32:
+  69:ntt.c         **** }
+ 422              	 .loc 1 69 12 view .LVU121
+ 423 0008 4888     	 ldrh r0,[r1,#2]
+ 424              	.LVL33:
+  69:ntt.c         **** }
+ 425              	 .loc 1 69 12 view .LVU122
+ 426 000a 5388     	 ldrh r3,[r2,#2]
+ 427              	.LVL34:
+  69:ntt.c         **** }
+ 428              	 .loc 1 69 12 view .LVU123
+ 429 000c 114F     	 ldr r7,.L22
+ 430 000e 10FB03F0 	 smulbb r0,r0,r3
+ 431              	.LBE32:
+ 432              	.LBE34:
+ 140:ntt.c         ****     r[0]  = fqmul(a[1], b[1]);
+ 433              	 .loc 1 140 105 view .LVU124
+ 434 0012 0E46     	 mov r6,r1
+ 435 0014 1546     	 mov r5,r2
+ 436              	.LBB35:
+ 437              	.LBB33:
+  69:ntt.c         **** }
+ 438              	 .loc 1 69 12 view .LVU125
+ 439 0016 B847     	 blx r7
+ 440              	.LVL35:
+  69:ntt.c         **** }
+ 441              	 .loc 1 69 12 view .LVU126
+ 442              	.LBE33:
+ 443              	.LBE35:
+ 444              	 .loc 1 141 11 discriminator 1 view .LVU127
+ 445 0018 2080     	 strh r0,[r4]
+ 142:ntt.c         ****     r[0]  = fqmul(r[0], zeta);
+ 446              	 .loc 1 142 5 is_stmt 1 view .LVU128
+ 447              	.LVL36:
+ 448              	.LBB36:
+ 449              	.LBI36:
+  68:ntt.c         ****     return PQCLEAN_MLKEM768_CLEAN_montgomery_reduce((int32_t)a * b);
+ 450              	 .loc 1 68 16 view .LVU129
+ 451              	.LBB37:
+  69:ntt.c         **** }
+ 452              	 .loc 1 69 5 view .LVU130
+  69:ntt.c         **** }
+ 453              	 .loc 1 69 12 is_stmt 0 view .LVU131
+ 454 001a 00FB08F0 	 mul r0,r0,r8
+ 455              	.LVL37:
+  69:ntt.c         **** }
+ 456              	 .loc 1 69 12 view .LVU132
+ 457 001e B847     	 blx r7
+ 458              	.LVL38:
+  69:ntt.c         **** }
+ 459              	 .loc 1 69 12 view .LVU133
+ 460              	.LBE37:
+ 461              	.LBE36:
+ 462              	 .loc 1 142 11 discriminator 1 view .LVU134
+ 463 0020 2080     	 strh r0,[r4]
+ 143:ntt.c         ****     r[0] += fqmul(a[0], b[0]);
+ 464              	 .loc 1 143 5 is_stmt 1 view .LVU135
+ 465              	.LVL39:
+ 466              	.LBB38:
+ 467              	.LBI38:
+  68:ntt.c         ****     return PQCLEAN_MLKEM768_CLEAN_montgomery_reduce((int32_t)a * b);
+ 468              	 .loc 1 68 16 view .LVU136
+ 469              	.LBB39:
+  69:ntt.c         **** }
+ 470              	 .loc 1 69 5 view .LVU137
+  69:ntt.c         **** }
+ 471              	 .loc 1 69 12 is_stmt 0 view .LVU138
+ 472 0022 2B88     	 ldrh r3,[r5]
+ 473 0024 3088     	 ldrh r0,[r6]
+ 474 0026 10FB03F0 	 smulbb r0,r0,r3
+ 475 002a B847     	 blx r7
+ 476              	.LVL40:
+  69:ntt.c         **** }
+ 477              	 .loc 1 69 12 view .LVU139
+ 478              	.LBE39:
+ 479              	.LBE38:
+ 480              	 .loc 1 143 10 discriminator 1 view .LVU140
+ 481 002c 2388     	 ldrh r3,[r4]
+ 482 002e 1844     	 add r0,r0,r3
+ 483 0030 2080     	 strh r0,[r4]
+ 144:ntt.c         ****     r[1]  = fqmul(a[0], b[1]);
+ 484              	 .loc 1 144 5 is_stmt 1 view .LVU141
+ 485              	.LVL41:
+ 486              	.LBB40:
+ 487              	.LBI40:
+  68:ntt.c         ****     return PQCLEAN_MLKEM768_CLEAN_montgomery_reduce((int32_t)a * b);
+ 488              	 .loc 1 68 16 view .LVU142
+ 489              	.LBB41:
+  69:ntt.c         **** }
+ 490              	 .loc 1 69 5 view .LVU143
+  69:ntt.c         **** }
+ 491              	 .loc 1 69 12 is_stmt 0 view .LVU144
+ 492 0032 6B88     	 ldrh r3,[r5,#2]
+ 493 0034 3088     	 ldrh r0,[r6]
+ 494 0036 10FB03F0 	 smulbb r0,r0,r3
+ 495 003a B847     	 blx r7
+ 496              	.LVL42:
+  69:ntt.c         **** }
+ 497              	 .loc 1 69 12 view .LVU145
+ 498              	.LBE41:
+ 499              	.LBE40:
+ 500              	 .loc 1 144 11 discriminator 1 view .LVU146
+ 501 003c 6080     	 strh r0,[r4,#2]
+ 145:ntt.c         ****     r[1] += fqmul(a[1], b[0]);
+ 502              	 .loc 1 145 5 is_stmt 1 view .LVU147
+ 503              	.LVL43:
+ 504              	.LBB42:
+ 505              	.LBI42:
+  68:ntt.c         ****     return PQCLEAN_MLKEM768_CLEAN_montgomery_reduce((int32_t)a * b);
+ 506              	 .loc 1 68 16 view .LVU148
+ 507              	.LBB43:
+  69:ntt.c         **** }
+ 508              	 .loc 1 69 5 view .LVU149
+  69:ntt.c         **** }
+ 509              	 .loc 1 69 12 is_stmt 0 view .LVU150
+ 510 003e 2B88     	 ldrh r3,[r5]
+ 511 0040 7088     	 ldrh r0,[r6,#2]
+ 512 0042 10FB03F0 	 smulbb r0,r0,r3
+ 513 0046 B847     	 blx r7
+ 514              	.LVL44:
+  69:ntt.c         **** }
+ 515              	 .loc 1 69 12 view .LVU151
+ 516              	.LBE43:
+ 517              	.LBE42:
+ 518              	 .loc 1 145 10 discriminator 1 view .LVU152
+ 519 0048 6388     	 ldrh r3,[r4,#2]
+ 520 004a 1844     	 add r0,r0,r3
+ 521 004c 6080     	 strh r0,[r4,#2]
+ 146:ntt.c         **** }
+ 522              	 .loc 1 146 1 view .LVU153
+ 523 004e BDE8F081 	 pop {r4,r5,r6,r7,r8,pc}
+ 524              	.LVL45:
+ 525              	.L23:
+ 526              	 .loc 1 146 1 view .LVU154
+ 527 0052 00BF     	 .align 2
+ 528              	.L22:
+ 529 0054 00000000 	 .word PQCLEAN_MLKEM768_CLEAN_montgomery_reduce
+ 530              	 .cfi_endproc
+ 531              	.LFE3:
+ 533              	 .global PQCLEAN_MLKEM768_CLEAN_zetas
+ 534              	 .section .rodata.PQCLEAN_MLKEM768_CLEAN_zetas,"a"
+ 535              	 .align 1
+ 538              	PQCLEAN_MLKEM768_CLEAN_zetas:
+ 539 0000 ECFB     	 .short -1044
+ 540 0002 0AFD     	 .short -758
+ 541 0004 99FE     	 .short -359
+ 542 0006 13FA     	 .short -1517
+ 543 0008 D505     	 .short 1493
+ 544 000a 8E05     	 .short 1422
+ 545 000c 1F01     	 .short 287
+ 546 000e CA00     	 .short 202
+ 547 0010 55FF     	 .short -171
+ 548 0012 6E02     	 .short 622
+ 549 0014 2906     	 .short 1577
+ 550 0016 B600     	 .short 182
+ 551 0018 C203     	 .short 962
+ 552 001a 4EFB     	 .short -1202
+ 553 001c 3EFA     	 .short -1474
+ 554 001e BC05     	 .short 1468
+ 555 0020 3D02     	 .short 573
+ 556 0022 D3FA     	 .short -1325
+ 557 0024 0801     	 .short 264
+ 558 0026 7F01     	 .short 383
+ 559 0028 C3FC     	 .short -829
+ 560 002a B205     	 .short 1458
+ 561 002c BEF9     	 .short -1602
+ 562 002e 7EFF     	 .short -130
+ 563 0030 57FD     	 .short -681
+ 564 0032 F903     	 .short 1017
+ 565 0034 DC02     	 .short 732
+ 566 0036 6002     	 .short 608
+ 567 0038 FAF9     	 .short -1542
+ 568 003a 9B01     	 .short 411
+ 569 003c 33FF     	 .short -205
+ 570 003e DDF9     	 .short -1571
+ 571 0040 C704     	 .short 1223
+ 572 0042 8C02     	 .short 652
+ 573 0044 D8FD     	 .short -552
+ 574 0046 F703     	 .short 1015
+ 575 0048 F3FA     	 .short -1293
+ 576 004a D305     	 .short 1491
+ 577 004c E6FE     	 .short -282
+ 578 004e F8F9     	 .short -1544
+ 579 0050 0402     	 .short 516
+ 580 0052 F8FF     	 .short -8
+ 581 0054 C0FE     	 .short -320
+ 582 0056 66FD     	 .short -666
+ 583 0058 AEF9     	 .short -1618
+ 584 005a 76FB     	 .short -1162
+ 585 005c 7E00     	 .short 126
+ 586 005e BD05     	 .short 1469
+ 587 0060 ABFC     	 .short -853
+ 588 0062 A6FF     	 .short -90
+ 589 0064 F1FE     	 .short -271
+ 590 0066 3E03     	 .short 830
+ 591 0068 6B00     	 .short 107
+ 592 006a 73FA     	 .short -1421
+ 593 006c 09FF     	 .short -247
+ 594 006e 49FC     	 .short -951
+ 595 0070 72FE     	 .short -398
+ 596 0072 C103     	 .short 961
+ 597 0074 1CFA     	 .short -1508
+ 598 0076 2BFD     	 .short -725
+ 599 0078 C001     	 .short 448
+ 600 007a D7FB     	 .short -1065
+ 601 007c A502     	 .short 677
+ 602 007e 05FB     	 .short -1275
+ 603 0080 B1FB     	 .short -1103
+ 604 0082 AE01     	 .short 430
+ 605 0084 2B02     	 .short 555
+ 606 0086 4B03     	 .short 843
+ 607 0088 1DFB     	 .short -1251
+ 608 008a 6703     	 .short 871
+ 609 008c 0E06     	 .short 1550
+ 610 008e 6900     	 .short 105
+ 611 0090 A601     	 .short 422
+ 612 0092 4B02     	 .short 587
+ 613 0094 B100     	 .short 177
+ 614 0096 15FF     	 .short -235
+ 615 0098 DDFE     	 .short -291
+ 616 009a 34FE     	 .short -460
+ 617 009c 2606     	 .short 1574
+ 618 009e 7506     	 .short 1653
+ 619 00a0 0AFF     	 .short -246
+ 620 00a2 0A03     	 .short 778
+ 621 00a4 8704     	 .short 1159
+ 622 00a6 6DFF     	 .short -147
+ 623 00a8 F7FC     	 .short -777
+ 624 00aa CB05     	 .short 1483
+ 625 00ac A6FD     	 .short -602
+ 626 00ae 5F04     	 .short 1119
+ 627 00b0 CAF9     	 .short -1590
+ 628 00b2 8402     	 .short 644
+ 629 00b4 98FC     	 .short -872
+ 630 00b6 5D01     	 .short 349
+ 631 00b8 A201     	 .short 418
+ 632 00ba 4901     	 .short 329
+ 633 00bc 64FF     	 .short -156
+ 634 00be B5FF     	 .short -75
+ 635 00c0 3103     	 .short 817
+ 636 00c2 4904     	 .short 1097
+ 637 00c4 5B02     	 .short 603
+ 638 00c6 6202     	 .short 610
+ 639 00c8 2A05     	 .short 1322
+ 640 00ca FBFA     	 .short -1285
+ 641 00cc 47FA     	 .short -1465
+ 642 00ce 8001     	 .short 384
+ 643 00d0 41FB     	 .short -1215
+ 644 00d2 78FF     	 .short -136
+ 645 00d4 C204     	 .short 1218
+ 646 00d6 C9FA     	 .short -1335
+ 647 00d8 96FC     	 .short -874
+ 648 00da DC00     	 .short 220
+ 649 00dc 5DFB     	 .short -1187
+ 650 00de 85F9     	 .short -1659
+ 651 00e0 5FFB     	 .short -1185
+ 652 00e2 06FA     	 .short -1530
+ 653 00e4 02FB     	 .short -1278
+ 654 00e6 1A03     	 .short 794
+ 655 00e8 1AFA     	 .short -1510
+ 656 00ea AAFC     	 .short -854
+ 657 00ec 9AFC     	 .short -870
+ 658 00ee DE01     	 .short 478
+ 659 00f0 94FF     	 .short -108
+ 660 00f2 CCFE     	 .short -308
+ 661 00f4 E403     	 .short 996
+ 662 00f6 DF03     	 .short 991
+ 663 00f8 BE03     	 .short 958
+ 664 00fa 4CFA     	 .short -1460
+ 665 00fc F205     	 .short 1522
+ 666 00fe 5C06     	 .short 1628
+ 667              	 .text
+ 668              	.Letext0:
+ 669              	 .file 2 "/usr/lib/gcc/arm-none-eabi/14.2.1/include/stdint.h"
+ 670              	 .file 3 "reduce.h"
+ 671              	 .file 4 "ntt.h"
+DEFINED SYMBOLS
+                            *ABS*:00000000 ntt.c
+    {standard input}:19     .text.PQCLEAN_MLKEM768_CLEAN_ntt:00000000 $t
+    {standard input}:25     .text.PQCLEAN_MLKEM768_CLEAN_ntt:00000000 PQCLEAN_MLKEM768_CLEAN_ntt
+    {standard input}:177    .text.PQCLEAN_MLKEM768_CLEAN_ntt:00000090 $d
+    {standard input}:538    .rodata.PQCLEAN_MLKEM768_CLEAN_zetas:00000000 PQCLEAN_MLKEM768_CLEAN_zetas
+    {standard input}:183    .text.PQCLEAN_MLKEM768_CLEAN_invntt:00000000 $t
+    {standard input}:189    .text.PQCLEAN_MLKEM768_CLEAN_invntt:00000000 PQCLEAN_MLKEM768_CLEAN_invntt
+    {standard input}:379    .text.PQCLEAN_MLKEM768_CLEAN_invntt:000000a0 $d
+    {standard input}:386    .text.PQCLEAN_MLKEM768_CLEAN_basemul:00000000 $t
+    {standard input}:392    .text.PQCLEAN_MLKEM768_CLEAN_basemul:00000000 PQCLEAN_MLKEM768_CLEAN_basemul
+    {standard input}:529    .text.PQCLEAN_MLKEM768_CLEAN_basemul:00000054 $d
+    {standard input}:535    .rodata.PQCLEAN_MLKEM768_CLEAN_zetas:00000000 $d
+                           .group:00000000 wm4.0.2b10ec159abbf65f4ef33f6bb625bef4
+                           .group:00000000 wm4.params.h.2.65111bfa3abfd57d5e74a081754452f6
+                           .group:00000000 wm4.stdint.h.29.6d480f4ba0f60596e88234283d42444f
+                           .group:00000000 wm4.reduce.h.2.c12619405f65f048190ed1cd26a85ce1
+
+UNDEFINED SYMBOLS
+PQCLEAN_MLKEM768_CLEAN_montgomery_reduce
+PQCLEAN_MLKEM768_CLEAN_barrett_reduce

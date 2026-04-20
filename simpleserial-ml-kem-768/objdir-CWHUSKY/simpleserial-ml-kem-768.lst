@@ -1,0 +1,846 @@
+   1              	 .cpu cortex-m4
+   2              	 .arch armv7e-m
+   3              	 .fpu softvfp
+   4              	 .eabi_attribute 20,1
+   5              	 .eabi_attribute 21,1
+   6              	 .eabi_attribute 23,3
+   7              	 .eabi_attribute 24,1
+   8              	 .eabi_attribute 25,1
+   9              	 .eabi_attribute 26,1
+  10              	 .eabi_attribute 30,4
+  11              	 .eabi_attribute 34,1
+  12              	 .eabi_attribute 18,4
+  13              	 .file "simpleserial-ml-kem-768.c"
+  14              	 .text
+  15              	.Ltext0:
+  16              	 .cfi_sections .debug_frame
+  17              	 .file 1 "simpleserial-ml-kem-768.c"
+  18              	 .section .text.mlkem.part.0,"ax",%progbits
+  19              	 .align 1
+  20              	 .syntax unified
+  21              	 .thumb
+  22              	 .thumb_func
+  24              	mlkem.part.0:
+  25              	.LVL0:
+  26              	.LFB8:
+   1:simpleserial-ml-kem-768.c **** /*
+   2:simpleserial-ml-kem-768.c ****     This file is part of the ChipWhisperer Example Targets
+   3:simpleserial-ml-kem-768.c ****     Copyright (C) 2012-2017 NewAE Technology Inc.
+   4:simpleserial-ml-kem-768.c ****  
+   5:simpleserial-ml-kem-768.c ****     This program is free software: you can redistribute it and/or modify
+   6:simpleserial-ml-kem-768.c ****     it under the terms of the GNU General Public License as published by
+   7:simpleserial-ml-kem-768.c ****     the Free Software Foundation, either version 3 of the License, or
+   8:simpleserial-ml-kem-768.c ****     (at your option) any later version.
+   9:simpleserial-ml-kem-768.c ****  
+  10:simpleserial-ml-kem-768.c ****     This program is distributed in the hope that it will be useful,
+  11:simpleserial-ml-kem-768.c ****     but WITHOUT ANY WARRANTY; without even the implied warranty of
+  12:simpleserial-ml-kem-768.c ****     MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+  13:simpleserial-ml-kem-768.c ****     GNU General Public License for more details.
+  14:simpleserial-ml-kem-768.c ****  
+  15:simpleserial-ml-kem-768.c ****     You should have received a copy of the GNU General Public License
+  16:simpleserial-ml-kem-768.c ****     along with this program.  If not, see <http://www.gnu.org/licenses/>.
+  17:simpleserial-ml-kem-768.c **** */
+  18:simpleserial-ml-kem-768.c **** 
+  19:simpleserial-ml-kem-768.c **** #include "api.h"
+  20:simpleserial-ml-kem-768.c **** #include "hal.h"
+  21:simpleserial-ml-kem-768.c **** #include "simpleserial.h"
+  22:simpleserial-ml-kem-768.c **** #include <stdint.h>
+  23:simpleserial-ml-kem-768.c **** #include <stdlib.h>
+  24:simpleserial-ml-kem-768.c **** #include <string.h>
+  25:simpleserial-ml-kem-768.c **** 
+  26:simpleserial-ml-kem-768.c **** // ML-KEM-768 key sizes
+  27:simpleserial-ml-kem-768.c **** #define MLKEM768_PUBLIC_KEY_BYTES  1184
+  28:simpleserial-ml-kem-768.c **** #define MLKEM768_SECRET_KEY_BYTES   2400
+  29:simpleserial-ml-kem-768.c **** #define MLKEM768_CIPHERTEXT_BYTES  1088
+  30:simpleserial-ml-kem-768.c **** #define MLKEM768_SHARED_SECRET_BYTES 32
+  31:simpleserial-ml-kem-768.c **** 
+  32:simpleserial-ml-kem-768.c **** static uint8_t sk[MLKEM768_SECRET_KEY_BYTES];
+  33:simpleserial-ml-kem-768.c **** static uint8_t pk[MLKEM768_PUBLIC_KEY_BYTES];
+  34:simpleserial-ml-kem-768.c **** 
+  35:simpleserial-ml-kem-768.c **** /**
+  36:simpleserial-ml-kem-768.c ****  * Generate keypair - command 'k'
+  37:simpleserial-ml-kem-768.c ****  * Input: None
+  38:simpleserial-ml-kem-768.c ****  * Output: Public key (pk) and stores secret key internally
+  39:simpleserial-ml-kem-768.c ****  */
+  40:simpleserial-ml-kem-768.c **** uint8_t get_key(uint8_t* k, uint8_t len)
+  41:simpleserial-ml-kem-768.c **** {
+  42:simpleserial-ml-kem-768.c ****     (void)len;
+  43:simpleserial-ml-kem-768.c ****     (void)k;
+  44:simpleserial-ml-kem-768.c ****     
+  45:simpleserial-ml-kem-768.c ****     // Generate keypair
+  46:simpleserial-ml-kem-768.c ****     crypto_kem_keypair(pk, sk);
+  47:simpleserial-ml-kem-768.c ****     
+  48:simpleserial-ml-kem-768.c ****     // Return public key
+  49:simpleserial-ml-kem-768.c ****     simpleserial_put('r', MLKEM768_PUBLIC_KEY_BYTES, pk);
+  50:simpleserial-ml-kem-768.c ****     return 0x00;
+  51:simpleserial-ml-kem-768.c **** }
+  52:simpleserial-ml-kem-768.c **** 
+  53:simpleserial-ml-kem-768.c **** /**
+  54:simpleserial-ml-kem-768.c ****  * Set secret key - command 's' 
+  55:simpleserial-ml-kem-768.c ****  * Input: Secret key (sk)
+  56:simpleserial-ml-kem-768.c ****  * Output: None
+  57:simpleserial-ml-kem-768.c ****  */
+  58:simpleserial-ml-kem-768.c **** uint8_t set_sk(uint8_t* sk_in, uint8_t len)
+  59:simpleserial-ml-kem-768.c **** {
+  60:simpleserial-ml-kem-768.c ****     if(len != MLKEM768_SECRET_KEY_BYTES)
+  61:simpleserial-ml-kem-768.c ****         return 0x01;
+  62:simpleserial-ml-kem-768.c ****     
+  63:simpleserial-ml-kem-768.c ****     memcpy(sk, sk_in, MLKEM768_SECRET_KEY_BYTES);
+  64:simpleserial-ml-kem-768.c ****     return 0x00;
+  65:simpleserial-ml-kem-768.c **** }
+  66:simpleserial-ml-kem-768.c **** 
+  67:simpleserial-ml-kem-768.c **** /**
+  68:simpleserial-ml-kem-768.c ****  * Set public key - command 'p'
+  69:simpleserial-ml-kem-768.c ****  * Input: Public key (pk)
+  70:simpleserial-ml-kem-768.c ****  * Output: None
+  71:simpleserial-ml-kem-768.c ****  */
+  72:simpleserial-ml-kem-768.c **** uint8_t set_pk(uint8_t* pk_in, uint8_t len)
+  73:simpleserial-ml-kem-768.c **** {
+  74:simpleserial-ml-kem-768.c ****     if(len != MLKEM768_PUBLIC_KEY_BYTES)
+  75:simpleserial-ml-kem-768.c ****         return 0x01;
+  76:simpleserial-ml-kem-768.c ****     
+  77:simpleserial-ml-kem-768.c ****     memcpy(pk, pk_in, MLKEM768_PUBLIC_KEY_BYTES);
+  78:simpleserial-ml-kem-768.c ****     return 0x00;
+  79:simpleserial-ml-kem-768.c **** }
+  80:simpleserial-ml-kem-768.c **** 
+  81:simpleserial-ml-kem-768.c **** /**
+  82:simpleserial-ml-kem-768.c ****  * Encrypt - command 'e'
+  83:simpleserial-ml-kem-768.c ****  * Input: Public key (already set via 'p')
+  84:simpleserial-ml-kem-768.c ****  * Output: Ciphertext (ct) and shared secret (ss)
+  85:simpleserial-ml-kem-768.c ****  */
+  86:simpleserial-ml-kem-768.c **** uint8_t do_enc(uint8_t* pt, uint8_t len)
+  87:simpleserial-ml-kem-768.c **** {
+  88:simpleserial-ml-kem-768.c ****     uint8_t ct[MLKEM768_CIPHERTEXT_BYTES];
+  89:simpleserial-ml-kem-768.c ****     uint8_t ss[MLKEM768_SHARED_SECRET_BYTES];
+  90:simpleserial-ml-kem-768.c ****     
+  91:simpleserial-ml-kem-768.c ****     if(len != 0)
+  92:simpleserial-ml-kem-768.c ****         return 0x01;
+  93:simpleserial-ml-kem-768.c ****     
+  94:simpleserial-ml-kem-768.c ****     trigger_high();
+  95:simpleserial-ml-kem-768.c ****     
+  96:simpleserial-ml-kem-768.c ****     // Encrypt using public key
+  97:simpleserial-ml-kem-768.c ****     crypto_kem_enc(ct, ss, pk);
+  98:simpleserial-ml-kem-768.c ****     
+  99:simpleserial-ml-kem-768.c ****     trigger_low();
+ 100:simpleserial-ml-kem-768.c ****     
+ 101:simpleserial-ml-kem-768.c ****     // Return ciphertext and shared secret
+ 102:simpleserial-ml-kem-768.c ****     simpleserial_put('c', MLKEM768_CIPHERTEXT_BYTES, ct);
+ 103:simpleserial-ml-kem-768.c ****     simpleserial_put('s', MLKEM768_SHARED_SECRET_BYTES, ss);
+ 104:simpleserial-ml-kem-768.c ****     return 0x00;
+ 105:simpleserial-ml-kem-768.c **** }
+ 106:simpleserial-ml-kem-768.c **** 
+ 107:simpleserial-ml-kem-768.c **** /**
+ 108:simpleserial-ml-kem-768.c ****  * Decrypt - command 'd'
+ 109:simpleserial-ml-kem-768.c ****  * Input: Ciphertext (ct)
+ 110:simpleserial-ml-kem-768.c ****  * Output: Shared secret (ss)
+ 111:simpleserial-ml-kem-768.c ****  */
+ 112:simpleserial-ml-kem-768.c **** uint8_t do_dec(uint8_t* ct, uint8_t len)
+ 113:simpleserial-ml-kem-768.c **** {
+ 114:simpleserial-ml-kem-768.c ****     uint8_t ss[MLKEM768_SHARED_SECRET_BYTES];
+ 115:simpleserial-ml-kem-768.c ****     
+ 116:simpleserial-ml-kem-768.c ****     if(len != MLKEM768_CIPHERTEXT_BYTES)
+ 117:simpleserial-ml-kem-768.c ****         return 0x01;
+ 118:simpleserial-ml-kem-768.c ****     
+ 119:simpleserial-ml-kem-768.c ****     trigger_high();
+ 120:simpleserial-ml-kem-768.c ****     
+ 121:simpleserial-ml-kem-768.c ****     // Decrypt using secret key
+ 122:simpleserial-ml-kem-768.c ****     crypto_kem_dec(ss, ct, sk);
+ 123:simpleserial-ml-kem-768.c ****     
+ 124:simpleserial-ml-kem-768.c ****     trigger_low();
+ 125:simpleserial-ml-kem-768.c ****     
+ 126:simpleserial-ml-kem-768.c ****     // Return shared secret
+ 127:simpleserial-ml-kem-768.c ****     simpleserial_put('r', MLKEM768_SHARED_SECRET_BYTES, ss);
+ 128:simpleserial-ml-kem-768.c ****     return 0x00;
+ 129:simpleserial-ml-kem-768.c **** }
+ 130:simpleserial-ml-kem-768.c **** 
+ 131:simpleserial-ml-kem-768.c **** /**
+ 132:simpleserial-ml-kem-768.c ****  * Reset - command 'x'
+ 133:simpleserial-ml-kem-768.c ****  */
+ 134:simpleserial-ml-kem-768.c **** uint8_t reset(uint8_t* x, uint8_t len)
+ 135:simpleserial-ml-kem-768.c **** {
+ 136:simpleserial-ml-kem-768.c ****     (void)x;
+ 137:simpleserial-ml-kem-768.c ****     (void)len;
+ 138:simpleserial-ml-kem-768.c ****     // Reset keys if needed
+ 139:simpleserial-ml-kem-768.c ****     return 0x00;
+ 140:simpleserial-ml-kem-768.c **** }
+ 141:simpleserial-ml-kem-768.c **** 
+ 142:simpleserial-ml-kem-768.c **** #if SS_VER == SS_VER_2_1
+ 143:simpleserial-ml-kem-768.c **** uint8_t mlkem(uint8_t cmd, uint8_t scmd, uint8_t len, uint8_t *buf)
+  27              	 .loc 1 143 9 view-0
+  28              	 .cfi_startproc
+  29              	 
+  30              	 
+  31              	.LBB3:
+ 144:simpleserial-ml-kem-768.c **** {
+ 145:simpleserial-ml-kem-768.c ****     uint8_t req_len = 0;
+ 146:simpleserial-ml-kem-768.c ****     uint8_t err = 0;
+ 147:simpleserial-ml-kem-768.c ****     
+ 148:simpleserial-ml-kem-768.c ****     if (scmd & 0x01) {
+ 149:simpleserial-ml-kem-768.c ****         // Generate keypair
+ 150:simpleserial-ml-kem-768.c ****         crypto_kem_keypair(pk, sk);
+ 151:simpleserial-ml-kem-768.c ****         req_len = 0;
+ 152:simpleserial-ml-kem-768.c ****         simpleserial_put('r', MLKEM768_PUBLIC_KEY_BYTES, pk);
+ 153:simpleserial-ml-kem-768.c ****     }
+ 154:simpleserial-ml-kem-768.c ****     
+ 155:simpleserial-ml-kem-768.c ****     if (scmd & 0x02) {
+ 156:simpleserial-ml-kem-768.c ****         // Encrypt
+ 157:simpleserial-ml-kem-768.c ****         uint8_t ct[MLKEM768_CIPHERTEXT_BYTES];
+  32              	 .loc 1 157 9 view .LVU1
+ 158:simpleserial-ml-kem-768.c ****         uint8_t ss[MLKEM768_SHARED_SECRET_BYTES];
+  33              	 .loc 1 158 9 view .LVU2
+ 159:simpleserial-ml-kem-768.c ****         
+ 160:simpleserial-ml-kem-768.c ****         crypto_kem_enc(ct, ss, pk);
+  34              	 .loc 1 160 9 view .LVU3
+  35              	.LBE3:
+ 143:simpleserial-ml-kem-768.c **** {
+  36              	 .loc 1 143 9 is_stmt 0 view .LVU4
+  37 0000 30B5     	 push {r4,r5,lr}
+  38              	.LCFI0:
+  39              	 .cfi_def_cfa_offset 12
+  40              	 .cfi_offset 4,-12
+  41              	 .cfi_offset 5,-8
+  42              	 .cfi_offset 14,-4
+  43 0002 ADF2644D 	 subw sp,sp,#1124
+  44              	.LCFI1:
+  45              	 .cfi_def_cfa_offset 1136
+  46              	.LBB4:
+  47              	 .loc 1 160 9 view .LVU5
+  48 0006 08AD     	 add r5,sp,#32
+  49              	.LBE4:
+ 143:simpleserial-ml-kem-768.c **** {
+  50              	 .loc 1 143 9 view .LVU6
+  51 0008 0446     	 mov r4,r0
+  52              	.LBB5:
+  53              	 .loc 1 160 9 view .LVU7
+  54 000a 0D4A     	 ldr r2,.L4
+  55 000c 0D4B     	 ldr r3,.L4+4
+  56 000e 6946     	 mov r1,sp
+  57 0010 2846     	 mov r0,r5
+  58              	.LVL1:
+  59              	 .loc 1 160 9 view .LVU8
+  60 0012 9847     	 blx r3
+  61              	.LVL2:
+ 161:simpleserial-ml-kem-768.c ****         
+ 162:simpleserial-ml-kem-768.c ****         // Build response: ct (1088 bytes) + ss (32 bytes)
+ 163:simpleserial-ml-kem-768.c ****         memcpy(buf + req_len, ct, MLKEM768_CIPHERTEXT_BYTES);
+  62              	 .loc 1 163 9 is_stmt 1 view .LVU9
+  63 0014 0C4B     	 ldr r3,.L4+8
+  64 0016 4FF48862 	 mov r2,#1088
+  65 001a 2946     	 mov r1,r5
+  66 001c 2046     	 mov r0,r4
+  67 001e 9847     	 blx r3
+  68              	.LVL3:
+ 164:simpleserial-ml-kem-768.c ****         req_len += MLKEM768_CIPHERTEXT_BYTES;
+  69              	 .loc 1 164 9 view .LVU10
+ 165:simpleserial-ml-kem-768.c ****         memcpy(buf + req_len, ss, MLKEM768_SHARED_SECRET_BYTES);
+  70              	 .loc 1 165 9 view .LVU11
+  71 0020 6A46     	 mov r2,sp
+  72 0022 04F14003 	 add r3,r4,#64
+  73              	.LVL4:
+  74              	.L2:
+  75              	 .loc 1 165 9 is_stmt 0 view .LVU12
+  76 0026 1446     	 mov r4,r2
+  77 0028 03CC     	 ldmia r4!,{r0,r1}
+  78 002a AC42     	 cmp r4,r5
+  79 002c 1860     	 str r0,[r3]
+  80 002e 5960     	 str r1,[r3,#4]
+  81 0030 2246     	 mov r2,r4
+  82 0032 03F10803 	 add r3,r3,#8
+  83 0036 F6D1     	 bne .L2
+  84              	.LBE5:
+ 166:simpleserial-ml-kem-768.c ****         req_len += MLKEM768_SHARED_SECRET_BYTES;
+ 167:simpleserial-ml-kem-768.c ****     }
+ 168:simpleserial-ml-kem-768.c **** 
+ 169:simpleserial-ml-kem-768.c ****     return 0x00;
+ 170:simpleserial-ml-kem-768.c **** }
+  85              	 .loc 1 170 1 view .LVU13
+  86 0038 0DF2644D 	 addw sp,sp,#1124
+  87              	.LCFI2:
+  88              	 .cfi_def_cfa_offset 12
+  89              	 
+  90 003c 30BD     	 pop {r4,r5,pc}
+  91              	.L5:
+  92 003e 00BF     	 .align 2
+  93              	.L4:
+  94 0040 00000000 	 .word pk
+  95 0044 00000000 	 .word PQCLEAN_MLKEM768_CLEAN_crypto_kem_enc
+  96 0048 00000000 	 .word memcpy
+  97              	 .cfi_endproc
+  98              	.LFE8:
+ 100              	 .section .text.mlkem,"ax",%progbits
+ 101              	 .align 1
+ 102              	 .global mlkem
+ 103              	 .syntax unified
+ 104              	 .thumb
+ 105              	 .thumb_func
+ 107              	mlkem:
+ 108              	.LVL5:
+ 109              	.LFB6:
+ 144:simpleserial-ml-kem-768.c ****     uint8_t req_len = 0;
+ 110              	 .loc 1 144 1 is_stmt 1 view-0
+ 111              	 .cfi_startproc
+ 112              	 
+ 113              	 
+ 145:simpleserial-ml-kem-768.c ****     uint8_t err = 0;
+ 114              	 .loc 1 145 5 view .LVU15
+ 146:simpleserial-ml-kem-768.c ****     
+ 115              	 .loc 1 146 5 view .LVU16
+ 148:simpleserial-ml-kem-768.c ****         // Generate keypair
+ 116              	 .loc 1 148 5 view .LVU17
+ 148:simpleserial-ml-kem-768.c ****         // Generate keypair
+ 117              	 .loc 1 148 8 is_stmt 0 view .LVU18
+ 118 0000 CA07     	 lsls r2,r1,#31
+ 119              	.LVL6:
+ 144:simpleserial-ml-kem-768.c ****     uint8_t req_len = 0;
+ 120              	 .loc 1 144 1 view .LVU19
+ 121 0002 38B5     	 push {r3,r4,r5,lr}
+ 122              	.LCFI3:
+ 123              	 .cfi_def_cfa_offset 16
+ 124              	 .cfi_offset 3,-16
+ 125              	 .cfi_offset 4,-12
+ 126              	 .cfi_offset 5,-8
+ 127              	 .cfi_offset 14,-4
+ 144:simpleserial-ml-kem-768.c ****     uint8_t req_len = 0;
+ 128              	 .loc 1 144 1 view .LVU20
+ 129 0004 0C46     	 mov r4,r1
+ 130 0006 1D46     	 mov r5,r3
+ 148:simpleserial-ml-kem-768.c ****         // Generate keypair
+ 131              	 .loc 1 148 8 view .LVU21
+ 132 0008 08D5     	 bpl .L7
+ 150:simpleserial-ml-kem-768.c ****         req_len = 0;
+ 133              	 .loc 1 150 9 is_stmt 1 view .LVU22
+ 134 000a 0849     	 ldr r1,.L15
+ 135              	.LVL7:
+ 150:simpleserial-ml-kem-768.c ****         req_len = 0;
+ 136              	 .loc 1 150 9 is_stmt 0 view .LVU23
+ 137 000c 084B     	 ldr r3,.L15+4
+ 138              	.LVL8:
+ 150:simpleserial-ml-kem-768.c ****         req_len = 0;
+ 139              	 .loc 1 150 9 view .LVU24
+ 140 000e 0948     	 ldr r0,.L15+8
+ 141              	.LVL9:
+ 150:simpleserial-ml-kem-768.c ****         req_len = 0;
+ 142              	 .loc 1 150 9 view .LVU25
+ 143 0010 9847     	 blx r3
+ 144              	.LVL10:
+ 151:simpleserial-ml-kem-768.c ****         simpleserial_put('r', MLKEM768_PUBLIC_KEY_BYTES, pk);
+ 145              	 .loc 1 151 9 is_stmt 1 view .LVU26
+ 152:simpleserial-ml-kem-768.c ****     }
+ 146              	 .loc 1 152 9 view .LVU27
+ 147 0012 084A     	 ldr r2,.L15+8
+ 148 0014 084B     	 ldr r3,.L15+12
+ 149 0016 A021     	 movs r1,#160
+ 150 0018 7220     	 movs r0,#114
+ 151 001a 9847     	 blx r3
+ 152              	.LVL11:
+ 153              	.L7:
+ 155:simpleserial-ml-kem-768.c ****         // Encrypt
+ 154              	 .loc 1 155 5 view .LVU28
+ 155:simpleserial-ml-kem-768.c ****         // Encrypt
+ 155              	 .loc 1 155 8 is_stmt 0 view .LVU29
+ 156 001c A307     	 lsls r3,r4,#30
+ 157 001e 02D5     	 bpl .L8
+ 158 0020 064B     	 ldr r3,.L15+16
+ 159 0022 2846     	 mov r0,r5
+ 160 0024 9847     	 blx r3
+ 161              	.LVL12:
+ 162              	.L8:
+ 169:simpleserial-ml-kem-768.c **** }
+ 163              	 .loc 1 169 5 is_stmt 1 view .LVU30
+ 164              	 .loc 1 170 1 is_stmt 0 view .LVU31
+ 165 0026 0020     	 movs r0,#0
+ 166 0028 38BD     	 pop {r3,r4,r5,pc}
+ 167              	.LVL13:
+ 168              	.L16:
+ 169              	 .loc 1 170 1 view .LVU32
+ 170 002a 00BF     	 .align 2
+ 171              	.L15:
+ 172 002c 00000000 	 .word sk
+ 173 0030 00000000 	 .word PQCLEAN_MLKEM768_CLEAN_crypto_kem_keypair
+ 174 0034 00000000 	 .word pk
+ 175 0038 00000000 	 .word simpleserial_put
+ 176 003c 00000000 	 .word mlkem.part.0
+ 177              	 .cfi_endproc
+ 178              	.LFE6:
+ 180              	 .section .text.get_key,"ax",%progbits
+ 181              	 .align 1
+ 182              	 .global get_key
+ 183              	 .syntax unified
+ 184              	 .thumb
+ 185              	 .thumb_func
+ 187              	get_key:
+ 188              	.LVL14:
+ 189              	.LFB0:
+  41:simpleserial-ml-kem-768.c ****     (void)len;
+ 190              	 .loc 1 41 1 is_stmt 1 view-0
+ 191              	 .cfi_startproc
+ 192              	 
+ 193              	 
+  42:simpleserial-ml-kem-768.c ****     (void)k;
+ 194              	 .loc 1 42 5 view .LVU34
+  43:simpleserial-ml-kem-768.c ****     
+ 195              	 .loc 1 43 5 view .LVU35
+  46:simpleserial-ml-kem-768.c ****     
+ 196              	 .loc 1 46 5 view .LVU36
+  41:simpleserial-ml-kem-768.c ****     (void)len;
+ 197              	 .loc 1 41 1 is_stmt 0 view .LVU37
+ 198 0000 08B5     	 push {r3,lr}
+ 199              	.LCFI4:
+ 200              	 .cfi_def_cfa_offset 8
+ 201              	 .cfi_offset 3,-8
+ 202              	 .cfi_offset 14,-4
+  46:simpleserial-ml-kem-768.c ****     
+ 203              	 .loc 1 46 5 view .LVU38
+ 204 0002 0549     	 ldr r1,.L18
+ 205              	.LVL15:
+  46:simpleserial-ml-kem-768.c ****     
+ 206              	 .loc 1 46 5 view .LVU39
+ 207 0004 054B     	 ldr r3,.L18+4
+ 208 0006 0648     	 ldr r0,.L18+8
+ 209              	.LVL16:
+  46:simpleserial-ml-kem-768.c ****     
+ 210              	 .loc 1 46 5 view .LVU40
+ 211 0008 9847     	 blx r3
+ 212              	.LVL17:
+  49:simpleserial-ml-kem-768.c ****     return 0x00;
+ 213              	 .loc 1 49 5 is_stmt 1 view .LVU41
+ 214 000a 054A     	 ldr r2,.L18+8
+ 215 000c 054B     	 ldr r3,.L18+12
+ 216 000e A021     	 movs r1,#160
+ 217 0010 7220     	 movs r0,#114
+ 218 0012 9847     	 blx r3
+ 219              	.LVL18:
+  50:simpleserial-ml-kem-768.c **** }
+ 220              	 .loc 1 50 5 view .LVU42
+  51:simpleserial-ml-kem-768.c **** 
+ 221              	 .loc 1 51 1 is_stmt 0 view .LVU43
+ 222 0014 0020     	 movs r0,#0
+ 223 0016 08BD     	 pop {r3,pc}
+ 224              	.L19:
+ 225              	 .align 2
+ 226              	.L18:
+ 227 0018 00000000 	 .word sk
+ 228 001c 00000000 	 .word PQCLEAN_MLKEM768_CLEAN_crypto_kem_keypair
+ 229 0020 00000000 	 .word pk
+ 230 0024 00000000 	 .word simpleserial_put
+ 231              	 .cfi_endproc
+ 232              	.LFE0:
+ 234              	 .section .text.set_sk,"ax",%progbits
+ 235              	 .align 1
+ 236              	 .global set_sk
+ 237              	 .syntax unified
+ 238              	 .thumb
+ 239              	 .thumb_func
+ 241              	set_sk:
+ 242              	.LVL19:
+ 243              	.LFB1:
+  59:simpleserial-ml-kem-768.c ****     if(len != MLKEM768_SECRET_KEY_BYTES)
+ 244              	 .loc 1 59 1 is_stmt 1 view-0
+ 245              	 .cfi_startproc
+ 246              	 
+ 247              	 
+ 248              	 
+  60:simpleserial-ml-kem-768.c ****         return 0x01;
+ 249              	 .loc 1 60 5 view .LVU45
+  61:simpleserial-ml-kem-768.c ****     
+ 250              	 .loc 1 61 9 view .LVU46
+  65:simpleserial-ml-kem-768.c **** 
+ 251              	 .loc 1 65 1 is_stmt 0 view .LVU47
+ 252 0000 0120     	 movs r0,#1
+ 253              	.LVL20:
+  65:simpleserial-ml-kem-768.c **** 
+ 254              	 .loc 1 65 1 view .LVU48
+ 255 0002 7047     	 bx lr
+ 256              	 .cfi_endproc
+ 257              	.LFE1:
+ 259              	 .section .text.set_pk,"ax",%progbits
+ 260              	 .align 1
+ 261              	 .global set_pk
+ 262              	 .syntax unified
+ 263              	 .thumb
+ 264              	 .thumb_func
+ 266              	set_pk:
+ 267              	.LFB10:
+ 268              	 .cfi_startproc
+  72:simpleserial-ml-kem-768.c **** {
+ 269              	 .loc 1 72 9 is_stmt 1 view-0
+ 270              	 
+ 271              	 
+ 272              	 
+ 273 0000 0120     	 movs r0,#1
+ 274 0002 7047     	 bx lr
+ 275              	 .cfi_endproc
+ 276              	.LFE10:
+ 278              	 .section .text.do_enc,"ax",%progbits
+ 279              	 .align 1
+ 280              	 .global do_enc
+ 281              	 .syntax unified
+ 282              	 .thumb
+ 283              	 .thumb_func
+ 285              	do_enc:
+ 286              	.LVL21:
+ 287              	.LFB3:
+  87:simpleserial-ml-kem-768.c ****     uint8_t ct[MLKEM768_CIPHERTEXT_BYTES];
+ 288              	 .loc 1 87 1 view-0
+ 289              	 .cfi_startproc
+ 290              	 
+ 291              	 
+  88:simpleserial-ml-kem-768.c ****     uint8_t ss[MLKEM768_SHARED_SECRET_BYTES];
+ 292              	 .loc 1 88 5 view .LVU51
+  89:simpleserial-ml-kem-768.c ****     
+ 293              	 .loc 1 89 5 view .LVU52
+  91:simpleserial-ml-kem-768.c ****         return 0x01;
+ 294              	 .loc 1 91 5 view .LVU53
+  87:simpleserial-ml-kem-768.c ****     uint8_t ct[MLKEM768_CIPHERTEXT_BYTES];
+ 295              	 .loc 1 87 1 is_stmt 0 view .LVU54
+ 296 0000 30B5     	 push {r4,r5,lr}
+ 297              	.LCFI5:
+ 298              	 .cfi_def_cfa_offset 12
+ 299              	 .cfi_offset 4,-12
+ 300              	 .cfi_offset 5,-8
+ 301              	 .cfi_offset 14,-4
+  91:simpleserial-ml-kem-768.c ****         return 0x01;
+ 302              	 .loc 1 91 7 view .LVU55
+ 303 0002 0C46     	 mov r4,r1
+  87:simpleserial-ml-kem-768.c ****     uint8_t ct[MLKEM768_CIPHERTEXT_BYTES];
+ 304              	 .loc 1 87 1 view .LVU56
+ 305 0004 ADF2644D 	 subw sp,sp,#1124
+ 306              	.LCFI6:
+ 307              	 .cfi_def_cfa_offset 1136
+  91:simpleserial-ml-kem-768.c ****         return 0x01;
+ 308              	 .loc 1 91 7 view .LVU57
+ 309 0008 A9B9     	 cbnz r1,.L24
+  94:simpleserial-ml-kem-768.c ****     
+ 310              	 .loc 1 94 5 is_stmt 1 view .LVU58
+ 311 000a 0C4B     	 ldr r3,.L25
+ 102:simpleserial-ml-kem-768.c ****     simpleserial_put('s', MLKEM768_SHARED_SECRET_BYTES, ss);
+ 312              	 .loc 1 102 5 is_stmt 0 view .LVU59
+ 313 000c 0C4D     	 ldr r5,.L25+4
+  94:simpleserial-ml-kem-768.c ****     
+ 314              	 .loc 1 94 5 view .LVU60
+ 315 000e 9847     	 blx r3
+ 316              	.LVL22:
+  97:simpleserial-ml-kem-768.c ****     
+ 317              	 .loc 1 97 5 is_stmt 1 view .LVU61
+ 318 0010 0C4A     	 ldr r2,.L25+8
+ 319 0012 0D4B     	 ldr r3,.L25+12
+ 320 0014 6946     	 mov r1,sp
+ 321 0016 08A8     	 add r0,sp,#32
+ 322 0018 9847     	 blx r3
+ 323              	.LVL23:
+  99:simpleserial-ml-kem-768.c ****     
+ 324              	 .loc 1 99 5 view .LVU62
+ 325 001a 0C4B     	 ldr r3,.L25+16
+ 326 001c 9847     	 blx r3
+ 327              	.LVL24:
+ 102:simpleserial-ml-kem-768.c ****     simpleserial_put('s', MLKEM768_SHARED_SECRET_BYTES, ss);
+ 328              	 .loc 1 102 5 view .LVU63
+ 329 001e 08AA     	 add r2,sp,#32
+ 330 0020 4021     	 movs r1,#64
+ 331 0022 6320     	 movs r0,#99
+ 332 0024 A847     	 blx r5
+ 333              	.LVL25:
+ 103:simpleserial-ml-kem-768.c ****     return 0x00;
+ 334              	 .loc 1 103 5 view .LVU64
+ 335 0026 6A46     	 mov r2,sp
+ 336 0028 2021     	 movs r1,#32
+ 337 002a 7320     	 movs r0,#115
+ 338 002c A847     	 blx r5
+ 339              	.LVL26:
+ 104:simpleserial-ml-kem-768.c **** }
+ 340              	 .loc 1 104 5 view .LVU65
+ 341              	.L23:
+ 105:simpleserial-ml-kem-768.c **** 
+ 342              	 .loc 1 105 1 is_stmt 0 view .LVU66
+ 343 002e 2046     	 mov r0,r4
+ 344 0030 0DF2644D 	 addw sp,sp,#1124
+ 345              	.LCFI7:
+ 346              	 .cfi_remember_state
+ 347              	 .cfi_def_cfa_offset 12
+ 348              	 
+ 349 0034 30BD     	 pop {r4,r5,pc}
+ 350              	.LVL27:
+ 351              	.L24:
+ 352              	.LCFI8:
+ 353              	 .cfi_restore_state
+  92:simpleserial-ml-kem-768.c ****     
+ 354              	 .loc 1 92 16 view .LVU67
+ 355 0036 0124     	 movs r4,#1
+ 356 0038 F9E7     	 b .L23
+ 357              	.L26:
+ 358 003a 00BF     	 .align 2
+ 359              	.L25:
+ 360 003c 00000000 	 .word trigger_high
+ 361 0040 00000000 	 .word simpleserial_put
+ 362 0044 00000000 	 .word pk
+ 363 0048 00000000 	 .word PQCLEAN_MLKEM768_CLEAN_crypto_kem_enc
+ 364 004c 00000000 	 .word trigger_low
+ 365              	 .cfi_endproc
+ 366              	.LFE3:
+ 368              	 .section .text.do_dec,"ax",%progbits
+ 369              	 .align 1
+ 370              	 .global do_dec
+ 371              	 .syntax unified
+ 372              	 .thumb
+ 373              	 .thumb_func
+ 375              	do_dec:
+ 376              	.LFB12:
+ 377              	 .cfi_startproc
+ 112:simpleserial-ml-kem-768.c **** {
+ 378              	 .loc 1 112 9 is_stmt 1 view-0
+ 379              	 
+ 380              	 
+ 381              	 
+ 382 0000 0120     	 movs r0,#1
+ 383 0002 7047     	 bx lr
+ 384              	 .cfi_endproc
+ 385              	.LFE12:
+ 387              	 .section .text.reset,"ax",%progbits
+ 388              	 .align 1
+ 389              	 .global reset
+ 390              	 .syntax unified
+ 391              	 .thumb
+ 392              	 .thumb_func
+ 394              	reset:
+ 395              	.LVL28:
+ 396              	.LFB5:
+ 135:simpleserial-ml-kem-768.c ****     (void)x;
+ 397              	 .loc 1 135 1 view-0
+ 398              	 .cfi_startproc
+ 399              	 
+ 400              	 
+ 401              	 
+ 136:simpleserial-ml-kem-768.c ****     (void)len;
+ 402              	 .loc 1 136 5 view .LVU70
+ 137:simpleserial-ml-kem-768.c ****     // Reset keys if needed
+ 403              	 .loc 1 137 5 view .LVU71
+ 139:simpleserial-ml-kem-768.c **** }
+ 404              	 .loc 1 139 5 view .LVU72
+ 140:simpleserial-ml-kem-768.c **** 
+ 405              	 .loc 1 140 1 is_stmt 0 view .LVU73
+ 406 0000 0020     	 movs r0,#0
+ 407              	.LVL29:
+ 140:simpleserial-ml-kem-768.c **** 
+ 408              	 .loc 1 140 1 view .LVU74
+ 409 0002 7047     	 bx lr
+ 410              	 .cfi_endproc
+ 411              	.LFE5:
+ 413              	 .section .text.startup.main,"ax",%progbits
+ 414              	 .align 1
+ 415              	 .global main
+ 416              	 .syntax unified
+ 417              	 .thumb
+ 418              	 .thumb_func
+ 420              	main:
+ 421              	.LFB7:
+ 171:simpleserial-ml-kem-768.c **** #endif
+ 172:simpleserial-ml-kem-768.c **** 
+ 173:simpleserial-ml-kem-768.c **** int main(void)
+ 174:simpleserial-ml-kem-768.c **** {
+ 422              	 .loc 1 174 1 is_stmt 1 view-0
+ 423              	 .cfi_startproc
+ 424              	 
+ 425              	 
+ 426              	 
+ 175:simpleserial-ml-kem-768.c ****     platform_init();
+ 427              	 .loc 1 175 5 view .LVU76
+ 174:simpleserial-ml-kem-768.c ****     platform_init();
+ 428              	 .loc 1 174 1 is_stmt 0 view .LVU77
+ 429 0000 08B5     	 push {r3,lr}
+ 430              	.LCFI9:
+ 431              	 .cfi_def_cfa_offset 8
+ 432              	 .cfi_offset 3,-8
+ 433              	 .cfi_offset 14,-4
+ 434              	 .loc 1 175 5 view .LVU78
+ 435 0002 0F4B     	 ldr r3,.L31
+ 176:simpleserial-ml-kem-768.c ****     init_uart();
+ 177:simpleserial-ml-kem-768.c ****     trigger_setup();
+ 178:simpleserial-ml-kem-768.c ****     
+ 179:simpleserial-ml-kem-768.c ****     // Initialize keys to zero
+ 180:simpleserial-ml-kem-768.c ****     memset(pk, 0, MLKEM768_PUBLIC_KEY_BYTES);
+ 436              	 .loc 1 180 5 view .LVU79
+ 437 0004 0F4C     	 ldr r4,.L31+4
+ 175:simpleserial-ml-kem-768.c ****     init_uart();
+ 438              	 .loc 1 175 5 view .LVU80
+ 439 0006 9847     	 blx r3
+ 440              	.LVL30:
+ 176:simpleserial-ml-kem-768.c ****     init_uart();
+ 441              	 .loc 1 176 5 is_stmt 1 view .LVU81
+ 442 0008 0F4B     	 ldr r3,.L31+8
+ 443 000a 9847     	 blx r3
+ 444              	.LVL31:
+ 177:simpleserial-ml-kem-768.c ****     
+ 445              	 .loc 1 177 5 view .LVU82
+ 446 000c 0F4B     	 ldr r3,.L31+12
+ 447 000e 9847     	 blx r3
+ 448              	.LVL32:
+ 449              	 .loc 1 180 5 view .LVU83
+ 450 0010 4FF49462 	 mov r2,#1184
+ 451 0014 0021     	 movs r1,#0
+ 452 0016 0E48     	 ldr r0,.L31+16
+ 453 0018 A047     	 blx r4
+ 454              	.LVL33:
+ 181:simpleserial-ml-kem-768.c ****     memset(sk, 0, MLKEM768_SECRET_KEY_BYTES);
+ 455              	 .loc 1 181 5 view .LVU84
+ 456 001a 4FF41662 	 mov r2,#2400
+ 457 001e 0021     	 movs r1,#0
+ 458 0020 0C48     	 ldr r0,.L31+20
+ 459 0022 A047     	 blx r4
+ 460              	.LVL34:
+ 182:simpleserial-ml-kem-768.c ****     
+ 183:simpleserial-ml-kem-768.c ****     simpleserial_init();
+ 461              	 .loc 1 183 5 view .LVU85
+ 462 0024 0C4B     	 ldr r3,.L31+24
+ 184:simpleserial-ml-kem-768.c ****     
+ 185:simpleserial-ml-kem-768.c **** #if SS_VER == SS_VER_2_1
+ 186:simpleserial-ml-kem-768.c ****     simpleserial_addcmd(0x01, 0, mlkem);  // Generate keypair
+ 463              	 .loc 1 186 5 is_stmt 0 view .LVU86
+ 464 0026 0D4C     	 ldr r4,.L31+28
+ 183:simpleserial-ml-kem-768.c ****     
+ 465              	 .loc 1 183 5 view .LVU87
+ 466 0028 9847     	 blx r3
+ 467              	.LVL35:
+ 468              	 .loc 1 186 5 is_stmt 1 view .LVU88
+ 469 002a 0D4A     	 ldr r2,.L31+32
+ 470 002c 0021     	 movs r1,#0
+ 471 002e 0120     	 movs r0,#1
+ 472 0030 A047     	 blx r4
+ 473              	.LVL36:
+ 187:simpleserial-ml-kem-768.c ****     simpleserial_addcmd(0x02, 0, mlkem);  // Encrypt
+ 474              	 .loc 1 187 5 view .LVU89
+ 475 0032 0B4A     	 ldr r2,.L31+32
+ 476 0034 0021     	 movs r1,#0
+ 477 0036 0220     	 movs r0,#2
+ 478 0038 A047     	 blx r4
+ 479              	.LVL37:
+ 188:simpleserial-ml-kem-768.c **** #else
+ 189:simpleserial-ml-kem-768.c ****     simpleserial_addcmd('k', 0, get_key);      // Generate keypair
+ 190:simpleserial-ml-kem-768.c ****     simpleserial_addcmd('p', MLKEM768_PUBLIC_KEY_BYTES, set_pk);   // Set public key
+ 191:simpleserial-ml-kem-768.c ****     simpleserial_addcmd('s', MLKEM768_SECRET_KEY_BYTES, set_sk);   // Set secret key
+ 192:simpleserial-ml-kem-768.c ****     simpleserial_addcmd('e', 0, do_enc);      // Encrypt
+ 193:simpleserial-ml-kem-768.c ****     simpleserial_addcmd('d', MLKEM768_CIPHERTEXT_BYTES, do_dec);  // Decrypt
+ 194:simpleserial-ml-kem-768.c ****     simpleserial_addcmd('x', 0, reset);       // Reset
+ 195:simpleserial-ml-kem-768.c **** #endif
+ 196:simpleserial-ml-kem-768.c ****     
+ 197:simpleserial-ml-kem-768.c ****     while(1)
+ 198:simpleserial-ml-kem-768.c ****         simpleserial_get();
+ 480              	 .loc 1 198 9 is_stmt 0 discriminator 1 view .LVU90
+ 481 003a 0A4C     	 ldr r4,.L31+36
+ 482              	.L30:
+ 197:simpleserial-ml-kem-768.c ****         simpleserial_get();
+ 483              	 .loc 1 197 5 is_stmt 1 view .LVU91
+ 484              	 .loc 1 198 9 discriminator 1 view .LVU92
+ 485 003c A047     	 blx r4
+ 486              	.LVL38:
+ 197:simpleserial-ml-kem-768.c ****         simpleserial_get();
+ 487              	 .loc 1 197 10 view .LVU93
+ 488 003e FDE7     	 b .L30
+ 489              	.L32:
+ 490              	 .align 2
+ 491              	.L31:
+ 492 0040 00000000 	 .word platform_init
+ 493 0044 00000000 	 .word memset
+ 494 0048 00000000 	 .word init_uart
+ 495 004c 00000000 	 .word trigger_setup
+ 496 0050 00000000 	 .word pk
+ 497 0054 00000000 	 .word sk
+ 498 0058 00000000 	 .word simpleserial_init
+ 499 005c 00000000 	 .word simpleserial_addcmd
+ 500 0060 00000000 	 .word mlkem
+ 501 0064 00000000 	 .word simpleserial_get
+ 502              	 .cfi_endproc
+ 503              	.LFE7:
+ 505              	 .section .bss.pk,"aw",%nobits
+ 508              	pk:
+ 509 0000 00000000 	 .space 1184
+ 509      00000000 
+ 509      00000000 
+ 509      00000000 
+ 509      00000000 
+ 510              	 .section .bss.sk,"aw",%nobits
+ 513              	sk:
+ 514 0000 00000000 	 .space 2400
+ 514      00000000 
+ 514      00000000 
+ 514      00000000 
+ 514      00000000 
+ 515              	 .text
+ 516              	.Letext0:
+ 517              	 .file 2 ".././simpleserial/simpleserial.h"
+ 518              	 .file 3 "/usr/include/newlib/string.h"
+ 519              	 .file 4 ".././hal/sam4s/sam4s_hal.h"
+ 520              	 .file 5 ".././hal/hal.h"
+ 521              	 .file 6 "api.h"
+ 522              	 .file 7 "<built-in>"
+ 523              	 .file 8 "/usr/lib/gcc/arm-none-eabi/14.2.1/include/stdint.h"
+DEFINED SYMBOLS
+                            *ABS*:00000000 simpleserial-ml-kem-768.c
+    {standard input}:19     .text.mlkem.part.0:00000000 $t
+    {standard input}:24     .text.mlkem.part.0:00000000 mlkem.part.0
+    {standard input}:94     .text.mlkem.part.0:00000040 $d
+    {standard input}:508    .bss.pk:00000000 pk
+    {standard input}:101    .text.mlkem:00000000 $t
+    {standard input}:107    .text.mlkem:00000000 mlkem
+    {standard input}:172    .text.mlkem:0000002c $d
+    {standard input}:513    .bss.sk:00000000 sk
+    {standard input}:181    .text.get_key:00000000 $t
+    {standard input}:187    .text.get_key:00000000 get_key
+    {standard input}:227    .text.get_key:00000018 $d
+    {standard input}:235    .text.set_sk:00000000 $t
+    {standard input}:241    .text.set_sk:00000000 set_sk
+    {standard input}:260    .text.set_pk:00000000 $t
+    {standard input}:266    .text.set_pk:00000000 set_pk
+    {standard input}:279    .text.do_enc:00000000 $t
+    {standard input}:285    .text.do_enc:00000000 do_enc
+    {standard input}:360    .text.do_enc:0000003c $d
+    {standard input}:369    .text.do_dec:00000000 $t
+    {standard input}:375    .text.do_dec:00000000 do_dec
+    {standard input}:388    .text.reset:00000000 $t
+    {standard input}:394    .text.reset:00000000 reset
+    {standard input}:414    .text.startup.main:00000000 $t
+    {standard input}:420    .text.startup.main:00000000 main
+    {standard input}:492    .text.startup.main:00000040 $d
+    {standard input}:509    .bss.pk:00000000 $d
+    {standard input}:514    .bss.sk:00000000 $d
+                           .group:00000000 wm4.0.2b10ec159abbf65f4ef33f6bb625bef4
+                           .group:00000000 wm4.stdint.h.29.6d480f4ba0f60596e88234283d42444f
+                           .group:00000000 wm4.params.h.2.65111bfa3abfd57d5e74a081754452f6
+                           .group:00000000 wm4.api.h.7.1d6d433040c9d3c86352181648cffdf7
+                           .group:00000000 wm4.hal.h.20.4ce509bfa0d05e14954b01d3e94d8ba2
+                           .group:00000000 wm4.simpleserial.h.5.c96c6e95969d4c6e0b7b683e18b3c16d
+                           .group:00000000 wm4.ieeefp.h.77.b6f5ce903562917fbd9193ee87d4fa47
+                           .group:00000000 wm4._newlib_version.h.4.0eb654b64686e2bd29646258853f6c22
+                           .group:00000000 wm4.newlib.h.27.07bf1b8b16da454ae07478107717878b
+                           .group:00000000 wm4.features.h.22.03467e2205ec9ffbc20524d97cdbdf6a
+                           .group:00000000 wm4.config.h.224.10ee1ad185d877c6e334e6581faab44d
+                           .group:00000000 wm4._ansi.h.31.de524f58584151836e90d8620a16f8e8
+                           .group:00000000 wm4.stdlib.h.13.4ed386f5c1a80d71e72172885d946ef2
+                           .group:00000000 wm4.stddef.h.185.882514a1a6169ceba9142f401cbe27c6
+                           .group:00000000 wm4.stddef.h.39.ce75d04d8242e588a8427ce8922e2e35
+                           .group:00000000 wm4._default_types.h.6.959254cf5f09734ea7516c89e8bb21bd
+                           .group:00000000 wm4.cdefs.h.49.bafb023044e47a1dcdd854e4d6521f7d
+                           .group:00000000 wm4._types.h.20.dd0d04dca3800a0d2a6129b87f3adbb2
+                           .group:00000000 wm4.stddef.h.158.6f8e08a347b1cff664332fa350bfceb3
+                           .group:00000000 wm4._types.h.127.3bdfe3ff8ea2d0985b03d9cbe93480e3
+                           .group:00000000 wm4.reent.h.18.25503cdc8b7e55dd0d6ea7b3e5af7a03
+                           .group:00000000 wm4.lock.h.2.c0958401bd0ce484d507ee19aacab817
+                           .group:00000000 wm4.reent.h.78.6b87466b04591b1f1cb88c14fdf2ba9e
+                           .group:00000000 wm4.alloca.h.8.dfc0c703c47ec3e69746825b17d9e66d
+                           .group:00000000 wm4.stdlib.h.56.f4862cfbf4363a1db01842d5bdf72c18
+                           .group:00000000 wm4.string.h.8.c4b8571ce60dff2817f43fec8b86aecd
+                           .group:00000000 wm4.stddef.h.158.eec8bf00b5213f43d095cb984c5f22e3
+
+UNDEFINED SYMBOLS
+PQCLEAN_MLKEM768_CLEAN_crypto_kem_enc
+memcpy
+PQCLEAN_MLKEM768_CLEAN_crypto_kem_keypair
+simpleserial_put
+trigger_high
+trigger_low
+platform_init
+memset
+init_uart
+trigger_setup
+simpleserial_init
+simpleserial_addcmd
+simpleserial_get

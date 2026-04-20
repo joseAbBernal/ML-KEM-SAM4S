@@ -396,40 +396,35 @@
  129              	 .loc 1 224 2 view .LVU7
  226:.././hal//sam4s/startup_sam4s.c **** 		for (; pDest < &_erelocate;) {
  130              	 .loc 1 226 2 view .LVU8
- 226:.././hal//sam4s/startup_sam4s.c **** 		for (; pDest < &_erelocate;) {
- 131              	 .loc 1 226 5 is_stmt 0 view .LVU9
- 132 0000 1949     	 ldr r1,.L9
- 133 0002 1A48     	 ldr r0,.L9+4
- 134 0004 8142     	 cmp r1,r0
  219:.././hal//sam4s/startup_sam4s.c **** 	uint32_t *pSrc, *pDest;
- 135              	 .loc 1 219 1 view .LVU10
- 136 0006 10B5     	 push {r4,lr}
- 137              	.LCFI0:
- 138              	 .cfi_def_cfa_offset 8
- 139              	 .cfi_offset 4,-8
- 140              	 .cfi_offset 14,-4
+ 131              	 .loc 1 219 1 is_stmt 0 view .LVU9
+ 132 0000 08B5     	 push {r3,lr}
+ 133              	.LCFI0:
+ 134              	 .cfi_def_cfa_offset 8
+ 135              	 .cfi_offset 3,-8
+ 136              	 .cfi_offset 14,-4
  226:.././hal//sam4s/startup_sam4s.c **** 		for (; pDest < &_erelocate;) {
- 141              	 .loc 1 226 5 view .LVU11
- 142 0008 20D9     	 bls .L4
- 228:.././hal//sam4s/startup_sam4s.c **** 		}
- 143              	 .loc 1 228 13 view .LVU12
- 144 000a 194B     	 ldr r3,.L9+8
- 145 000c DA1C     	 adds r2,r3,#3
- 146 000e 121A     	 subs r2,r2,r0
- 147 0010 22F00302 	 bic r2,r2,#3
- 148 0014 C41E     	 subs r4,r0,#3
- 149 0016 9C42     	 cmp r4,r3
- 150 0018 88BF     	 it hi
- 151 001a 0022     	 movhi r2,#0
- 152 001c 154B     	 ldr r3,.L9+12
- 153 001e 9847     	 blx r3
- 154              	.LVL1:
- 155              	.L6:
+ 137              	 .loc 1 226 5 view .LVU10
+ 138 0002 154A     	 ldr r2,.L13
+ 139 0004 154B     	 ldr r3,.L13+4
+ 140 0006 9A42     	 cmp r2,r3
+ 141 0008 15D9     	 bls .L4
+ 227:.././hal//sam4s/startup_sam4s.c **** 			*pDest++ = *pSrc++;
+ 142              	 .loc 1 227 16 view .LVU11
+ 143 000a 1549     	 ldr r1,.L13+8
+ 144              	.LVL1:
+ 145              	.L5:
+ 227:.././hal//sam4s/startup_sam4s.c **** 			*pDest++ = *pSrc++;
+ 146              	 .loc 1 227 16 is_stmt 1 view .LVU12
+ 147 000c 8B42     	 cmp r3,r1
+ 148 000e 0DD3     	 bcc .L6
+ 149              	.LVL2:
+ 150              	.L8:
  238:.././hal//sam4s/startup_sam4s.c **** 
- 156              	 .loc 1 238 2 is_stmt 1 view .LVU13
- 157              	.LBB5:
- 158              	.LBI5:
- 159              	 .file 2 ".././hal//sam4s/inc/core_cmInstr.h"
+ 151              	 .loc 1 238 2 view .LVU13
+ 152              	.LBB5:
+ 153              	.LBI5:
+ 154              	 .file 2 ".././hal//sam4s/inc/core_cmInstr.h"
    1:.././hal//sam4s/inc/core_cmInstr.h **** /**************************************************************************//**
    2:.././hal//sam4s/inc/core_cmInstr.h ****  * @file     core_cmInstr.h
    3:.././hal//sam4s/inc/core_cmInstr.h ****  * @brief    CMSIS Cortex-M Core Instruction Access Header File
@@ -818,195 +813,224 @@
  386:.././hal//sam4s/inc/core_cmInstr.h ****     No Operation does nothing. This instruction can be used for code alignment purposes.
  387:.././hal//sam4s/inc/core_cmInstr.h ****  */
  388:.././hal//sam4s/inc/core_cmInstr.h **** __attribute__( ( always_inline ) ) __STATIC_INLINE void __NOP(void)
- 160              	 .loc 2 388 57 view .LVU14
- 161              	.LBB6:
+ 155              	 .loc 2 388 57 view .LVU14
+ 156              	.LBB6:
  389:.././hal//sam4s/inc/core_cmInstr.h **** {
  390:.././hal//sam4s/inc/core_cmInstr.h ****   __ASM volatile ("nop");
- 162              	 .loc 2 390 3 view .LVU15
+ 157              	 .loc 2 390 3 view .LVU15
+ 158              	 .syntax unified
+ 159              	
+ 160 0010 00BF     	 nop
+ 161              	
+ 162              	 .thumb
  163              	 .syntax unified
- 164              	
- 165 0020 00BF     	 nop
- 166              	
- 167              	 .thumb
- 168              	 .syntax unified
- 169              	.LBE6:
- 170              	.LBE5:
+ 164              	.LBE6:
+ 165              	.LBE5:
  241:.././hal//sam4s/startup_sam4s.c **** 		*pDest++ = 0;
- 171              	 .loc 1 241 2 view .LVU16
- 172              	.LVL2:
+ 166              	 .loc 1 241 2 view .LVU16
+ 167              	.LVL3:
+ 241:.././hal//sam4s/startup_sam4s.c **** 		*pDest++ = 0;
+ 168              	 .loc 1 241 13 is_stmt 0 view .LVU17
+ 169 0012 144B     	 ldr r3,.L13+12
+ 241:.././hal//sam4s/startup_sam4s.c **** 		*pDest++ = 0;
+ 170              	 .loc 1 241 30 discriminator 1 view .LVU18
+ 171 0014 144A     	 ldr r2,.L13+16
  242:.././hal//sam4s/startup_sam4s.c **** 	}
- 173              	 .loc 1 242 12 is_stmt 0 view .LVU17
- 174 0022 154B     	 ldr r3,.L9+16
- 175 0024 1548     	 ldr r0,.L9+20
- 176 0026 DA1C     	 adds r2,r3,#3
- 177 0028 121A     	 subs r2,r2,r0
- 178 002a C11E     	 subs r1,r0,#3
- 179 002c 22F00302 	 bic r2,r2,#3
- 180 0030 9942     	 cmp r1,r3
- 181 0032 88BF     	 it hi
- 182 0034 0022     	 movhi r2,#0
- 183 0036 124B     	 ldr r3,.L9+24
- 184 0038 0021     	 movs r1,#0
- 185 003a 9847     	 blx r3
- 186              	.LVL3:
+ 172              	 .loc 1 242 12 view .LVU19
+ 173 0016 0021     	 movs r1,#0
+ 174              	.LVL4:
+ 175              	.L7:
+ 241:.././hal//sam4s/startup_sam4s.c **** 		*pDest++ = 0;
+ 176              	 .loc 1 241 30 is_stmt 1 discriminator 1 view .LVU20
+ 177 0018 9342     	 cmp r3,r2
+ 178 001a 1AD3     	 bcc .L11
  246:.././hal//sam4s/startup_sam4s.c **** 	SCB->VTOR = ((uint32_t) pSrc);
- 187              	 .loc 1 246 2 is_stmt 1 view .LVU18
+ 179              	 .loc 1 246 2 view .LVU21
+ 180              	.LVL5:
  247:.././hal//sam4s/startup_sam4s.c **** 
- 188              	 .loc 1 247 2 view .LVU19
+ 181              	 .loc 1 247 2 view .LVU22
  247:.././hal//sam4s/startup_sam4s.c **** 
- 189              	 .loc 1 247 12 is_stmt 0 view .LVU20
- 190 003c 114B     	 ldr r3,.L9+28
- 191 003e 124A     	 ldr r2,.L9+32
- 192 0040 9A60     	 str r2,[r3,#8]
+ 182              	 .loc 1 247 12 is_stmt 0 view .LVU23
+ 183 001c 134B     	 ldr r3,.L13+20
+ 184              	.LVL6:
+ 247:.././hal//sam4s/startup_sam4s.c **** 
+ 185              	 .loc 1 247 12 view .LVU24
+ 186 001e 144A     	 ldr r2,.L13+24
+ 187 0020 9A60     	 str r2,[r3,#8]
  250:.././hal//sam4s/startup_sam4s.c **** 
- 193              	 .loc 1 250 2 is_stmt 1 view .LVU21
- 194 0042 124B     	 ldr r3,.L9+36
- 195 0044 9847     	 blx r3
- 196              	.LVL4:
+ 188              	 .loc 1 250 2 is_stmt 1 view .LVU25
+ 189 0022 144B     	 ldr r3,.L13+28
+ 190 0024 9847     	 blx r3
+ 191              	.LVL7:
  253:.././hal//sam4s/startup_sam4s.c **** 
- 197              	 .loc 1 253 2 view .LVU22
- 198 0046 124B     	 ldr r3,.L9+40
- 199 0048 9847     	 blx r3
- 200              	.LVL5:
- 201              	.L5:
+ 192              	 .loc 1 253 2 view .LVU26
+ 193 0026 144B     	 ldr r3,.L13+32
+ 194 0028 9847     	 blx r3
+ 195              	.LVL8:
+ 196              	.L12:
  256:.././hal//sam4s/startup_sam4s.c **** }
- 202              	 .loc 1 256 2 view .LVU23
+ 197              	 .loc 1 256 2 view .LVU27
  256:.././hal//sam4s/startup_sam4s.c **** }
- 203              	 .loc 1 256 8 view .LVU24
- 204 004a FEE7     	 b .L5
- 205              	.LVL6:
- 206              	.L4:
+ 198              	 .loc 1 256 8 view .LVU28
+ 199 002a FEE7     	 b .L12
+ 200              	.LVL9:
+ 201              	.L6:
+ 228:.././hal//sam4s/startup_sam4s.c **** 		}
+ 202              	 .loc 1 228 4 view .LVU29
+ 228:.././hal//sam4s/startup_sam4s.c **** 		}
+ 203              	 .loc 1 228 15 is_stmt 0 view .LVU30
+ 204 002c 52F8040B 	 ldr r0,[r2],#4
+ 205              	.LVL10:
+ 228:.././hal//sam4s/startup_sam4s.c **** 		}
+ 206              	 .loc 1 228 13 view .LVU31
+ 207 0030 43F8040B 	 str r0,[r3],#4
+ 208              	.LVL11:
+ 228:.././hal//sam4s/startup_sam4s.c **** 		}
+ 209              	 .loc 1 228 13 view .LVU32
+ 210 0034 EAE7     	 b .L5
+ 211              	.LVL12:
+ 212              	.L4:
  230:.././hal//sam4s/startup_sam4s.c **** 		uint32_t nb_bytes = (uint32_t)&_erelocate - (uint32_t)&_srelocate;
- 207              	 .loc 1 230 9 view .LVU25
+ 213              	 .loc 1 230 9 is_stmt 1 view .LVU33
  230:.././hal//sam4s/startup_sam4s.c **** 		uint32_t nb_bytes = (uint32_t)&_erelocate - (uint32_t)&_srelocate;
- 208              	 .loc 1 230 12 is_stmt 0 view .LVU26
- 209 004c E8D2     	 bcs .L6
- 210              	.LBB7:
+ 214              	 .loc 1 230 12 is_stmt 0 view .LVU34
+ 215 0036 EBD2     	 bcs .L8
+ 216              	.LBB7:
  231:.././hal//sam4s/startup_sam4s.c **** 		pSrc = (uint32_t*)((uint32_t)pSrc + nb_bytes) - 1;
- 211              	 .loc 1 231 3 is_stmt 1 view .LVU27
+ 217              	 .loc 1 231 3 is_stmt 1 view .LVU35
  231:.././hal//sam4s/startup_sam4s.c **** 		pSrc = (uint32_t*)((uint32_t)pSrc + nb_bytes) - 1;
- 212              	 .loc 1 231 23 is_stmt 0 view .LVU28
- 213 004e 084B     	 ldr r3,.L9+8
- 214              	.LVL7:
+ 218              	 .loc 1 231 23 is_stmt 0 view .LVU36
+ 219 0038 0949     	 ldr r1,.L13+8
+ 220              	.LVL13:
  232:.././hal//sam4s/startup_sam4s.c **** 		pDest = (uint32_t*)((uint32_t)pDest + nb_bytes) - 1;
- 215              	 .loc 1 232 3 is_stmt 1 view .LVU29
+ 221              	 .loc 1 232 3 is_stmt 1 view .LVU37
  232:.././hal//sam4s/startup_sam4s.c **** 		pDest = (uint32_t*)((uint32_t)pDest + nb_bytes) - 1;
- 216              	 .loc 1 232 49 is_stmt 0 view .LVU30
- 217 0050 0A1F     	 subs r2,r1,#4
+ 222              	 .loc 1 232 49 is_stmt 0 view .LVU38
+ 223 003a 101F     	 subs r0,r2,#4
  231:.././hal//sam4s/startup_sam4s.c **** 		pSrc = (uint32_t*)((uint32_t)pSrc + nb_bytes) - 1;
- 218              	 .loc 1 231 12 view .LVU31
- 219 0052 181A     	 subs r0,r3,r0
+ 224              	 .loc 1 231 12 view .LVU39
+ 225 003c CB1A     	 subs r3,r1,r3
  232:.././hal//sam4s/startup_sam4s.c **** 		pDest = (uint32_t*)((uint32_t)pDest + nb_bytes) - 1;
- 220              	 .loc 1 232 49 view .LVU32
- 221 0054 1044     	 add r0,r0,r2
- 222              	.LVL8:
+ 226              	 .loc 1 232 49 view .LVU40
+ 227 003e 0344     	 add r3,r3,r0
+ 228              	.LVL14:
  233:.././hal//sam4s/startup_sam4s.c **** 		for (;nb_bytes;nb_bytes -= 4) {
- 223              	 .loc 1 233 3 is_stmt 1 view .LVU33
+ 229              	 .loc 1 233 3 is_stmt 1 view .LVU41
  234:.././hal//sam4s/startup_sam4s.c **** 			*pDest-- = *pSrc--;
- 224              	 .loc 1 234 3 view .LVU34
+ 230              	 .loc 1 234 3 view .LVU42
  234:.././hal//sam4s/startup_sam4s.c **** 			*pDest-- = *pSrc--;
- 225              	 .loc 1 234 9 is_stmt 0 discriminator 1 view .LVU35
- 226 0056 C1F10401 	 rsb r1,r1,#4
- 227              	.LVL9:
- 228              	.L7:
+ 231              	 .loc 1 234 9 is_stmt 0 discriminator 1 view .LVU43
+ 232 0040 C2F10402 	 rsb r2,r2,#4
+ 233              	.LVL15:
+ 234              	.L9:
  234:.././hal//sam4s/startup_sam4s.c **** 			*pDest-- = *pSrc--;
- 229              	 .loc 1 234 9 is_stmt 1 discriminator 1 view .LVU36
- 230 005a C842     	 cmn r0,r1
- 231 005c E0D0     	 beq .L6
+ 235              	 .loc 1 234 9 is_stmt 1 discriminator 1 view .LVU44
+ 236 0044 D342     	 cmn r3,r2
+ 237 0046 E3D0     	 beq .L8
  235:.././hal//sam4s/startup_sam4s.c **** 		}
- 232              	 .loc 1 235 4 view .LVU37
- 233              	.LVL10:
+ 238              	 .loc 1 235 4 view .LVU45
+ 239              	.LVL16:
  235:.././hal//sam4s/startup_sam4s.c **** 		}
- 234              	 .loc 1 235 15 is_stmt 0 view .LVU38
- 235 005e 50F80429 	 ldr r2,[r0],#-4
- 236              	.LVL11:
+ 240              	 .loc 1 235 15 is_stmt 0 view .LVU46
+ 241 0048 53F80409 	 ldr r0,[r3],#-4
+ 242              	.LVL17:
  235:.././hal//sam4s/startup_sam4s.c **** 		}
- 237              	 .loc 1 235 13 view .LVU39
- 238 0062 43F8042D 	 str r2,[r3,#-4]!
+ 243              	 .loc 1 235 13 view .LVU47
+ 244 004c 41F8040D 	 str r0,[r1,#-4]!
  234:.././hal//sam4s/startup_sam4s.c **** 			*pDest-- = *pSrc--;
- 239              	 .loc 1 234 27 is_stmt 1 discriminator 2 view .LVU40
- 240              	.LVL12:
+ 245              	 .loc 1 234 27 is_stmt 1 discriminator 2 view .LVU48
+ 246              	.LVL18:
  234:.././hal//sam4s/startup_sam4s.c **** 			*pDest-- = *pSrc--;
- 241              	 .loc 1 234 27 is_stmt 0 discriminator 2 view .LVU41
- 242 0066 F8E7     	 b .L7
- 243              	.L10:
- 244              	 .align 2
- 245              	.L9:
- 246 0068 00000000 	 .word _etext
- 247 006c 00000000 	 .word _srelocate
- 248 0070 00000000 	 .word _erelocate
- 249 0074 00000000 	 .word memcpy
- 250 0078 00000000 	 .word _ezero
- 251 007c 00000000 	 .word _szero
- 252 0080 00000000 	 .word memset
- 253 0084 00ED00E0 	 .word -536810240
- 254 0088 00000000 	 .word _sfixed
- 255 008c 00000000 	 .word __libc_init_array
- 256 0090 00000000 	 .word main
- 257              	.LBE7:
- 258              	 .cfi_endproc
- 259              	.LFE123:
- 261              	 .global exception_table
- 262              	 .section .vectors,"a"
- 263              	 .align 2
- 266              	exception_table:
- 267 0000 00000000 	 .word _estack
- 268 0004 00000000 	 .word Reset_Handler
- 269 0008 00000000 	 .word NMI_Handler
- 270 000c 00000000 	 .word HardFault_Handler
- 271 0010 00000000 	 .word MemManage_Handler
- 272 0014 00000000 	 .word BusFault_Handler
- 273 0018 00000000 	 .word UsageFault_Handler
- 274 001c 00000000 	 .word 0
- 275 0020 00000000 	 .word 0
- 276 0024 00000000 	 .word 0
- 277 0028 00000000 	 .word 0
- 278 002c 00000000 	 .word SVC_Handler
- 279 0030 00000000 	 .word DebugMon_Handler
- 280 0034 00000000 	 .word 0
- 281 0038 00000000 	 .word PendSV_Handler
- 282 003c 00000000 	 .word SysTick_Handler
- 283 0040 00000000 	 .word SUPC_Handler
- 284 0044 00000000 	 .word RSTC_Handler
- 285 0048 00000000 	 .word RTC_Handler
- 286 004c 00000000 	 .word RTT_Handler
- 287 0050 00000000 	 .word WDT_Handler
- 288 0054 00000000 	 .word PMC_Handler
- 289 0058 00000000 	 .word EFC0_Handler
- 290 005c 00000000 	 .word 0
- 291 0060 00000000 	 .word UART0_Handler
- 292 0064 00000000 	 .word UART1_Handler
- 293 0068 00000000 	 .word 0
- 294 006c 00000000 	 .word PIOA_Handler
- 295 0070 00000000 	 .word PIOB_Handler
- 296 0074 00000000 	 .word 0
- 297 0078 00000000 	 .word USART0_Handler
- 298 007c 00000000 	 .word USART1_Handler
- 299 0080 00000000 	 .word 0
- 300 0084 00000000 	 .word 0
- 301 0088 00000000 	 .word HSMCI_Handler
- 302 008c 00000000 	 .word TWI0_Handler
- 303 0090 00000000 	 .word TWI1_Handler
- 304 0094 00000000 	 .word SPI_Handler
- 305 0098 00000000 	 .word SSC_Handler
- 306 009c 00000000 	 .word TC0_Handler
- 307 00a0 00000000 	 .word TC1_Handler
- 308 00a4 00000000 	 .word TC2_Handler
- 309 00a8 00000000 	 .word 0
- 310 00ac 00000000 	 .word 0
- 311 00b0 00000000 	 .word 0
- 312 00b4 00000000 	 .word ADC_Handler
- 313 00b8 00000000 	 .word DACC_Handler
- 314 00bc 00000000 	 .word PWM_Handler
- 315 00c0 00000000 	 .word CRCCU_Handler
- 316 00c4 00000000 	 .word ACC_Handler
- 317 00c8 00000000 	 .word UDP_Handler
- 318              	 .text
- 319              	.Letext0:
- 320              	 .file 3 "/usr/lib/gcc/arm-none-eabi/13.2.1/include/stdint.h"
- 321              	 .file 4 ".././hal//sam4s/inc/sam4s2b.h"
- 322              	 .file 5 ".././hal//sam4s/inc/core_cm4.h"
- 323              	 .file 6 "<built-in>"
+ 247              	 .loc 1 234 27 is_stmt 0 discriminator 2 view .LVU49
+ 248 0050 F8E7     	 b .L9
+ 249              	.LVL19:
+ 250              	.L11:
+ 234:.././hal//sam4s/startup_sam4s.c **** 			*pDest-- = *pSrc--;
+ 251              	 .loc 1 234 27 discriminator 2 view .LVU50
+ 252              	.LBE7:
+ 242:.././hal//sam4s/startup_sam4s.c **** 	}
+ 253              	 .loc 1 242 3 is_stmt 1 view .LVU51
+ 242:.././hal//sam4s/startup_sam4s.c **** 	}
+ 254              	 .loc 1 242 12 is_stmt 0 view .LVU52
+ 255 0052 43F8041B 	 str r1,[r3],#4
+ 256              	.LVL20:
+ 242:.././hal//sam4s/startup_sam4s.c **** 	}
+ 257              	 .loc 1 242 12 view .LVU53
+ 258 0056 DFE7     	 b .L7
+ 259              	.L14:
+ 260              	 .align 2
+ 261              	.L13:
+ 262 0058 00000000 	 .word _etext
+ 263 005c 00000000 	 .word _srelocate
+ 264 0060 00000000 	 .word _erelocate
+ 265 0064 00000000 	 .word _szero
+ 266 0068 00000000 	 .word _ezero
+ 267 006c 00ED00E0 	 .word -536810240
+ 268 0070 00000000 	 .word _sfixed
+ 269 0074 00000000 	 .word __libc_init_array
+ 270 0078 00000000 	 .word main
+ 271              	 .cfi_endproc
+ 272              	.LFE123:
+ 274              	 .global exception_table
+ 275              	 .section .vectors,"a"
+ 276              	 .align 2
+ 279              	exception_table:
+ 280 0000 00000000 	 .word _estack
+ 281 0004 00000000 	 .word Reset_Handler
+ 282 0008 00000000 	 .word NMI_Handler
+ 283 000c 00000000 	 .word HardFault_Handler
+ 284 0010 00000000 	 .word MemManage_Handler
+ 285 0014 00000000 	 .word BusFault_Handler
+ 286 0018 00000000 	 .word UsageFault_Handler
+ 287 001c 00000000 	 .word 0
+ 288 0020 00000000 	 .word 0
+ 289 0024 00000000 	 .word 0
+ 290 0028 00000000 	 .word 0
+ 291 002c 00000000 	 .word SVC_Handler
+ 292 0030 00000000 	 .word DebugMon_Handler
+ 293 0034 00000000 	 .word 0
+ 294 0038 00000000 	 .word PendSV_Handler
+ 295 003c 00000000 	 .word SysTick_Handler
+ 296 0040 00000000 	 .word SUPC_Handler
+ 297 0044 00000000 	 .word RSTC_Handler
+ 298 0048 00000000 	 .word RTC_Handler
+ 299 004c 00000000 	 .word RTT_Handler
+ 300 0050 00000000 	 .word WDT_Handler
+ 301 0054 00000000 	 .word PMC_Handler
+ 302 0058 00000000 	 .word EFC0_Handler
+ 303 005c 00000000 	 .word 0
+ 304 0060 00000000 	 .word UART0_Handler
+ 305 0064 00000000 	 .word UART1_Handler
+ 306 0068 00000000 	 .word 0
+ 307 006c 00000000 	 .word PIOA_Handler
+ 308 0070 00000000 	 .word PIOB_Handler
+ 309 0074 00000000 	 .word 0
+ 310 0078 00000000 	 .word USART0_Handler
+ 311 007c 00000000 	 .word USART1_Handler
+ 312 0080 00000000 	 .word 0
+ 313 0084 00000000 	 .word 0
+ 314 0088 00000000 	 .word HSMCI_Handler
+ 315 008c 00000000 	 .word TWI0_Handler
+ 316 0090 00000000 	 .word TWI1_Handler
+ 317 0094 00000000 	 .word SPI_Handler
+ 318 0098 00000000 	 .word SSC_Handler
+ 319 009c 00000000 	 .word TC0_Handler
+ 320 00a0 00000000 	 .word TC1_Handler
+ 321 00a4 00000000 	 .word TC2_Handler
+ 322 00a8 00000000 	 .word 0
+ 323 00ac 00000000 	 .word 0
+ 324 00b0 00000000 	 .word 0
+ 325 00b4 00000000 	 .word ADC_Handler
+ 326 00b8 00000000 	 .word DACC_Handler
+ 327 00bc 00000000 	 .word PWM_Handler
+ 328 00c0 00000000 	 .word CRCCU_Handler
+ 329 00c4 00000000 	 .word ACC_Handler
+ 330 00c8 00000000 	 .word UDP_Handler
+ 331              	 .text
+ 332              	.Letext0:
+ 333              	 .file 3 "/usr/lib/gcc/arm-none-eabi/14.2.1/include/stdint.h"
+ 334              	 .file 4 ".././hal//sam4s/inc/sam4s2b.h"
+ 335              	 .file 5 ".././hal//sam4s/inc/core_cm4.h"
 DEFINED SYMBOLS
                             *ABS*:00000000 startup_sam4s.c
     {standard input}:19     .text.Dummy_Handler:00000000 $t
@@ -1049,10 +1073,10 @@ DEFINED SYMBOLS
     {standard input}:25     .text.Dummy_Handler:00000000 NMI_Handler
     {standard input}:114    .text.Reset_Handler:00000000 $t
     {standard input}:120    .text.Reset_Handler:00000000 Reset_Handler
-    {standard input}:246    .text.Reset_Handler:00000068 $d
-    {standard input}:266    .vectors:00000000 exception_table
-    {standard input}:263    .vectors:00000000 $d
-                           .group:00000000 wm4.0.ade4f9eb57a3e60dd8a456a9e838da1f
+    {standard input}:262    .text.Reset_Handler:00000058 $d
+    {standard input}:279    .vectors:00000000 exception_table
+    {standard input}:276    .vectors:00000000 $d
+                           .group:00000000 wm4.0.534b8d408cafabed4abbc6a1c4e55e02
                            .group:00000000 wm4.stdint.h.29.6d480f4ba0f60596e88234283d42444f
                            .group:00000000 wm4.sam4s2b.h.221.db99b1f5dbb5d4301dbbbaff13b63e70
                            .group:00000000 wm4.core_cm4.h.43.9593ac0dcec24a3a6f1d638d754e90b2
@@ -1120,10 +1144,8 @@ UNDEFINED SYMBOLS
 _etext
 _srelocate
 _erelocate
-memcpy
-_ezero
 _szero
-memset
+_ezero
 _sfixed
 __libc_init_array
 main

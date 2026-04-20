@@ -1,0 +1,744 @@
+   1              	 .cpu cortex-m4
+   2              	 .arch armv7e-m
+   3              	 .fpu softvfp
+   4              	 .eabi_attribute 20,1
+   5              	 .eabi_attribute 21,1
+   6              	 .eabi_attribute 23,3
+   7              	 .eabi_attribute 24,1
+   8              	 .eabi_attribute 25,1
+   9              	 .eabi_attribute 26,1
+  10              	 .eabi_attribute 30,4
+  11              	 .eabi_attribute 34,1
+  12              	 .eabi_attribute 18,4
+  13              	 .file "randombytes.c"
+  14              	 .text
+  15              	.Ltext0:
+  16              	 .cfi_sections .debug_frame
+  17              	 .file 1 "randombytes.c"
+  18              	 .section .text.surf,"ax",%progbits
+  19              	 .align 1
+  20              	 .syntax unified
+  21              	 .thumb
+  22              	 .thumb_func
+  24              	surf:
+  25              	.LVL0:
+  26              	.LFB0:
+   1:randombytes.c **** // SPDX-License-Identifier: Apache-2.0 or CC0-1.0
+   2:randombytes.c **** #include "randombytes.h"
+   3:randombytes.c **** 
+   4:randombytes.c **** #if defined(STM32F2) || defined(STM32F4) || defined(STM32L4R5ZI) && !defined(MPS2_AN386)
+   5:randombytes.c **** 
+   6:randombytes.c **** #include <libopencm3/stm32/rng.h>
+   7:randombytes.c **** 
+   8:randombytes.c **** //TODO Maybe we do not want to use the hardware RNG for all randomness, but instead only read a see
+   9:randombytes.c **** 
+  10:randombytes.c **** int randombytes(uint8_t *obuf, size_t len)
+  11:randombytes.c **** {
+  12:randombytes.c ****     union
+  13:randombytes.c ****     {
+  14:randombytes.c ****         unsigned char aschar[4];
+  15:randombytes.c ****         uint32_t asint;
+  16:randombytes.c ****     } random;
+  17:randombytes.c **** 
+  18:randombytes.c ****     while (len > 4)
+  19:randombytes.c ****     {
+  20:randombytes.c ****         random.asint = rng_get_random_blocking();
+  21:randombytes.c ****         *obuf++ = random.aschar[0];
+  22:randombytes.c ****         *obuf++ = random.aschar[1];
+  23:randombytes.c ****         *obuf++ = random.aschar[2];
+  24:randombytes.c ****         *obuf++ = random.aschar[3];
+  25:randombytes.c ****         len -= 4;
+  26:randombytes.c ****     }
+  27:randombytes.c ****     if (len > 0)
+  28:randombytes.c ****     {
+  29:randombytes.c ****         for (random.asint = rng_get_random_blocking(); len > 0; --len)
+  30:randombytes.c ****         {
+  31:randombytes.c ****             *obuf++ = random.aschar[len - 1];
+  32:randombytes.c ****         }
+  33:randombytes.c ****     }
+  34:randombytes.c **** 
+  35:randombytes.c ****     return 0;
+  36:randombytes.c **** }
+  37:randombytes.c **** 
+  38:randombytes.c **** #else /* NONRANDOM FALLBACK IMPLEMENTATION */
+  39:randombytes.c **** #warning Using a non-random randombytes
+  40:randombytes.c **** 
+  41:randombytes.c **** #include <string.h>
+  42:randombytes.c **** 
+  43:randombytes.c **** static uint32_t seed[32] = {3, 1, 4, 1, 5, 9, 2, 6, 5, 3, 5, 8, 9, 7, 9, 3,
+  44:randombytes.c ****                             2, 3, 8, 4, 6, 2, 6, 4, 3, 3, 8, 3, 2, 7, 9, 5};
+  45:randombytes.c **** static uint32_t in[12];
+  46:randombytes.c **** static uint8_t out_buf[sizeof(uint32_t) * 16];
+  47:randombytes.c **** static int32_t outleft = 0;
+  48:randombytes.c **** 
+  49:randombytes.c **** #define ROTATE(x, b) (((x) << (b)) | ((x) >> (32 - (b))))
+  50:randombytes.c **** #define MUSH(i, b) x = t[i] += (((x ^ seed[i]) + sum) ^ ROTATE(x, b));
+  51:randombytes.c **** 
+  52:randombytes.c **** static void surf(uint32_t out[8])
+  53:randombytes.c **** {
+  27              	 .loc 1 53 1 view-0
+  28              	 .cfi_startproc
+  29              	 
+  30              	 
+  54:randombytes.c ****   uint32_t t[12];
+  31              	 .loc 1 54 3 view .LVU1
+  55:randombytes.c ****   uint32_t x;
+  32              	 .loc 1 55 3 view .LVU2
+  56:randombytes.c ****   uint32_t sum = 0;
+  33              	 .loc 1 56 3 view .LVU3
+  57:randombytes.c ****   int32_t r;
+  34              	 .loc 1 57 3 view .LVU4
+  58:randombytes.c ****   int32_t i;
+  35              	 .loc 1 58 3 view .LVU5
+  59:randombytes.c ****   int32_t loop;
+  36              	 .loc 1 59 3 view .LVU6
+  60:randombytes.c **** 
+  61:randombytes.c ****   for (i = 0; i < 12; ++i) {
+  37              	 .loc 1 61 3 view .LVU7
+  38              	 .loc 1 61 17 discriminator 1 view .LVU8
+  53:randombytes.c ****   uint32_t t[12];
+  39              	 .loc 1 53 1 is_stmt 0 view .LVU9
+  40 0000 2DE9F04F 	 push {r4,r5,r6,r7,r8,r9,r10,fp,lr}
+  41              	.LCFI0:
+  42              	 .cfi_def_cfa_offset 36
+  43              	 .cfi_offset 4,-36
+  44              	 .cfi_offset 5,-32
+  45              	 .cfi_offset 6,-28
+  46              	 .cfi_offset 7,-24
+  47              	 .cfi_offset 8,-20
+  48              	 .cfi_offset 9,-16
+  49              	 .cfi_offset 10,-12
+  50              	 .cfi_offset 11,-8
+  51              	 .cfi_offset 14,-4
+  52 0004 91B0     	 sub sp,sp,#68
+  53              	.LCFI1:
+  54              	 .cfi_def_cfa_offset 104
+  55 0006 4D4C     	 ldr r4,.L10
+  53:randombytes.c ****   uint32_t t[12];
+  56              	 .loc 1 53 1 view .LVU10
+  57 0008 0190     	 str r0,[sp,#4]
+  58 000a 4D48     	 ldr r0,.L10+4
+  59              	.LVL1:
+  53:randombytes.c ****   uint32_t t[12];
+  60              	 .loc 1 53 1 view .LVU11
+  61 000c 04A9     	 add r1,sp,#16
+  62              	 .loc 1 61 10 view .LVU12
+  63 000e 0023     	 movs r3,#0
+  64              	.LVL2:
+  65              	.L2:
+  62:randombytes.c ****     t[i] = in[i] ^ seed[12 + i];
+  66              	 .loc 1 62 5 is_stmt 1 view .LVU13
+  67              	 .loc 1 62 14 is_stmt 0 view .LVU14
+  68 0010 54F8045B 	 ldr r5,[r4],#4
+  69              	 .loc 1 62 18 view .LVU15
+  70 0014 50F8042F 	 ldr r2,[r0,#4]!
+  61:randombytes.c ****     t[i] = in[i] ^ seed[12 + i];
+  71              	 .loc 1 61 23 discriminator 3 view .LVU16
+  72 0018 0133     	 adds r3,r3,#1
+  73              	.LVL3:
+  74              	 .loc 1 62 18 view .LVU17
+  75 001a 6A40     	 eors r2,r2,r5
+  61:randombytes.c ****     t[i] = in[i] ^ seed[12 + i];
+  76              	 .loc 1 61 17 discriminator 1 view .LVU18
+  77 001c 0C2B     	 cmp r3,#12
+  78              	 .loc 1 62 10 view .LVU19
+  79 001e 41F8042B 	 str r2,[r1],#4
+  61:randombytes.c ****     t[i] = in[i] ^ seed[12 + i];
+  80              	 .loc 1 61 23 is_stmt 1 discriminator 3 view .LVU20
+  81              	.LVL4:
+  61:randombytes.c ****     t[i] = in[i] ^ seed[12 + i];
+  82              	 .loc 1 61 17 discriminator 1 view .LVU21
+  83 0022 F5D1     	 bne .L2
+  63:randombytes.c ****   }
+  64:randombytes.c ****   for (i = 0; i < 8; ++i) {
+  65:randombytes.c ****     out[i] = seed[24 + i];
+  84              	 .loc 1 65 12 is_stmt 0 view .LVU22
+  85 0024 474D     	 ldr r5,.L10+8
+  86 0026 019C     	 ldr r4,[sp,#4]
+  66:randombytes.c ****   }
+  67:randombytes.c ****   x = t[11];
+  87              	 .loc 1 67 5 view .LVU23
+  88 0028 DDF83C90 	 ldr r9,[sp,#60]
+  65:randombytes.c ****   }
+  89              	 .loc 1 65 12 view .LVU24
+  90 002c 0FCD     	 ldmia r5!,{r0,r1,r2,r3}
+  91              	.LVL5:
+  65:randombytes.c ****   }
+  92              	 .loc 1 65 12 view .LVU25
+  93 002e 0FC4     	 stmia r4!,{r0,r1,r2,r3}
+  94 0030 95E80F00 	 ldm r5,{r0,r1,r2,r3}
+  95 0034 84E80F00 	 stm r4,{r0,r1,r2,r3}
+  96              	.LVL6:
+  97              	 .loc 1 67 3 is_stmt 1 view .LVU26
+  68:randombytes.c ****   for (loop = 0; loop < 2; ++loop) {
+  98              	 .loc 1 68 3 view .LVU27
+  99              	 .loc 1 68 23 discriminator 1 view .LVU28
+ 100 0038 019A     	 ldr r2,[sp,#4]
+ 101 003a DDE90407 	 ldrd r0,r7,[sp,#16]
+ 102 003e DDE906BE 	 ldrd fp,lr,[sp,#24]
+ 103 0042 1C32     	 adds r2,r2,#28
+  56:randombytes.c ****   int32_t r;
+ 104              	 .loc 1 56 12 is_stmt 0 view .LVU29
+ 105 0044 0023     	 movs r3,#0
+ 106 0046 0392     	 str r2,[sp,#12]
+ 107              	.LVL7:
+ 108              	.L3:
+  69:randombytes.c ****     for (r = 0; r < 16; ++r) {
+ 109              	 .loc 1 69 19 is_stmt 1 discriminator 1 view .LVU30
+ 110 0048 DFF8FCA0 	 ldr r10,.L10+12
+ 111 004c 0E9A     	 ldr r2,[sp,#56]
+ 112 004e DDE9088C 	 ldrd r8,ip,[sp,#32]
+ 113 0052 DDE90A65 	 ldrd r6,r5,[sp,#40]
+ 114 0056 DDE90C41 	 ldrd r4,r1,[sp,#48]
+ 115 005a 9A44     	 add r10,r3,r10
+ 116 005c CDF808A0 	 str r10,[sp,#8]
+ 117              	.LVL8:
+ 118              	.L4:
+  70:randombytes.c ****       sum += 0x9e3779b9;
+ 119              	 .loc 1 70 7 view .LVU31
+ 120              	 .loc 1 70 11 is_stmt 0 view .LVU32
+ 121 0060 A3F1C343 	 sub r3,r3,#1635778560
+ 122              	.LVL9:
+ 123              	 .loc 1 70 11 view .LVU33
+ 124 0064 A3F59103 	 sub r3,r3,#4751360
+ 125              	.LVL10:
+ 126              	 .loc 1 70 11 view .LVU34
+ 127 0068 A3F24763 	 subw r3,r3,#1607
+ 128              	.LVL11:
+  71:randombytes.c ****       MUSH(0, 5)
+ 129              	 .loc 1 71 7 is_stmt 1 view .LVU35
+ 130 006c 89F0030A 	 eor r10,r9,#3
+ 131 0070 9A44     	 add r10,r10,r3
+ 132 0072 8AEAF96A 	 eor r10,r10,r9,ror#27
+ 133 0076 5044     	 add r0,r0,r10
+ 134              	.LVL12:
+  72:randombytes.c ****       MUSH(1, 7)
+ 135              	 .loc 1 72 7 view .LVU36
+ 136 0078 80F0010A 	 eor r10,r0,#1
+ 137 007c 9A44     	 add r10,r10,r3
+ 138 007e 8AEA706A 	 eor r10,r10,r0,ror#25
+ 139 0082 5744     	 add r7,r7,r10
+ 140              	.LVL13:
+  73:randombytes.c ****       MUSH(2, 9)
+ 141              	 .loc 1 73 7 view .LVU37
+ 142 0084 87F0040A 	 eor r10,r7,#4
+ 143 0088 9A44     	 add r10,r10,r3
+ 144 008a 8AEAF75A 	 eor r10,r10,r7,ror#23
+ 145 008e D344     	 add fp,fp,r10
+ 146              	.LVL14:
+  74:randombytes.c ****       MUSH(3, 13)
+ 147              	 .loc 1 74 7 view .LVU38
+ 148 0090 8BF0010A 	 eor r10,fp,#1
+ 149 0094 9A44     	 add r10,r10,r3
+ 150 0096 8AEAFB4A 	 eor r10,r10,fp,ror#19
+ 151 009a D644     	 add lr,lr,r10
+ 152              	.LVL15:
+  75:randombytes.c ****       MUSH(4, 5)
+ 153              	 .loc 1 75 7 view .LVU39
+ 154 009c 8EF0050A 	 eor r10,lr,#5
+ 155 00a0 9A44     	 add r10,r10,r3
+ 156 00a2 8AEAFE6A 	 eor r10,r10,lr,ror#27
+ 157 00a6 D044     	 add r8,r8,r10
+ 158              	.LVL16:
+  76:randombytes.c ****       MUSH(5, 7)
+ 159              	 .loc 1 76 7 view .LVU40
+ 160 00a8 88F0090A 	 eor r10,r8,#9
+ 161 00ac 9A44     	 add r10,r10,r3
+ 162 00ae 8AEA786A 	 eor r10,r10,r8,ror#25
+ 163 00b2 D444     	 add ip,ip,r10
+ 164              	.LVL17:
+  77:randombytes.c ****       MUSH(6, 9)
+ 165              	 .loc 1 77 7 view .LVU41
+ 166 00b4 8CF0020A 	 eor r10,ip,#2
+ 167 00b8 9A44     	 add r10,r10,r3
+ 168 00ba 8AEAFC5A 	 eor r10,r10,ip,ror#23
+ 169 00be 5644     	 add r6,r6,r10
+ 170              	.LVL18:
+  78:randombytes.c ****       MUSH(7, 13)
+ 171              	 .loc 1 78 7 view .LVU42
+ 172 00c0 86F0060A 	 eor r10,r6,#6
+ 173 00c4 9A44     	 add r10,r10,r3
+ 174 00c6 8AEAF64A 	 eor r10,r10,r6,ror#19
+ 175 00ca 5544     	 add r5,r5,r10
+ 176              	.LVL19:
+  79:randombytes.c ****       MUSH(8, 5)
+ 177              	 .loc 1 79 7 view .LVU43
+ 178 00cc 85F0050A 	 eor r10,r5,#5
+ 179 00d0 9A44     	 add r10,r10,r3
+ 180 00d2 8AEAF56A 	 eor r10,r10,r5,ror#27
+ 181 00d6 5444     	 add r4,r4,r10
+ 182              	.LVL20:
+  80:randombytes.c ****       MUSH(9, 7)
+ 183              	 .loc 1 80 7 view .LVU44
+ 184 00d8 84F0030A 	 eor r10,r4,#3
+ 185 00dc 9A44     	 add r10,r10,r3
+ 186 00de 8AEA746A 	 eor r10,r10,r4,ror#25
+ 187 00e2 5144     	 add r1,r1,r10
+ 188              	.LVL21:
+  81:randombytes.c ****       MUSH(10, 9)
+ 189              	 .loc 1 81 7 view .LVU45
+ 190 00e4 81F0050A 	 eor r10,r1,#5
+ 191 00e8 9A44     	 add r10,r10,r3
+ 192 00ea 8AEAF15A 	 eor r10,r10,r1,ror#23
+ 193 00ee 5244     	 add r2,r2,r10
+ 194              	.LVL22:
+  82:randombytes.c ****       MUSH(11, 13)
+ 195              	 .loc 1 82 7 view .LVU46
+ 196 00f0 82F0080A 	 eor r10,r2,#8
+ 197 00f4 9A44     	 add r10,r10,r3
+ 198 00f6 8AEAF24A 	 eor r10,r10,r2,ror#19
+ 199 00fa D144     	 add r9,r9,r10
+ 200              	.LVL23:
+  69:randombytes.c ****       sum += 0x9e3779b9;
+ 201              	 .loc 1 69 25 discriminator 3 view .LVU47
+  69:randombytes.c ****       sum += 0x9e3779b9;
+ 202              	 .loc 1 69 19 discriminator 1 view .LVU48
+ 203 00fc DDF808A0 	 ldr r10,[sp,#8]
+ 204 0100 5345     	 cmp r3,r10
+ 205 0102 ADD1     	 bne .L4
+ 206 0104 019B     	 ldr r3,[sp,#4]
+ 207              	.LVL24:
+  69:randombytes.c ****       sum += 0x9e3779b9;
+ 208              	 .loc 1 69 19 is_stmt 0 discriminator 1 view .LVU49
+ 209 0106 CDE9088C 	 strd r8,ip,[sp,#32]
+ 210 010a CDE90A65 	 strd r6,r5,[sp,#40]
+ 211 010e CDE90E29 	 strd r2,r9,[sp,#56]
+ 212              	.LVL25:
+  83:randombytes.c ****     }
+  84:randombytes.c ****     for (i = 0; i < 8; ++i) {
+ 213              	 .loc 1 84 19 is_stmt 1 discriminator 1 view .LVU50
+ 214 0112 CDE90C41 	 strd r4,r1,[sp,#48]
+ 215 0116 043B     	 subs r3,r3,#4
+ 216 0118 07A9     	 add r1,sp,#28
+ 217              	.LVL26:
+ 218              	.L5:
+  85:randombytes.c ****       out[i] ^= t[i + 4];
+ 219              	 .loc 1 85 7 view .LVU51
+ 220              	 .loc 1 85 14 is_stmt 0 view .LVU52
+ 221 011a 53F8042F 	 ldr r2,[r3,#4]!
+ 222 011e 51F8044F 	 ldr r4,[r1,#4]!
+ 223 0122 6240     	 eors r2,r2,r4
+ 224 0124 1A60     	 str r2,[r3]
+  84:randombytes.c ****       out[i] ^= t[i + 4];
+ 225              	 .loc 1 84 24 is_stmt 1 discriminator 3 view .LVU53
+  84:randombytes.c ****       out[i] ^= t[i + 4];
+ 226              	 .loc 1 84 19 discriminator 1 view .LVU54
+ 227 0126 039A     	 ldr r2,[sp,#12]
+ 228 0128 9A42     	 cmp r2,r3
+ 229 012a F6D1     	 bne .L5
+  68:randombytes.c ****     for (r = 0; r < 16; ++r) {
+ 230              	 .loc 1 68 28 discriminator 2 view .LVU55
+ 231              	.LVL27:
+  68:randombytes.c ****     for (r = 0; r < 16; ++r) {
+ 232              	 .loc 1 68 23 discriminator 1 view .LVU56
+ 233 012c 029A     	 ldr r2,[sp,#8]
+ 234 012e 0749     	 ldr r1,.L10+16
+ 235 0130 054B     	 ldr r3,.L10+12
+ 236 0132 8A42     	 cmp r2,r1
+ 237 0134 88D1     	 bne .L3
+  86:randombytes.c ****     }
+  87:randombytes.c ****   }
+  88:randombytes.c **** }
+ 238              	 .loc 1 88 1 is_stmt 0 view .LVU57
+ 239 0136 11B0     	 add sp,sp,#68
+ 240              	.LCFI2:
+ 241              	 .cfi_def_cfa_offset 36
+ 242              	 
+ 243 0138 BDE8F08F 	 pop {r4,r5,r6,r7,r8,r9,r10,fp,pc}
+ 244              	.LVL28:
+ 245              	.L11:
+ 246              	 .loc 1 88 1 view .LVU58
+ 247              	 .align 2
+ 248              	.L10:
+ 249 013c 00000000 	 .word in
+ 250 0140 2C000000 	 .word seed+44
+ 251 0144 60000000 	 .word seed+96
+ 252 0148 909B77E3 	 .word -478700656
+ 253 014c 2037EFC6 	 .word -957401312
+ 254              	 .cfi_endproc
+ 255              	.LFE0:
+ 257              	 .section .text.randombytes_regen,"ax",%progbits
+ 258              	 .align 1
+ 259              	 .global randombytes_regen
+ 260              	 .syntax unified
+ 261              	 .thumb
+ 262              	 .thumb_func
+ 264              	randombytes_regen:
+ 265              	.LFB1:
+  89:randombytes.c **** 
+  90:randombytes.c **** void randombytes_regen(void);
+  91:randombytes.c **** void randombytes_regen(void)
+  92:randombytes.c **** {
+ 266              	 .loc 1 92 1 is_stmt 1 view-0
+ 267              	 .cfi_startproc
+ 268              	 
+ 269              	 
+  93:randombytes.c ****   uint32_t out[8];
+ 270              	 .loc 1 93 3 view .LVU60
+  94:randombytes.c ****   if (!++in[0]) {
+ 271              	 .loc 1 94 3 view .LVU61
+  92:randombytes.c ****   uint32_t out[8];
+ 272              	 .loc 1 92 1 is_stmt 0 view .LVU62
+ 273 0000 2DE9F041 	 push {r4,r5,r6,r7,r8,lr}
+ 274              	.LCFI3:
+ 275              	 .cfi_def_cfa_offset 24
+ 276              	 .cfi_offset 4,-24
+ 277              	 .cfi_offset 5,-20
+ 278              	 .cfi_offset 6,-16
+ 279              	 .cfi_offset 7,-12
+ 280              	 .cfi_offset 8,-8
+ 281              	 .cfi_offset 14,-4
+ 282              	 .loc 1 94 12 view .LVU63
+ 283 0004 214C     	 ldr r4,.L23
+ 284 0006 2568     	 ldr r5,[r4]
+ 285              	 .loc 1 94 8 view .LVU64
+ 286 0008 6B1C     	 adds r3,r5,#1
+  92:randombytes.c ****   uint32_t out[8];
+ 287              	 .loc 1 92 1 view .LVU65
+ 288 000a 88B0     	 sub sp,sp,#32
+ 289              	.LCFI4:
+ 290              	 .cfi_def_cfa_offset 56
+ 291              	 .loc 1 94 6 view .LVU66
+ 292 000c 2360     	 str r3,[r4]
+ 293 000e 53B9     	 cbnz r3,.L14
+  95:randombytes.c ****     if (!++in[1]) {
+ 294              	 .loc 1 95 5 is_stmt 1 view .LVU67
+ 295              	 .loc 1 95 10 is_stmt 0 view .LVU68
+ 296 0010 6368     	 ldr r3,[r4,#4]
+ 297 0012 0133     	 adds r3,r3,#1
+ 298              	 .loc 1 95 8 view .LVU69
+ 299 0014 6360     	 str r3,[r4,#4]
+ 300 0016 33B9     	 cbnz r3,.L14
+  96:randombytes.c ****       if (!++in[2]) {
+ 301              	 .loc 1 96 7 is_stmt 1 view .LVU70
+ 302              	 .loc 1 96 12 is_stmt 0 view .LVU71
+ 303 0018 A368     	 ldr r3,[r4,#8]
+ 304 001a 0133     	 adds r3,r3,#1
+ 305              	 .loc 1 96 10 view .LVU72
+ 306 001c A360     	 str r3,[r4,#8]
+ 307 001e 13B9     	 cbnz r3,.L14
+  97:randombytes.c ****         ++in[3];
+ 308              	 .loc 1 97 9 is_stmt 1 view .LVU73
+ 309 0020 E368     	 ldr r3,[r4,#12]
+ 310 0022 0133     	 adds r3,r3,#1
+ 311 0024 E360     	 str r3,[r4,#12]
+ 312              	.L14:
+  98:randombytes.c ****       }
+  99:randombytes.c ****     }
+ 100:randombytes.c ****   }
+ 101:randombytes.c ****   surf(out);
+ 313              	 .loc 1 101 3 view .LVU74
+ 314 0026 DFF86880 	 ldr r8,.L23+4
+ 102:randombytes.c ****   memcpy(out_buf, out, sizeof(out));
+ 315              	 .loc 1 102 3 is_stmt 0 view .LVU75
+ 316 002a 1A4E     	 ldr r6,.L23+8
+ 101:randombytes.c ****   memcpy(out_buf, out, sizeof(out));
+ 317              	 .loc 1 101 3 view .LVU76
+ 318 002c 6846     	 mov r0,sp
+ 319 002e C047     	 blx r8
+ 320              	.LVL29:
+ 321              	 .loc 1 102 3 is_stmt 1 view .LVU77
+ 322 0030 6F46     	 mov r7,sp
+ 323 0032 4246     	 mov r2,r8
+ 324              	.L16:
+ 325 0034 3B46     	 mov r3,r7
+ 326 0036 03CB     	 ldmia r3!,{r0,r1}
+ 327 0038 7160     	 str r1,[r6,#4]
+ 328 003a 08A9     	 add r1,sp,#32
+ 329 003c 8B42     	 cmp r3,r1
+ 330 003e 3060     	 str r0,[r6]
+ 331 0040 1F46     	 mov r7,r3
+ 332 0042 06F10806 	 add r6,r6,#8
+ 333 0046 F5D1     	 bne .L16
+ 103:randombytes.c ****   if (!++in[0]) {
+ 334              	 .loc 1 103 3 view .LVU78
+ 335              	 .loc 1 103 8 is_stmt 0 view .LVU79
+ 336 0048 0235     	 adds r5,r5,#2
+ 337              	 .loc 1 103 6 view .LVU80
+ 338 004a 2560     	 str r5,[r4]
+ 339 004c 55B9     	 cbnz r5,.L18
+ 104:randombytes.c ****     if (!++in[1]) {
+ 340              	 .loc 1 104 5 is_stmt 1 view .LVU81
+ 341              	 .loc 1 104 10 is_stmt 0 view .LVU82
+ 342 004e 6368     	 ldr r3,[r4,#4]
+ 343 0050 0133     	 adds r3,r3,#1
+ 344              	 .loc 1 104 8 view .LVU83
+ 345 0052 6360     	 str r3,[r4,#4]
+ 346 0054 33B9     	 cbnz r3,.L18
+ 105:randombytes.c ****       if (!++in[2]) {
+ 347              	 .loc 1 105 7 is_stmt 1 view .LVU84
+ 348              	 .loc 1 105 12 is_stmt 0 view .LVU85
+ 349 0056 A368     	 ldr r3,[r4,#8]
+ 350 0058 0133     	 adds r3,r3,#1
+ 351              	 .loc 1 105 10 view .LVU86
+ 352 005a A360     	 str r3,[r4,#8]
+ 353 005c 13B9     	 cbnz r3,.L18
+ 106:randombytes.c ****         ++in[3];
+ 354              	 .loc 1 106 9 is_stmt 1 view .LVU87
+ 355 005e E368     	 ldr r3,[r4,#12]
+ 356 0060 0133     	 adds r3,r3,#1
+ 357 0062 E360     	 str r3,[r4,#12]
+ 358              	.L18:
+ 107:randombytes.c ****       }
+ 108:randombytes.c ****     }
+ 109:randombytes.c ****   }
+ 110:randombytes.c ****   surf(out);
+ 359              	 .loc 1 110 3 view .LVU88
+ 360 0064 6846     	 mov r0,sp
+ 111:randombytes.c ****   memcpy(out_buf + sizeof(out), out, sizeof(out));
+ 361              	 .loc 1 111 3 is_stmt 0 view .LVU89
+ 362 0066 0C4C     	 ldr r4,.L23+12
+ 110:randombytes.c ****   memcpy(out_buf + sizeof(out), out, sizeof(out));
+ 363              	 .loc 1 110 3 view .LVU90
+ 364 0068 9047     	 blx r2
+ 365              	.LVL30:
+ 366              	 .loc 1 111 3 is_stmt 1 view .LVU91
+ 367 006a 6B46     	 mov r3,sp
+ 368              	.L20:
+ 369 006c 1A46     	 mov r2,r3
+ 370 006e 03CA     	 ldmia r2!,{r0,r1}
+ 371 0070 6160     	 str r1,[r4,#4]
+ 372 0072 08A9     	 add r1,sp,#32
+ 373 0074 8A42     	 cmp r2,r1
+ 374 0076 2060     	 str r0,[r4]
+ 375 0078 1346     	 mov r3,r2
+ 376 007a 04F10804 	 add r4,r4,#8
+ 377 007e F5D1     	 bne .L20
+ 112:randombytes.c ****   outleft = sizeof(out_buf);
+ 378              	 .loc 1 112 3 view .LVU92
+ 379              	 .loc 1 112 11 is_stmt 0 view .LVU93
+ 380 0080 064B     	 ldr r3,.L23+16
+ 381 0082 4022     	 movs r2,#64
+ 382 0084 1A60     	 str r2,[r3]
+ 113:randombytes.c **** }
+ 383              	 .loc 1 113 1 view .LVU94
+ 384 0086 08B0     	 add sp,sp,#32
+ 385              	.LCFI5:
+ 386              	 .cfi_def_cfa_offset 24
+ 387              	 
+ 388 0088 BDE8F081 	 pop {r4,r5,r6,r7,r8,pc}
+ 389              	.L24:
+ 390              	 .align 2
+ 391              	.L23:
+ 392 008c 00000000 	 .word in
+ 393 0090 00000000 	 .word surf
+ 394 0094 00000000 	 .word out_buf
+ 395 0098 20000000 	 .word out_buf+32
+ 396 009c 00000000 	 .word outleft
+ 397              	 .cfi_endproc
+ 398              	.LFE1:
+ 400              	 .section .text.PQCLEAN_randombytes,"ax",%progbits
+ 401              	 .align 1
+ 402              	 .global PQCLEAN_randombytes
+ 403              	 .syntax unified
+ 404              	 .thumb
+ 405              	 .thumb_func
+ 407              	PQCLEAN_randombytes:
+ 408              	.LVL31:
+ 409              	.LFB2:
+ 114:randombytes.c **** 
+ 115:randombytes.c **** int randombytes(uint8_t* buf, size_t xlen)
+ 116:randombytes.c **** {
+ 410              	 .loc 1 116 1 is_stmt 1 view-0
+ 411              	 .cfi_startproc
+ 412              	 
+ 413              	 
+ 414              	 .loc 1 116 1 is_stmt 0 view .LVU96
+ 415 0000 F8B5     	 push {r3,r4,r5,r6,r7,lr}
+ 416              	.LCFI6:
+ 417              	 .cfi_def_cfa_offset 24
+ 418              	 .cfi_offset 3,-24
+ 419              	 .cfi_offset 4,-20
+ 420              	 .cfi_offset 5,-16
+ 421              	 .cfi_offset 6,-12
+ 422              	 .cfi_offset 7,-8
+ 423              	 .cfi_offset 14,-4
+ 117:randombytes.c ****   while (xlen > 0) {
+ 118:randombytes.c ****     if (!outleft) {
+ 424              	 .loc 1 118 9 view .LVU97
+ 425 0002 094E     	 ldr r6,.L29
+ 119:randombytes.c ****       randombytes_regen();
+ 426              	 .loc 1 119 7 view .LVU98
+ 427 0004 094F     	 ldr r7,.L29+4
+ 116:randombytes.c ****   while (xlen > 0) {
+ 428              	 .loc 1 116 1 view .LVU99
+ 429 0006 0446     	 mov r4,r0
+ 117:randombytes.c ****   while (xlen > 0) {
+ 430              	 .loc 1 117 3 is_stmt 1 view .LVU100
+ 431 0008 4518     	 adds r5,r0,r1
+ 432              	.LVL32:
+ 433              	.L26:
+ 117:randombytes.c ****   while (xlen > 0) {
+ 434              	 .loc 1 117 15 view .LVU101
+ 435 000a AC42     	 cmp r4,r5
+ 436 000c 01D1     	 bne .L28
+ 120:randombytes.c ****     }
+ 121:randombytes.c ****     *buf = out_buf[--outleft];
+ 122:randombytes.c ****     ++buf;
+ 123:randombytes.c ****     --xlen;
+ 124:randombytes.c ****   }
+ 125:randombytes.c ****   return 0;
+ 437              	 .loc 1 125 3 view .LVU102
+ 126:randombytes.c **** }
+ 438              	 .loc 1 126 1 is_stmt 0 view .LVU103
+ 439 000e 0020     	 movs r0,#0
+ 440 0010 F8BD     	 pop {r3,r4,r5,r6,r7,pc}
+ 441              	.LVL33:
+ 442              	.L28:
+ 118:randombytes.c ****       randombytes_regen();
+ 443              	 .loc 1 118 5 is_stmt 1 view .LVU104
+ 118:randombytes.c ****       randombytes_regen();
+ 444              	 .loc 1 118 8 is_stmt 0 view .LVU105
+ 445 0012 3368     	 ldr r3,[r6]
+ 446 0014 03B9     	 cbnz r3,.L27
+ 119:randombytes.c ****     }
+ 447              	 .loc 1 119 7 is_stmt 1 view .LVU106
+ 448 0016 B847     	 blx r7
+ 449              	.LVL34:
+ 450              	.L27:
+ 121:randombytes.c ****     ++buf;
+ 451              	 .loc 1 121 5 view .LVU107
+ 121:randombytes.c ****     ++buf;
+ 452              	 .loc 1 121 20 is_stmt 0 view .LVU108
+ 453 0018 3368     	 ldr r3,[r6]
+ 121:randombytes.c ****     ++buf;
+ 454              	 .loc 1 121 19 view .LVU109
+ 455 001a 054A     	 ldr r2,.L29+8
+ 121:randombytes.c ****     ++buf;
+ 456              	 .loc 1 121 20 view .LVU110
+ 457 001c 013B     	 subs r3,r3,#1
+ 121:randombytes.c ****     ++buf;
+ 458              	 .loc 1 121 10 view .LVU111
+ 459 001e 3360     	 str r3,[r6]
+ 121:randombytes.c ****     ++buf;
+ 460              	 .loc 1 121 19 view .LVU112
+ 461 0020 D35C     	 ldrb r3,[r2,r3]
+ 121:randombytes.c ****     ++buf;
+ 462              	 .loc 1 121 10 view .LVU113
+ 463 0022 04F8013B 	 strb r3,[r4],#1
+ 464              	.LVL35:
+ 122:randombytes.c ****     --xlen;
+ 465              	 .loc 1 122 5 is_stmt 1 view .LVU114
+ 123:randombytes.c ****   }
+ 466              	 .loc 1 123 5 view .LVU115
+ 467 0026 F0E7     	 b .L26
+ 468              	.L30:
+ 469              	 .align 2
+ 470              	.L29:
+ 471 0028 00000000 	 .word outleft
+ 472 002c 00000000 	 .word randombytes_regen
+ 473 0030 00000000 	 .word out_buf
+ 474              	 .cfi_endproc
+ 475              	.LFE2:
+ 477              	 .section .bss.outleft,"aw",%nobits
+ 478              	 .align 2
+ 481              	outleft:
+ 482 0000 00000000 	 .space 4
+ 483              	 .section .bss.out_buf,"aw",%nobits
+ 486              	out_buf:
+ 487 0000 00000000 	 .space 64
+ 487      00000000 
+ 487      00000000 
+ 487      00000000 
+ 487      00000000 
+ 488              	 .section .bss.in,"aw",%nobits
+ 489              	 .align 2
+ 492              	in:
+ 493 0000 00000000 	 .space 48
+ 493      00000000 
+ 493      00000000 
+ 493      00000000 
+ 493      00000000 
+ 494              	 .section .rodata.seed,"a"
+ 495              	 .align 2
+ 498              	seed:
+ 499 0000 03000000 	 .word 3
+ 500 0004 01000000 	 .word 1
+ 501 0008 04000000 	 .word 4
+ 502 000c 01000000 	 .word 1
+ 503 0010 05000000 	 .word 5
+ 504 0014 09000000 	 .word 9
+ 505 0018 02000000 	 .word 2
+ 506 001c 06000000 	 .word 6
+ 507 0020 05000000 	 .word 5
+ 508 0024 03000000 	 .word 3
+ 509 0028 05000000 	 .word 5
+ 510 002c 08000000 	 .word 8
+ 511 0030 09000000 	 .word 9
+ 512 0034 07000000 	 .word 7
+ 513 0038 09000000 	 .word 9
+ 514 003c 03000000 	 .word 3
+ 515 0040 02000000 	 .word 2
+ 516 0044 03000000 	 .word 3
+ 517 0048 08000000 	 .word 8
+ 518 004c 04000000 	 .word 4
+ 519 0050 06000000 	 .word 6
+ 520 0054 02000000 	 .word 2
+ 521 0058 06000000 	 .word 6
+ 522 005c 04000000 	 .word 4
+ 523 0060 03000000 	 .word 3
+ 524 0064 03000000 	 .word 3
+ 525 0068 08000000 	 .word 8
+ 526 006c 03000000 	 .word 3
+ 527 0070 02000000 	 .word 2
+ 528 0074 07000000 	 .word 7
+ 529 0078 09000000 	 .word 9
+ 530 007c 05000000 	 .word 5
+ 531              	 .text
+ 532              	.Letext0:
+ 533              	 .file 2 "/usr/lib/gcc/arm-none-eabi/14.2.1/include/stdint.h"
+ 534              	 .file 3 "/usr/lib/gcc/arm-none-eabi/14.2.1/include/stddef.h"
+ 535              	 .file 4 "/usr/include/newlib/string.h"
+DEFINED SYMBOLS
+                            *ABS*:00000000 randombytes.c
+    {standard input}:19     .text.surf:00000000 $t
+    {standard input}:24     .text.surf:00000000 surf
+    {standard input}:249    .text.surf:0000013c $d
+    {standard input}:492    .bss.in:00000000 in
+    {standard input}:498    .rodata.seed:00000000 seed
+    {standard input}:258    .text.randombytes_regen:00000000 $t
+    {standard input}:264    .text.randombytes_regen:00000000 randombytes_regen
+    {standard input}:392    .text.randombytes_regen:0000008c $d
+    {standard input}:486    .bss.out_buf:00000000 out_buf
+    {standard input}:481    .bss.outleft:00000000 outleft
+    {standard input}:401    .text.PQCLEAN_randombytes:00000000 $t
+    {standard input}:407    .text.PQCLEAN_randombytes:00000000 PQCLEAN_randombytes
+    {standard input}:471    .text.PQCLEAN_randombytes:00000028 $d
+    {standard input}:478    .bss.outleft:00000000 $d
+    {standard input}:487    .bss.out_buf:00000000 $d
+    {standard input}:489    .bss.in:00000000 $d
+    {standard input}:495    .rodata.seed:00000000 $d
+                           .group:00000000 wm4.0.2b10ec159abbf65f4ef33f6bb625bef4
+                           .group:00000000 wm4.stdint.h.29.6d480f4ba0f60596e88234283d42444f
+                           .group:00000000 wm4._newlib_version.h.4.0eb654b64686e2bd29646258853f6c22
+                           .group:00000000 wm4.newlib.h.27.07bf1b8b16da454ae07478107717878b
+                           .group:00000000 wm4.ieeefp.h.77.b6f5ce903562917fbd9193ee87d4fa47
+                           .group:00000000 wm4.features.h.22.03467e2205ec9ffbc20524d97cdbdf6a
+                           .group:00000000 wm4.config.h.224.10ee1ad185d877c6e334e6581faab44d
+                           .group:00000000 wm4._ansi.h.31.de524f58584151836e90d8620a16f8e8
+                           .group:00000000 wm4.unistd.h.9.2709ac388e61c5728907bf928c890ff7
+                           .group:00000000 wm4._default_types.h.6.959254cf5f09734ea7516c89e8bb21bd
+                           .group:00000000 wm4.stddef.h.132.1afdd7da36d27b39387169a042f6f591
+                           .group:00000000 wm4.cdefs.h.49.bafb023044e47a1dcdd854e4d6521f7d
+                           .group:00000000 wm4.types.h.40.8b6acba56cefbb11746718204edc8f5e
+                           .group:00000000 wm4._types.h.20.dd0d04dca3800a0d2a6129b87f3adbb2
+                           .group:00000000 wm4.stddef.h.237.9850e39ab2d64d6c5b323bd3217b427d
+                           .group:00000000 wm4._types.h.127.3bdfe3ff8ea2d0985b03d9cbe93480e3
+                           .group:00000000 wm4._stdint.h.10.c24fa3af3bc1706662bb5593a907e841
+                           .group:00000000 wm4._endian.h.31.65a10590763c3dde1ac4a7f66d7d4891
+                           .group:00000000 wm4.endian.h.9.49f3a4695c1b61e8a0808de3c4a106cb
+                           .group:00000000 wm4._timeval.h.32.bec3221fa7a9bb0bdde696c9c57e47d2
+                           .group:00000000 wm4.timespec.h.41.d855182eb0e690443ab8651bcedca6e1
+                           .group:00000000 wm4.select.h.19.8c04bee5682eafa577cf6325dd7ee64c
+                           .group:00000000 wm4.types.h.51.e2a6e4379b4797ffcc4841f8498fd61b
+                           .group:00000000 wm4.sched.h.22.c60982713a5c428609783c78f9c78d95
+                           .group:00000000 wm4._pthreadtypes.h.36.fcee9961c35163dde6267ef772ad1972
+                           .group:00000000 wm4.stddef.h.39.84f280b4d43ab019798ff29d29267cac
+                           .group:00000000 wm4.unistd.h.166.64f46862ce0a3925984c663d49123e22
+                           .group:00000000 wm4.reent.h.18.25503cdc8b7e55dd0d6ea7b3e5af7a03
+                           .group:00000000 wm4.lock.h.2.c0958401bd0ce484d507ee19aacab817
+                           .group:00000000 wm4.reent.h.78.6b87466b04591b1f1cb88c14fdf2ba9e
+                           .group:00000000 wm4.string.h.15.dab3980bf35408a4c507182805e2de3a
+                           .group:00000000 wm4.stddef.h.158.eec8bf00b5213f43d095cb984c5f22e3
+
+NO UNDEFINED SYMBOLS

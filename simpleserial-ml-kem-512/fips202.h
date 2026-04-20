@@ -1,4 +1,3 @@
-// SPDX-License-Identifier: Apache-2.0 or CC0-1.0
 #ifndef FIPS202_H
 #define FIPS202_H
 
@@ -11,40 +10,42 @@
 #define SHA3_384_RATE 104
 #define SHA3_512_RATE 72
 
+#define PQC_SHAKEINCCTX_BYTES (sizeof(uint64_t)*26)
+#define PQC_SHAKECTX_BYTES (sizeof(uint64_t)*25)
 
 // Context for incremental API
 typedef struct {
-    uint64_t ctx[26];
+    uint64_t *ctx;
 } shake128incctx;
 
 // Context for non-incremental API
 typedef struct {
-    uint64_t ctx[25];
+    uint64_t *ctx;
 } shake128ctx;
 
 // Context for incremental API
 typedef struct {
-    uint64_t ctx[26];
+    uint64_t *ctx;
 } shake256incctx;
 
 // Context for non-incremental API
 typedef struct {
-    uint64_t ctx[25];
+    uint64_t *ctx;
 } shake256ctx;
 
 // Context for incremental API
 typedef struct {
-    uint64_t ctx[26];
+    uint64_t *ctx;
 } sha3_256incctx;
 
 // Context for incremental API
 typedef struct {
-    uint64_t ctx[26];
+    uint64_t *ctx;
 } sha3_384incctx;
 
 // Context for incremental API
 typedef struct {
-    uint64_t ctx[26];
+    uint64_t *ctx;
 } sha3_512incctx;
 
 /* Initialize the state and absorb the provided input.
@@ -63,10 +64,6 @@ void shake128_ctx_release(shake128ctx *state);
 /* Copy the state. */
 void shake128_ctx_clone(shake128ctx *dest, const shake128ctx *src);
 
-void cshake128_simple_absorb(shake128ctx *state, uint16_t cstm, const uint8_t *input, size_t inlen);
-void cshake128_simple_squeezeblocks(uint8_t *output, size_t nblocks, shake128ctx *state);
-void cshake128_simple(uint8_t *output, size_t outlen, uint16_t cstm, const uint8_t *input, size_t inlen);
-
 /* Initialize incremental hashing API */
 void shake128_inc_init(shake128incctx *state);
 /* Absorb more information into the XOF.
@@ -82,7 +79,7 @@ void shake128_inc_finalize(shake128incctx *state);
  */
 void shake128_inc_squeeze(uint8_t *output, size_t outlen, shake128incctx *state);
 /* Copy the context of the SHAKE128 XOF */
-void shake128_inc_ctx_clone(shake128incctx* dest, const shake128incctx *src);
+void shake128_inc_ctx_clone(shake128incctx *dest, const shake128incctx *src);
 /* Free the context of the SHAKE128 XOF */
 void shake128_inc_ctx_release(shake128incctx *state);
 
@@ -102,25 +99,18 @@ void shake256_ctx_release(shake256ctx *state);
 /* Copy the context held by this XOF */
 void shake256_ctx_clone(shake256ctx *dest, const shake256ctx *src);
 
-void cshake256_simple_absorb(shake256ctx *state, uint16_t cstm, const uint8_t *input, size_t inlen);
-void cshake256_simple_squeezeblocks(uint8_t *output, size_t nblocks, shake256ctx *state);
-void cshake256_simple(uint8_t *output, size_t outlen, uint16_t cstm, const uint8_t *input, size_t inlen);
-
 /* Initialize incremental hashing API */
 void shake256_inc_init(shake256incctx *state);
 void shake256_inc_absorb(shake256incctx *state, const uint8_t *input, size_t inlen);
 /* Prepares for squeeze phase */
 void shake256_inc_finalize(shake256incctx *state);
-
-
-
 /* Squeeze output out of the sponge.
  *
  * Supports being called multiple times
  */
 void shake256_inc_squeeze(uint8_t *output, size_t outlen, shake256incctx *state);
 /* Copy the state */
-void shake256_inc_ctx_clone(shake256incctx* dest, const shake256incctx *src);
+void shake256_inc_ctx_clone(shake256incctx *dest, const shake256incctx *src);
 /* Free the state */
 void shake256_inc_ctx_release(shake256incctx *state);
 
@@ -172,4 +162,5 @@ void sha3_512_inc_ctx_release(sha3_512incctx *state);
 
 /* One-stop SHA3-512 shop */
 void sha3_512(uint8_t *output, const uint8_t *input, size_t inlen);
+
 #endif

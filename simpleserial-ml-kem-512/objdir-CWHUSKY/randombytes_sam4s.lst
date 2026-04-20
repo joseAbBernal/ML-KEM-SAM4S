@@ -1,0 +1,183 @@
+   1              	 .cpu cortex-m4
+   2              	 .arch armv7e-m
+   3              	 .fpu softvfp
+   4              	 .eabi_attribute 20,1
+   5              	 .eabi_attribute 21,1
+   6              	 .eabi_attribute 23,3
+   7              	 .eabi_attribute 24,1
+   8              	 .eabi_attribute 25,1
+   9              	 .eabi_attribute 26,1
+  10              	 .eabi_attribute 30,4
+  11              	 .eabi_attribute 34,1
+  12              	 .eabi_attribute 18,4
+  13              	 .file "randombytes_sam4s.c"
+  14              	 .text
+  15              	.Ltext0:
+  16              	 .cfi_sections .debug_frame
+  17              	 .file 1 "randombytes_sam4s.c"
+  18              	 .section .text.PQCLEAN_randombytes,"ax",%progbits
+  19              	 .align 1
+  20              	 .global PQCLEAN_randombytes
+  21              	 .syntax unified
+  22              	 .thumb
+  23              	 .thumb_func
+  25              	PQCLEAN_randombytes:
+  26              	.LVL0:
+  27              	.LFB0:
+   1:randombytes_sam4s.c **** /*
+   2:randombytes_sam4s.c ****  * SAM4S-specific fallback randombytes implementation.
+   3:randombytes_sam4s.c ****  *
+   4:randombytes_sam4s.c ****  * Simplified version that doesn't depend on SysTick initialization.
+   5:randombytes_sam4s.c ****  * Uses a simple counter-based approach for testing.
+   6:randombytes_sam4s.c ****  */
+   7:randombytes_sam4s.c **** 
+   8:randombytes_sam4s.c **** #include "randombytes.h"
+   9:randombytes_sam4s.c **** #include <stdint.h>
+  10:randombytes_sam4s.c **** #include <stddef.h>
+  11:randombytes_sam4s.c **** 
+  12:randombytes_sam4s.c **** static uint32_t sam4s_rng_counter = 0x12345678;
+  13:randombytes_sam4s.c **** 
+  14:randombytes_sam4s.c **** int randombytes(uint8_t *output, size_t n) {
+  28              	 .loc 1 14 44 view-0
+  29              	 .cfi_startproc
+  30              	 
+  31              	 
+  15:randombytes_sam4s.c ****     if (output == NULL) {
+  32              	 .loc 1 15 5 view .LVU1
+  14:randombytes_sam4s.c ****     if (output == NULL) {
+  33              	 .loc 1 14 44 is_stmt 0 view .LVU2
+  34 0000 70B5     	 push {r4,r5,r6,lr}
+  35              	.LCFI0:
+  36              	 .cfi_def_cfa_offset 16
+  37              	 .cfi_offset 4,-16
+  38              	 .cfi_offset 5,-12
+  39              	 .cfi_offset 6,-8
+  40              	 .cfi_offset 14,-4
+  41              	 .loc 1 15 8 view .LVU3
+  42 0002 88B1     	 cbz r0,.L6
+  43 0004 0A4A     	 ldr r2,.L10
+  44              	.LBB2:
+  16:randombytes_sam4s.c ****         return -1;
+  17:randombytes_sam4s.c ****     }
+  18:randombytes_sam4s.c **** 
+  19:randombytes_sam4s.c ****     for (size_t i = 0; i < n; i++) {
+  20:randombytes_sam4s.c ****         // Simple counter-based pseudo-random generation
+  21:randombytes_sam4s.c ****         sam4s_rng_counter = sam4s_rng_counter * 1664525 + 1013904223;
+  45              	 .loc 1 21 47 view .LVU4
+  46 0006 0B4D     	 ldr r5,.L10+4
+  47 0008 1368     	 ldr r3,[r2]
+  48              	 .loc 1 21 57 view .LVU5
+  49 000a 0B4E     	 ldr r6,.L10+8
+  50 000c 0144     	 add r1,r1,r0
+  51              	.LVL1:
+  52              	 .loc 1 21 57 view .LVU6
+  53              	.LBE2:
+  15:randombytes_sam4s.c ****         return -1;
+  54              	 .loc 1 15 8 view .LVU7
+  55 000e 0024     	 movs r4,#0
+  56              	.LVL2:
+  57              	.L3:
+  58              	.LBB3:
+  19:randombytes_sam4s.c ****         // Simple counter-based pseudo-random generation
+  59              	 .loc 1 19 26 is_stmt 1 discriminator 1 view .LVU8
+  60 0010 8142     	 cmp r1,r0
+  61 0012 03D1     	 bne .L4
+  62 0014 04B1     	 cbz r4,.L5
+  63 0016 1360     	 str r3,[r2]
+  64              	.L5:
+  65              	.LBE3:
+  22:randombytes_sam4s.c ****         output[i] = (uint8_t)(sam4s_rng_counter & 0xFF);
+  23:randombytes_sam4s.c ****     }
+  24:randombytes_sam4s.c **** 
+  25:randombytes_sam4s.c ****     return 0;
+  66              	 .loc 1 25 12 is_stmt 0 view .LVU9
+  67 0018 0020     	 movs r0,#0
+  68              	.LVL3:
+  69              	.L1:
+  26:randombytes_sam4s.c **** }
+  70              	 .loc 1 26 1 view .LVU10
+  71 001a 70BD     	 pop {r4,r5,r6,pc}
+  72              	.LVL4:
+  73              	.L4:
+  74              	.LBB4:
+  21:randombytes_sam4s.c ****         output[i] = (uint8_t)(sam4s_rng_counter & 0xFF);
+  75              	 .loc 1 21 9 is_stmt 1 view .LVU11
+  21:randombytes_sam4s.c ****         output[i] = (uint8_t)(sam4s_rng_counter & 0xFF);
+  76              	 .loc 1 21 57 is_stmt 0 view .LVU12
+  77 001c 05FB0363 	 mla r3,r5,r3,r6
+  22:randombytes_sam4s.c ****         output[i] = (uint8_t)(sam4s_rng_counter & 0xFF);
+  78              	 .loc 1 22 9 is_stmt 1 view .LVU13
+  22:randombytes_sam4s.c ****         output[i] = (uint8_t)(sam4s_rng_counter & 0xFF);
+  79              	 .loc 1 22 21 is_stmt 0 view .LVU14
+  80 0020 00F8013B 	 strb r3,[r0],#1
+  81              	.LVL5:
+  19:randombytes_sam4s.c ****         // Simple counter-based pseudo-random generation
+  82              	 .loc 1 19 32 is_stmt 1 discriminator 3 view .LVU15
+  22:randombytes_sam4s.c ****     }
+  83              	 .loc 1 22 19 is_stmt 0 view .LVU16
+  84 0024 0124     	 movs r4,#1
+  85 0026 F3E7     	 b .L3
+  86              	.LVL6:
+  87              	.L6:
+  22:randombytes_sam4s.c ****     }
+  88              	 .loc 1 22 19 view .LVU17
+  89              	.LBE4:
+  16:randombytes_sam4s.c ****     }
+  90              	 .loc 1 16 16 view .LVU18
+  91 0028 4FF0FF30 	 mov r0,#-1
+  92              	.LVL7:
+  16:randombytes_sam4s.c ****     }
+  93              	 .loc 1 16 16 view .LVU19
+  94 002c F5E7     	 b .L1
+  95              	.L11:
+  96 002e 00BF     	 .align 2
+  97              	.L10:
+  98 0030 00000000 	 .word sam4s_rng_counter
+  99 0034 0D661900 	 .word 1664525
+ 100 0038 5FF36E3C 	 .word 1013904223
+ 101              	 .cfi_endproc
+ 102              	.LFE0:
+ 104              	 .section .data.sam4s_rng_counter,"aw"
+ 105              	 .align 2
+ 108              	sam4s_rng_counter:
+ 109 0000 78563412 	 .word 305419896
+ 110              	 .text
+ 111              	.Letext0:
+ 112              	 .file 2 "/usr/lib/gcc/arm-none-eabi/14.2.1/include/stdint.h"
+ 113              	 .file 3 "/usr/lib/gcc/arm-none-eabi/14.2.1/include/stddef.h"
+DEFINED SYMBOLS
+                            *ABS*:00000000 randombytes_sam4s.c
+    {standard input}:19     .text.PQCLEAN_randombytes:00000000 $t
+    {standard input}:25     .text.PQCLEAN_randombytes:00000000 PQCLEAN_randombytes
+    {standard input}:98     .text.PQCLEAN_randombytes:00000030 $d
+    {standard input}:108    .data.sam4s_rng_counter:00000000 sam4s_rng_counter
+    {standard input}:105    .data.sam4s_rng_counter:00000000 $d
+                           .group:00000000 wm4.0.534b8d408cafabed4abbc6a1c4e55e02
+                           .group:00000000 wm4.stdint.h.29.6d480f4ba0f60596e88234283d42444f
+                           .group:00000000 wm4._newlib_version.h.4.0eb654b64686e2bd29646258853f6c22
+                           .group:00000000 wm4.newlib.h.27.07bf1b8b16da454ae07478107717878b
+                           .group:00000000 wm4.ieeefp.h.77.b6f5ce903562917fbd9193ee87d4fa47
+                           .group:00000000 wm4.features.h.22.03467e2205ec9ffbc20524d97cdbdf6a
+                           .group:00000000 wm4.config.h.224.10ee1ad185d877c6e334e6581faab44d
+                           .group:00000000 wm4._ansi.h.31.de524f58584151836e90d8620a16f8e8
+                           .group:00000000 wm4.unistd.h.9.2709ac388e61c5728907bf928c890ff7
+                           .group:00000000 wm4._default_types.h.6.959254cf5f09734ea7516c89e8bb21bd
+                           .group:00000000 wm4.stddef.h.132.1afdd7da36d27b39387169a042f6f591
+                           .group:00000000 wm4.cdefs.h.49.bafb023044e47a1dcdd854e4d6521f7d
+                           .group:00000000 wm4.types.h.40.8b6acba56cefbb11746718204edc8f5e
+                           .group:00000000 wm4._types.h.20.dd0d04dca3800a0d2a6129b87f3adbb2
+                           .group:00000000 wm4.stddef.h.237.9850e39ab2d64d6c5b323bd3217b427d
+                           .group:00000000 wm4._types.h.127.3bdfe3ff8ea2d0985b03d9cbe93480e3
+                           .group:00000000 wm4._stdint.h.10.c24fa3af3bc1706662bb5593a907e841
+                           .group:00000000 wm4._endian.h.31.65a10590763c3dde1ac4a7f66d7d4891
+                           .group:00000000 wm4.endian.h.9.49f3a4695c1b61e8a0808de3c4a106cb
+                           .group:00000000 wm4._timeval.h.32.bec3221fa7a9bb0bdde696c9c57e47d2
+                           .group:00000000 wm4.timespec.h.41.d855182eb0e690443ab8651bcedca6e1
+                           .group:00000000 wm4.select.h.19.8c04bee5682eafa577cf6325dd7ee64c
+                           .group:00000000 wm4.types.h.51.e2a6e4379b4797ffcc4841f8498fd61b
+                           .group:00000000 wm4.sched.h.22.c60982713a5c428609783c78f9c78d95
+                           .group:00000000 wm4._pthreadtypes.h.36.fcee9961c35163dde6267ef772ad1972
+                           .group:00000000 wm4.stddef.h.39.84f280b4d43ab019798ff29d29267cac
+                           .group:00000000 wm4.unistd.h.166.64f46862ce0a3925984c663d49123e22
+
+NO UNDEFINED SYMBOLS

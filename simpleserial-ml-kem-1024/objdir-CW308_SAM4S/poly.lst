@@ -1,0 +1,1731 @@
+   1              	 .cpu cortex-m4
+   2              	 .arch armv7e-m
+   3              	 .fpu softvfp
+   4              	 .eabi_attribute 20,1
+   5              	 .eabi_attribute 21,1
+   6              	 .eabi_attribute 23,3
+   7              	 .eabi_attribute 24,1
+   8              	 .eabi_attribute 25,1
+   9              	 .eabi_attribute 26,1
+  10              	 .eabi_attribute 30,4
+  11              	 .eabi_attribute 34,1
+  12              	 .eabi_attribute 18,4
+  13              	 .file "poly.c"
+  14              	 .text
+  15              	.Ltext0:
+  16              	 .cfi_sections .debug_frame
+  17              	 .file 1 "poly.c"
+  18              	 .section .text.crypto_kem_kyber1024_ref_poly_decompress,"ax",%progbits
+  19              	 .align 1
+  20              	 .global crypto_kem_kyber1024_ref_poly_decompress
+  21              	 .syntax unified
+  22              	 .thumb
+  23              	 .thumb_func
+  25              	crypto_kem_kyber1024_ref_poly_decompress:
+  26              	.LVL0:
+  27              	.LFB1:
+   1:poly.c        **** #include <stdint.h>
+   2:poly.c        **** #include "params.h"
+   3:poly.c        **** #include "poly.h"
+   4:poly.c        **** #include "ntt.h"
+   5:poly.c        **** #include "reduce.h"
+   6:poly.c        **** #include "cbd.h"
+   7:poly.c        **** #include "symmetric.h"
+   8:poly.c        **** 
+   9:poly.c        **** /*************************************************
+  10:poly.c        **** * Name:        poly_compress
+  11:poly.c        **** *
+  12:poly.c        **** * Description: Compression and subsequent serialization of a polynomial
+  13:poly.c        **** *
+  14:poly.c        **** * Arguments:   - uint8_t *r: pointer to output byte array
+  15:poly.c        **** *                            (of length KYBER_POLYCOMPRESSEDBYTES)
+  16:poly.c        **** *              - poly *a:    pointer to input polynomial
+  17:poly.c        **** **************************************************/
+  18:poly.c        **** void poly_compress(uint8_t r[KYBER_POLYCOMPRESSEDBYTES], poly *a)
+  19:poly.c        **** {
+  20:poly.c        ****   unsigned int i,j;
+  21:poly.c        ****   uint8_t t[8];
+  22:poly.c        **** 
+  23:poly.c        ****   poly_csubq(a);
+  24:poly.c        **** 
+  25:poly.c        **** #if (KYBER_POLYCOMPRESSEDBYTES == 96)
+  26:poly.c        ****   for(i=0;i<KYBER_N/8;i++) {
+  27:poly.c        ****     for(j=0;j<8;j++)
+  28:poly.c        ****       t[j] = ((((uint16_t)a->coeffs[8*i+j] << 3) + KYBER_Q/2)/KYBER_Q) & 7;
+  29:poly.c        **** 
+  30:poly.c        ****     r[0] = (t[0] >> 0) | (t[1] << 3) | (t[2] << 6);
+  31:poly.c        ****     r[1] = (t[2] >> 2) | (t[3] << 1) | (t[4] << 4) | (t[5] << 7);
+  32:poly.c        ****     r[2] = (t[5] >> 1) | (t[6] << 2) | (t[7] << 5);
+  33:poly.c        ****     r += 3;
+  34:poly.c        ****   }
+  35:poly.c        **** #elif (KYBER_POLYCOMPRESSEDBYTES == 128)
+  36:poly.c        ****   for(i=0;i<KYBER_N/8;i++) {
+  37:poly.c        ****     for(j=0;j<8;j++)
+  38:poly.c        ****       t[j] = ((((uint16_t)a->coeffs[8*i+j] << 4) + KYBER_Q/2)/KYBER_Q) & 15;
+  39:poly.c        **** 
+  40:poly.c        ****     r[0] = t[0] | (t[1] << 4);
+  41:poly.c        ****     r[1] = t[2] | (t[3] << 4);
+  42:poly.c        ****     r[2] = t[4] | (t[5] << 4);
+  43:poly.c        ****     r[3] = t[6] | (t[7] << 4);
+  44:poly.c        ****     r += 4;
+  45:poly.c        ****   }
+  46:poly.c        **** #elif (KYBER_POLYCOMPRESSEDBYTES == 160)
+  47:poly.c        ****   for(i=0;i<KYBER_N/8;i++) {
+  48:poly.c        ****     for(j=0;j<8;j++)
+  49:poly.c        ****       t[j] = ((((uint32_t)a->coeffs[8*i+j] << 5) + KYBER_Q/2)/KYBER_Q) & 31;
+  50:poly.c        **** 
+  51:poly.c        ****     r[0] = (t[0] >> 0) | (t[1] << 5);
+  52:poly.c        ****     r[1] = (t[1] >> 3) | (t[2] << 2) | (t[3] << 7);
+  53:poly.c        ****     r[2] = (t[3] >> 1) | (t[4] << 4);
+  54:poly.c        ****     r[3] = (t[4] >> 4) | (t[5] << 1) | (t[6] << 6);
+  55:poly.c        ****     r[4] = (t[6] >> 2) | (t[7] << 3);
+  56:poly.c        ****     r += 5;
+  57:poly.c        ****   }
+  58:poly.c        **** #else
+  59:poly.c        **** #error "KYBER_POLYCOMPRESSEDBYTES needs to be in {96, 128, 160}"
+  60:poly.c        **** #endif
+  61:poly.c        **** }
+  62:poly.c        **** 
+  63:poly.c        **** /*************************************************
+  64:poly.c        **** * Name:        poly_decompress
+  65:poly.c        **** *
+  66:poly.c        **** * Description: De-serialization and subsequent decompression of a polynomial;
+  67:poly.c        **** *              approximate inverse of poly_compress
+  68:poly.c        **** *
+  69:poly.c        **** * Arguments:   - poly *r:          pointer to output polynomial
+  70:poly.c        **** *              - const uint8_t *a: pointer to input byte array
+  71:poly.c        **** *                                  (of length KYBER_POLYCOMPRESSEDBYTES bytes)
+  72:poly.c        **** **************************************************/
+  73:poly.c        **** void poly_decompress(poly *r, const uint8_t a[KYBER_POLYCOMPRESSEDBYTES])
+  74:poly.c        **** {
+  28              	 .loc 1 74 1 view-0
+  29              	 .cfi_startproc
+  30              	 
+  31              	 
+  75:poly.c        ****   unsigned int i;
+  32              	 .loc 1 75 3 view .LVU1
+  76:poly.c        **** 
+  77:poly.c        **** #if (KYBER_POLYCOMPRESSEDBYTES == 96)
+  78:poly.c        ****   unsigned int j;
+  79:poly.c        ****   uint8_t t[8];
+  80:poly.c        ****   for(i=0;i<KYBER_N/8;i++) {
+  81:poly.c        ****     t[0] = (a[0] >> 0);
+  82:poly.c        ****     t[1] = (a[0] >> 3);
+  83:poly.c        ****     t[2] = (a[0] >> 6) | (a[1] << 2);
+  84:poly.c        ****     t[3] = (a[1] >> 1);
+  85:poly.c        ****     t[4] = (a[1] >> 4);
+  86:poly.c        ****     t[5] = (a[1] >> 7) | (a[2] << 1);
+  87:poly.c        ****     t[6] = (a[2] >> 2);
+  88:poly.c        ****     t[7] = (a[2] >> 5);
+  89:poly.c        ****     a += 3;
+  90:poly.c        **** 
+  91:poly.c        ****     for(j=0;j<8;j++)
+  92:poly.c        ****       r->coeffs[8*i+j] = ((uint16_t)(t[j] & 7)*KYBER_Q + 4) >> 3;
+  93:poly.c        ****   }
+  94:poly.c        **** #elif (KYBER_POLYCOMPRESSEDBYTES == 128)
+  95:poly.c        ****   for(i=0;i<KYBER_N/2;i++) {
+  96:poly.c        ****     r->coeffs[2*i+0] = (((uint16_t)(a[0] & 15)*KYBER_Q) + 8) >> 4;
+  97:poly.c        ****     r->coeffs[2*i+1] = (((uint16_t)(a[0] >> 4)*KYBER_Q) + 8) >> 4;
+  98:poly.c        ****     a += 1;
+  99:poly.c        ****   }
+ 100:poly.c        **** #elif (KYBER_POLYCOMPRESSEDBYTES == 160)
+ 101:poly.c        ****   unsigned int j;
+  33              	 .loc 1 101 3 view .LVU2
+ 102:poly.c        ****   uint8_t t[8];
+  34              	 .loc 1 102 3 view .LVU3
+ 103:poly.c        ****   for(i=0;i<KYBER_N/8;i++) {
+  35              	 .loc 1 103 3 view .LVU4
+  36              	 .loc 1 103 12 discriminator 1 view .LVU5
+  74:poly.c        ****   unsigned int i;
+  37              	 .loc 1 74 1 is_stmt 0 view .LVU6
+  38 0000 F7B5     	 push {r0,r1,r2,r4,r5,r6,r7,lr}
+  39              	.LCFI0:
+  40              	 .cfi_def_cfa_offset 32
+  41              	 .cfi_offset 4,-20
+  42              	 .cfi_offset 5,-16
+  43              	 .cfi_offset 6,-12
+  44              	 .cfi_offset 7,-8
+  45              	 .cfi_offset 14,-4
+  46 0002 0246     	 mov r2,r0
+  47 0004 0531     	 adds r1,r1,#5
+  48              	.LVL1:
+  74:poly.c        ****   unsigned int i;
+  49              	 .loc 1 74 1 view .LVU7
+  50 0006 0020     	 movs r0,#0
+  51              	.LVL2:
+ 104:poly.c        ****     t[0] = (a[0] >> 0);
+ 105:poly.c        ****     t[1] = (a[0] >> 5) | (a[1] << 3);
+ 106:poly.c        ****     t[2] = (a[1] >> 2);
+ 107:poly.c        ****     t[3] = (a[1] >> 7) | (a[2] << 1);
+ 108:poly.c        ****     t[4] = (a[2] >> 4) | (a[3] << 4);
+ 109:poly.c        ****     t[5] = (a[3] >> 1);
+ 110:poly.c        ****     t[6] = (a[3] >> 6) | (a[4] << 2);
+ 111:poly.c        ****     t[7] = (a[4] >> 3);
+ 112:poly.c        ****     a += 5;
+ 113:poly.c        **** 
+ 114:poly.c        ****     for(j=0;j<8;j++)
+ 115:poly.c        ****       r->coeffs[8*i+j] = ((uint32_t)(t[j] & 31)*KYBER_Q + 16) >> 5;
+  52              	 .loc 1 115 48 view .LVU8
+  53 0008 40F60155 	 movw r5,#3329
+  54              	.LVL3:
+  55              	.L3:
+ 104:poly.c        ****     t[0] = (a[0] >> 0);
+  56              	 .loc 1 104 5 is_stmt 1 view .LVU9
+ 105:poly.c        ****     t[2] = (a[1] >> 2);
+  57              	 .loc 1 105 28 is_stmt 0 view .LVU10
+  58 000c 11F8044C 	 ldrb r4,[r1,#-4]
+ 104:poly.c        ****     t[0] = (a[0] >> 0);
+  59              	 .loc 1 104 14 view .LVU11
+  60 0010 11F8056C 	 ldrb r6,[r1,#-5]
+ 107:poly.c        ****     t[4] = (a[2] >> 4) | (a[3] << 4);
+  61              	 .loc 1 107 28 view .LVU12
+  62 0014 11F8037C 	 ldrb r7,[r1,#-3]
+ 104:poly.c        ****     t[0] = (a[0] >> 0);
+  63              	 .loc 1 104 10 view .LVU13
+  64 0018 8DF80060 	 strb r6,[sp]
+ 105:poly.c        ****     t[2] = (a[1] >> 2);
+  65              	 .loc 1 105 5 is_stmt 1 view .LVU14
+ 105:poly.c        ****     t[2] = (a[1] >> 2);
+  66              	 .loc 1 105 24 is_stmt 0 view .LVU15
+  67 001c E300     	 lsls r3,r4,#3
+  68 001e 43EA5613 	 orr r3,r3,r6,lsr#5
+ 105:poly.c        ****     t[2] = (a[1] >> 2);
+  69              	 .loc 1 105 10 view .LVU16
+  70 0022 8DF80130 	 strb r3,[sp,#1]
+ 106:poly.c        ****     t[3] = (a[1] >> 7) | (a[2] << 1);
+  71              	 .loc 1 106 5 is_stmt 1 view .LVU17
+ 106:poly.c        ****     t[3] = (a[1] >> 7) | (a[2] << 1);
+  72              	 .loc 1 106 10 is_stmt 0 view .LVU18
+  73 0026 A308     	 lsrs r3,r4,#2
+ 108:poly.c        ****     t[5] = (a[3] >> 1);
+  74              	 .loc 1 108 28 view .LVU19
+  75 0028 11F8026C 	 ldrb r6,[r1,#-2]
+ 106:poly.c        ****     t[3] = (a[1] >> 7) | (a[2] << 1);
+  76              	 .loc 1 106 10 view .LVU20
+  77 002c 8DF80230 	 strb r3,[sp,#2]
+ 107:poly.c        ****     t[4] = (a[2] >> 4) | (a[3] << 4);
+  78              	 .loc 1 107 5 is_stmt 1 view .LVU21
+ 107:poly.c        ****     t[4] = (a[2] >> 4) | (a[3] << 4);
+  79              	 .loc 1 107 24 is_stmt 0 view .LVU22
+  80 0030 7B00     	 lsls r3,r7,#1
+  81 0032 43EAD413 	 orr r3,r3,r4,lsr#7
+ 107:poly.c        ****     t[4] = (a[2] >> 4) | (a[3] << 4);
+  82              	 .loc 1 107 10 view .LVU23
+  83 0036 8DF80330 	 strb r3,[sp,#3]
+ 108:poly.c        ****     t[5] = (a[3] >> 1);
+  84              	 .loc 1 108 5 is_stmt 1 view .LVU24
+ 108:poly.c        ****     t[5] = (a[3] >> 1);
+  85              	 .loc 1 108 24 is_stmt 0 view .LVU25
+  86 003a 3301     	 lsls r3,r6,#4
+  87 003c 43EA1713 	 orr r3,r3,r7,lsr#4
+ 108:poly.c        ****     t[5] = (a[3] >> 1);
+  88              	 .loc 1 108 10 view .LVU26
+  89 0040 8DF80430 	 strb r3,[sp,#4]
+ 109:poly.c        ****     t[6] = (a[3] >> 6) | (a[4] << 2);
+  90              	 .loc 1 109 5 is_stmt 1 view .LVU27
+ 109:poly.c        ****     t[6] = (a[3] >> 6) | (a[4] << 2);
+  91              	 .loc 1 109 10 is_stmt 0 view .LVU28
+  92 0044 7308     	 lsrs r3,r6,#1
+  93 0046 8DF80530 	 strb r3,[sp,#5]
+ 110:poly.c        ****     t[7] = (a[4] >> 3);
+  94              	 .loc 1 110 5 is_stmt 1 view .LVU29
+ 110:poly.c        ****     t[7] = (a[4] >> 3);
+  95              	 .loc 1 110 28 is_stmt 0 view .LVU30
+  96 004a 11F8013C 	 ldrb r3,[r1,#-1]
+ 110:poly.c        ****     t[7] = (a[4] >> 3);
+  97              	 .loc 1 110 24 view .LVU31
+  98 004e 9C00     	 lsls r4,r3,#2
+  99 0050 44EA9614 	 orr r4,r4,r6,lsr#6
+ 111:poly.c        ****     a += 5;
+ 100              	 .loc 1 111 10 view .LVU32
+ 101 0054 DB08     	 lsrs r3,r3,#3
+ 110:poly.c        ****     t[7] = (a[4] >> 3);
+ 102              	 .loc 1 110 10 view .LVU33
+ 103 0056 8DF80640 	 strb r4,[sp,#6]
+ 111:poly.c        ****     a += 5;
+ 104              	 .loc 1 111 5 is_stmt 1 view .LVU34
+ 111:poly.c        ****     a += 5;
+ 105              	 .loc 1 111 10 is_stmt 0 view .LVU35
+ 106 005a 8DF80730 	 strb r3,[sp,#7]
+ 112:poly.c        **** 
+ 107              	 .loc 1 112 5 is_stmt 1 view .LVU36
+ 108              	.LVL4:
+ 114:poly.c        ****       r->coeffs[8*i+j] = ((uint32_t)(t[j] & 31)*KYBER_Q + 16) >> 5;
+ 109              	 .loc 1 114 5 view .LVU37
+ 114:poly.c        ****       r->coeffs[8*i+j] = ((uint32_t)(t[j] & 31)*KYBER_Q + 16) >> 5;
+ 110              	 .loc 1 114 14 discriminator 1 view .LVU38
+ 111 005e 6E46     	 mov r6,sp
+ 112 0060 02F11004 	 add r4,r2,#16
+ 113              	.LVL5:
+ 114              	.L2:
+ 115              	 .loc 1 115 7 view .LVU39
+ 116              	 .loc 1 115 39 is_stmt 0 view .LVU40
+ 117 0064 16F8013B 	 ldrb r3,[r6],#1
+ 118              	.LVL6:
+ 119              	 .loc 1 115 27 view .LVU41
+ 120 0068 03F01F03 	 and r3,r3,#31
+ 121              	 .loc 1 115 48 view .LVU42
+ 122 006c 6B43     	 muls r3,r5,r3
+ 123              	 .loc 1 115 57 view .LVU43
+ 124 006e 1033     	 adds r3,r3,#16
+ 125              	 .loc 1 115 63 view .LVU44
+ 126 0070 5B09     	 lsrs r3,r3,#5
+ 127              	 .loc 1 115 24 view .LVU45
+ 128 0072 22F8023B 	 strh r3,[r2],#2
+ 114:poly.c        ****       r->coeffs[8*i+j] = ((uint32_t)(t[j] & 31)*KYBER_Q + 16) >> 5;
+ 129              	 .loc 1 114 18 is_stmt 1 discriminator 3 view .LVU46
+ 130              	.LVL7:
+ 114:poly.c        ****       r->coeffs[8*i+j] = ((uint32_t)(t[j] & 31)*KYBER_Q + 16) >> 5;
+ 131              	 .loc 1 114 14 discriminator 1 view .LVU47
+ 132 0076 9442     	 cmp r4,r2
+ 133 0078 F4D1     	 bne .L2
+ 103:poly.c        ****     t[0] = (a[0] >> 0);
+ 134              	 .loc 1 103 24 discriminator 2 view .LVU48
+ 103:poly.c        ****     t[0] = (a[0] >> 0);
+ 135              	 .loc 1 103 12 discriminator 1 view .LVU49
+ 136 007a 0830     	 adds r0,r0,#8
+ 137 007c B0F5807F 	 cmp r0,#256
+ 138 0080 01F10501 	 add r1,r1,#5
+ 139              	.LVL8:
+ 103:poly.c        ****     t[0] = (a[0] >> 0);
+ 140              	 .loc 1 103 12 is_stmt 0 discriminator 1 view .LVU50
+ 141 0084 01D1     	 bne .L4
+ 116:poly.c        ****   }
+ 117:poly.c        **** #else
+ 118:poly.c        **** #error "KYBER_POLYCOMPRESSEDBYTES needs to be in {96, 128, 160}"
+ 119:poly.c        **** #endif
+ 120:poly.c        **** }
+ 142              	 .loc 1 120 1 view .LVU51
+ 143 0086 03B0     	 add sp,sp,#12
+ 144              	.LCFI1:
+ 145              	 .cfi_remember_state
+ 146              	 .cfi_def_cfa_offset 20
+ 147              	 
+ 148 0088 F0BD     	 pop {r4,r5,r6,r7,pc}
+ 149              	.LVL9:
+ 150              	.L4:
+ 151              	.LCFI2:
+ 152              	 .cfi_restore_state
+ 153              	 .loc 1 120 1 view .LVU52
+ 154 008a 2246     	 mov r2,r4
+ 155 008c BEE7     	 b .L3
+ 156              	 .cfi_endproc
+ 157              	.LFE1:
+ 159              	 .section .text.crypto_kem_kyber1024_ref_poly_frombytes,"ax",%progbits
+ 160              	 .align 1
+ 161              	 .global crypto_kem_kyber1024_ref_poly_frombytes
+ 162              	 .syntax unified
+ 163              	 .thumb
+ 164              	 .thumb_func
+ 166              	crypto_kem_kyber1024_ref_poly_frombytes:
+ 167              	.LVL10:
+ 168              	.LFB3:
+ 121:poly.c        **** 
+ 122:poly.c        **** /*************************************************
+ 123:poly.c        **** * Name:        poly_tobytes
+ 124:poly.c        **** *
+ 125:poly.c        **** * Description: Serialization of a polynomial
+ 126:poly.c        **** *
+ 127:poly.c        **** * Arguments:   - uint8_t *r: pointer to output byte array
+ 128:poly.c        **** *                            (needs space for KYBER_POLYBYTES bytes)
+ 129:poly.c        **** *              - poly *a:    pointer to input polynomial
+ 130:poly.c        **** **************************************************/
+ 131:poly.c        **** void poly_tobytes(uint8_t r[KYBER_POLYBYTES], poly *a)
+ 132:poly.c        **** {
+ 133:poly.c        ****   unsigned int i;
+ 134:poly.c        ****   uint16_t t0, t1;
+ 135:poly.c        **** 
+ 136:poly.c        ****   poly_csubq(a);
+ 137:poly.c        **** 
+ 138:poly.c        ****   for(i=0;i<KYBER_N/2;i++) {
+ 139:poly.c        ****     t0 = a->coeffs[2*i];
+ 140:poly.c        ****     t1 = a->coeffs[2*i+1];
+ 141:poly.c        ****     r[3*i+0] = (t0 >> 0);
+ 142:poly.c        ****     r[3*i+1] = (t0 >> 8) | (t1 << 4);
+ 143:poly.c        ****     r[3*i+2] = (t1 >> 4);
+ 144:poly.c        ****   }
+ 145:poly.c        **** }
+ 146:poly.c        **** 
+ 147:poly.c        **** /*************************************************
+ 148:poly.c        **** * Name:        poly_frombytes
+ 149:poly.c        **** *
+ 150:poly.c        **** * Description: De-serialization of a polynomial;
+ 151:poly.c        **** *              inverse of poly_tobytes
+ 152:poly.c        **** *
+ 153:poly.c        **** * Arguments:   - poly *r:          pointer to output polynomial
+ 154:poly.c        **** *              - const uint8_t *a: pointer to input byte array
+ 155:poly.c        **** *                                  (of KYBER_POLYBYTES bytes)
+ 156:poly.c        **** **************************************************/
+ 157:poly.c        **** void poly_frombytes(poly *r, const uint8_t a[KYBER_POLYBYTES])
+ 158:poly.c        **** {
+ 169              	 .loc 1 158 1 is_stmt 1 view-0
+ 170              	 .cfi_startproc
+ 171              	 
+ 172              	 
+ 159:poly.c        ****   unsigned int i;
+ 173              	 .loc 1 159 3 view .LVU54
+ 160:poly.c        ****   for(i=0;i<KYBER_N/2;i++) {
+ 174              	 .loc 1 160 3 view .LVU55
+ 175              	 .loc 1 160 12 discriminator 1 view .LVU56
+ 158:poly.c        ****   unsigned int i;
+ 176              	 .loc 1 158 1 is_stmt 0 view .LVU57
+ 177 0000 30B5     	 push {r4,r5,lr}
+ 178              	.LCFI3:
+ 179              	 .cfi_def_cfa_offset 12
+ 180              	 .cfi_offset 4,-12
+ 181              	 .cfi_offset 5,-8
+ 182              	 .cfi_offset 14,-4
+ 183              	 .loc 1 160 8 view .LVU58
+ 184 0002 0023     	 movs r3,#0
+ 161:poly.c        ****     r->coeffs[2*i]   = ((a[3*i+0] >> 0) | ((uint16_t)a[3*i+1] << 8)) & 0xFFF;
+ 162:poly.c        ****     r->coeffs[2*i+1] = ((a[3*i+1] >> 4) | ((uint16_t)a[3*i+2] << 4)) & 0xFFF;
+ 185              	 .loc 1 162 22 view .LVU59
+ 186 0004 841C     	 adds r4,r0,#2
+ 187              	.LVL11:
+ 188              	.L7:
+ 161:poly.c        ****     r->coeffs[2*i]   = ((a[3*i+0] >> 0) | ((uint16_t)a[3*i+1] << 8)) & 0xFFF;
+ 189              	 .loc 1 161 5 is_stmt 1 view .LVU60
+ 161:poly.c        ****     r->coeffs[2*i]   = ((a[3*i+0] >> 0) | ((uint16_t)a[3*i+1] << 8)) & 0xFFF;
+ 190              	 .loc 1 161 41 is_stmt 0 view .LVU61
+ 191 0006 4D78     	 ldrb r5,[r1,#1]
+ 161:poly.c        ****     r->coeffs[2*i]   = ((a[3*i+0] >> 0) | ((uint16_t)a[3*i+1] << 8)) & 0xFFF;
+ 192              	 .loc 1 161 27 view .LVU62
+ 193 0008 0A78     	 ldrb r2,[r1]
+ 161:poly.c        ****     r->coeffs[2*i]   = ((a[3*i+0] >> 0) | ((uint16_t)a[3*i+1] << 8)) & 0xFFF;
+ 194              	 .loc 1 161 41 view .LVU63
+ 195 000a 42EA0522 	 orr r2,r2,r5,lsl#8
+ 161:poly.c        ****     r->coeffs[2*i]   = ((a[3*i+0] >> 0) | ((uint16_t)a[3*i+1] << 8)) & 0xFFF;
+ 196              	 .loc 1 161 70 view .LVU64
+ 197 000e C2F30B02 	 ubfx r2,r2,#0,#12
+ 161:poly.c        ****     r->coeffs[2*i]   = ((a[3*i+0] >> 0) | ((uint16_t)a[3*i+1] << 8)) & 0xFFF;
+ 198              	 .loc 1 161 22 view .LVU65
+ 199 0012 20F82320 	 strh r2,[r0,r3,lsl#2]
+ 200              	 .loc 1 162 5 is_stmt 1 view .LVU66
+ 201              	 .loc 1 162 41 is_stmt 0 view .LVU67
+ 202 0016 8A78     	 ldrb r2,[r1,#2]
+ 203 0018 4D78     	 ldrb r5,[r1,#1]
+ 204 001a 1201     	 lsls r2,r2,#4
+ 205 001c 42EA1512 	 orr r2,r2,r5,lsr#4
+ 206              	 .loc 1 162 22 view .LVU68
+ 207 0020 24F82320 	 strh r2,[r4,r3,lsl#2]
+ 160:poly.c        ****     r->coeffs[2*i]   = ((a[3*i+0] >> 0) | ((uint16_t)a[3*i+1] << 8)) & 0xFFF;
+ 208              	 .loc 1 160 24 is_stmt 1 discriminator 3 view .LVU69
+ 209 0024 0133     	 adds r3,r3,#1
+ 210              	.LVL12:
+ 160:poly.c        ****     r->coeffs[2*i]   = ((a[3*i+0] >> 0) | ((uint16_t)a[3*i+1] << 8)) & 0xFFF;
+ 211              	 .loc 1 160 12 discriminator 1 view .LVU70
+ 212 0026 802B     	 cmp r3,#128
+ 213 0028 01F10301 	 add r1,r1,#3
+ 214 002c EBD1     	 bne .L7
+ 163:poly.c        ****   }
+ 164:poly.c        **** }
+ 215              	 .loc 1 164 1 is_stmt 0 view .LVU71
+ 216 002e 30BD     	 pop {r4,r5,pc}
+ 217              	 .cfi_endproc
+ 218              	.LFE3:
+ 220              	 .section .text.crypto_kem_kyber1024_ref_poly_frommsg,"ax",%progbits
+ 221              	 .align 1
+ 222              	 .global crypto_kem_kyber1024_ref_poly_frommsg
+ 223              	 .syntax unified
+ 224              	 .thumb
+ 225              	 .thumb_func
+ 227              	crypto_kem_kyber1024_ref_poly_frommsg:
+ 228              	.LVL13:
+ 229              	.LFB4:
+ 165:poly.c        **** 
+ 166:poly.c        **** /*************************************************
+ 167:poly.c        **** * Name:        poly_frommsg
+ 168:poly.c        **** *
+ 169:poly.c        **** * Description: Convert 32-byte message to polynomial
+ 170:poly.c        **** *
+ 171:poly.c        **** * Arguments:   - poly *r:            pointer to output polynomial
+ 172:poly.c        **** *              - const uint8_t *msg: pointer to input message
+ 173:poly.c        **** **************************************************/
+ 174:poly.c        **** void poly_frommsg(poly *r, const uint8_t msg[KYBER_INDCPA_MSGBYTES])
+ 175:poly.c        **** {
+ 230              	 .loc 1 175 1 is_stmt 1 view-0
+ 231              	 .cfi_startproc
+ 232              	 
+ 233              	 
+ 176:poly.c        ****   unsigned int i,j;
+ 234              	 .loc 1 176 3 view .LVU73
+ 177:poly.c        ****   int16_t mask;
+ 235              	 .loc 1 177 3 view .LVU74
+ 178:poly.c        **** 
+ 179:poly.c        **** #if (KYBER_INDCPA_MSGBYTES != KYBER_N/8)
+ 180:poly.c        **** #error "KYBER_INDCPA_MSGBYTES must be equal to KYBER_N/8 bytes!"
+ 181:poly.c        **** #endif
+ 182:poly.c        **** 
+ 183:poly.c        ****   for(i=0;i<KYBER_N/8;i++) {
+ 236              	 .loc 1 183 3 view .LVU75
+ 237              	 .loc 1 183 12 discriminator 1 view .LVU76
+ 175:poly.c        ****   unsigned int i,j;
+ 238              	 .loc 1 175 1 is_stmt 0 view .LVU77
+ 239 0000 70B5     	 push {r4,r5,r6,lr}
+ 240              	.LCFI4:
+ 241              	 .cfi_def_cfa_offset 16
+ 242              	 .cfi_offset 4,-16
+ 243              	 .cfi_offset 5,-12
+ 244              	 .cfi_offset 6,-8
+ 245              	 .cfi_offset 14,-4
+ 246              	 .loc 1 183 8 view .LVU78
+ 247 0002 0022     	 movs r2,#0
+ 184:poly.c        ****     for(j=0;j<8;j++) {
+ 185:poly.c        ****       mask = -(int16_t)((msg[i] >> j)&1);
+ 186:poly.c        ****       r->coeffs[8*i+j] = mask & ((KYBER_Q+1)/2);
+ 248              	 .loc 1 186 31 view .LVU79
+ 249 0004 40F28166 	 movw r6,#1665
+ 250              	.LVL14:
+ 251              	.L10:
+ 184:poly.c        ****     for(j=0;j<8;j++) {
+ 252              	 .loc 1 184 14 is_stmt 1 discriminator 1 view .LVU80
+ 253 0008 00EB0215 	 add r5,r0,r2,lsl#4
+ 184:poly.c        ****     for(j=0;j<8;j++) {
+ 254              	 .loc 1 184 10 is_stmt 0 view .LVU81
+ 255 000c 0024     	 movs r4,#0
+ 256              	.LVL15:
+ 257              	.L11:
+ 185:poly.c        ****       r->coeffs[8*i+j] = mask & ((KYBER_Q+1)/2);
+ 258              	 .loc 1 185 7 is_stmt 1 view .LVU82
+ 259              	 .loc 1 186 7 view .LVU83
+ 185:poly.c        ****       r->coeffs[8*i+j] = mask & ((KYBER_Q+1)/2);
+ 260              	 .loc 1 185 29 is_stmt 0 view .LVU84
+ 261 000e 8B5C     	 ldrb r3,[r1,r2]
+ 262              	.LVL16:
+ 185:poly.c        ****       r->coeffs[8*i+j] = mask & ((KYBER_Q+1)/2);
+ 263              	 .loc 1 185 33 view .LVU85
+ 264 0010 2341     	 asrs r3,r3,r4
+ 265              	.LVL17:
+ 266              	 .loc 1 186 31 view .LVU86
+ 267 0012 43F30003 	 sbfx r3,r3,#0,#1
+ 184:poly.c        ****     for(j=0;j<8;j++) {
+ 268              	 .loc 1 184 18 discriminator 3 view .LVU87
+ 269 0016 0134     	 adds r4,r4,#1
+ 270              	.LVL18:
+ 271              	 .loc 1 186 31 view .LVU88
+ 272 0018 3340     	 ands r3,r3,r6
+ 184:poly.c        ****     for(j=0;j<8;j++) {
+ 273              	 .loc 1 184 14 discriminator 1 view .LVU89
+ 274 001a 082C     	 cmp r4,#8
+ 275              	 .loc 1 186 31 view .LVU90
+ 276 001c 25F8023B 	 strh r3,[r5],#2
+ 277              	.LVL19:
+ 184:poly.c        ****     for(j=0;j<8;j++) {
+ 278              	 .loc 1 184 18 is_stmt 1 discriminator 3 view .LVU91
+ 184:poly.c        ****     for(j=0;j<8;j++) {
+ 279              	 .loc 1 184 14 discriminator 1 view .LVU92
+ 280 0020 F5D1     	 bne .L11
+ 183:poly.c        ****     for(j=0;j<8;j++) {
+ 281              	 .loc 1 183 24 discriminator 2 view .LVU93
+ 282 0022 0132     	 adds r2,r2,#1
+ 283              	.LVL20:
+ 183:poly.c        ****     for(j=0;j<8;j++) {
+ 284              	 .loc 1 183 12 discriminator 1 view .LVU94
+ 285 0024 202A     	 cmp r2,#32
+ 286 0026 EFD1     	 bne .L10
+ 187:poly.c        ****     }
+ 188:poly.c        ****   }
+ 189:poly.c        **** }
+ 287              	 .loc 1 189 1 is_stmt 0 view .LVU95
+ 288 0028 70BD     	 pop {r4,r5,r6,pc}
+ 289              	 .loc 1 189 1 view .LVU96
+ 290              	 .cfi_endproc
+ 291              	.LFE4:
+ 293              	 .section .text.crypto_kem_kyber1024_ref_poly_getnoise,"ax",%progbits
+ 294              	 .align 1
+ 295              	 .global crypto_kem_kyber1024_ref_poly_getnoise
+ 296              	 .syntax unified
+ 297              	 .thumb
+ 298              	 .thumb_func
+ 300              	crypto_kem_kyber1024_ref_poly_getnoise:
+ 301              	.LVL21:
+ 302              	.LFB6:
+ 190:poly.c        **** 
+ 191:poly.c        **** /*************************************************
+ 192:poly.c        **** * Name:        poly_tomsg
+ 193:poly.c        **** *
+ 194:poly.c        **** * Description: Convert polynomial to 32-byte message
+ 195:poly.c        **** *
+ 196:poly.c        **** * Arguments:   - uint8_t *msg: pointer to output message
+ 197:poly.c        **** *              - poly *a:      pointer to input polynomial
+ 198:poly.c        **** **************************************************/
+ 199:poly.c        **** void poly_tomsg(uint8_t msg[KYBER_INDCPA_MSGBYTES], poly *a)
+ 200:poly.c        **** {
+ 201:poly.c        ****   unsigned int i,j;
+ 202:poly.c        ****   uint16_t t;
+ 203:poly.c        **** 
+ 204:poly.c        ****   poly_csubq(a);
+ 205:poly.c        **** 
+ 206:poly.c        ****   for(i=0;i<KYBER_N/8;i++) {
+ 207:poly.c        ****     msg[i] = 0;
+ 208:poly.c        ****     for(j=0;j<8;j++) {
+ 209:poly.c        ****       t = ((((uint16_t)a->coeffs[8*i+j] << 1) + KYBER_Q/2)/KYBER_Q) & 1;
+ 210:poly.c        ****       msg[i] |= t << j;
+ 211:poly.c        ****     }
+ 212:poly.c        ****   }
+ 213:poly.c        **** }
+ 214:poly.c        **** 
+ 215:poly.c        **** /*************************************************
+ 216:poly.c        **** * Name:        poly_getnoise
+ 217:poly.c        **** *
+ 218:poly.c        **** * Description: Sample a polynomial deterministically from a seed and a nonce,
+ 219:poly.c        **** *              with output polynomial close to centered binomial distribution
+ 220:poly.c        **** *              with parameter KYBER_ETA
+ 221:poly.c        **** *
+ 222:poly.c        **** * Arguments:   - poly *r:             pointer to output polynomial
+ 223:poly.c        **** *              - const uint8_t *seed: pointer to input seed
+ 224:poly.c        **** *                                     (of length KYBER_SYMBYTES bytes)
+ 225:poly.c        **** *              - uint8_t nonce:       one-byte input nonce
+ 226:poly.c        **** **************************************************/
+ 227:poly.c        **** void poly_getnoise(poly *r, const uint8_t seed[KYBER_SYMBYTES], uint8_t nonce)
+ 228:poly.c        **** {
+ 303              	 .loc 1 228 1 is_stmt 1 view-0
+ 304              	 .cfi_startproc
+ 305              	 
+ 306              	 
+ 229:poly.c        ****   uint8_t buf[KYBER_ETA*KYBER_N/4];
+ 307              	 .loc 1 229 3 view .LVU98
+ 230:poly.c        ****   prf(buf, sizeof(buf), seed, nonce);
+ 308              	 .loc 1 230 3 view .LVU99
+ 228:poly.c        ****   uint8_t buf[KYBER_ETA*KYBER_N/4];
+ 309              	 .loc 1 228 1 is_stmt 0 view .LVU100
+ 310 0000 30B5     	 push {r4,r5,lr}
+ 311              	.LCFI5:
+ 312              	 .cfi_def_cfa_offset 12
+ 313              	 .cfi_offset 4,-12
+ 314              	 .cfi_offset 5,-8
+ 315              	 .cfi_offset 14,-4
+ 316 0002 A1B0     	 sub sp,sp,#132
+ 317              	.LCFI6:
+ 318              	 .cfi_def_cfa_offset 144
+ 228:poly.c        ****   uint8_t buf[KYBER_ETA*KYBER_N/4];
+ 319              	 .loc 1 228 1 view .LVU101
+ 320 0004 0446     	 mov r4,r0
+ 321 0006 1346     	 mov r3,r2
+ 322              	 .loc 1 230 3 view .LVU102
+ 323 0008 6846     	 mov r0,sp
+ 324              	.LVL22:
+ 325              	 .loc 1 230 3 view .LVU103
+ 326 000a 0A46     	 mov r2,r1
+ 327              	.LVL23:
+ 328              	 .loc 1 230 3 view .LVU104
+ 329 000c 044D     	 ldr r5,.L15
+ 330 000e 8021     	 movs r1,#128
+ 331              	.LVL24:
+ 332              	 .loc 1 230 3 view .LVU105
+ 333 0010 A847     	 blx r5
+ 334              	.LVL25:
+ 231:poly.c        ****   cbd(r, buf);
+ 335              	 .loc 1 231 3 is_stmt 1 view .LVU106
+ 336 0012 044B     	 ldr r3,.L15+4
+ 337 0014 6946     	 mov r1,sp
+ 338 0016 2046     	 mov r0,r4
+ 339 0018 9847     	 blx r3
+ 340              	.LVL26:
+ 232:poly.c        **** }
+ 341              	 .loc 1 232 1 is_stmt 0 view .LVU107
+ 342 001a 21B0     	 add sp,sp,#132
+ 343              	.LCFI7:
+ 344              	 .cfi_def_cfa_offset 12
+ 345              	 
+ 346 001c 30BD     	 pop {r4,r5,pc}
+ 347              	.LVL27:
+ 348              	.L16:
+ 349              	 .loc 1 232 1 view .LVU108
+ 350 001e 00BF     	 .align 2
+ 351              	.L15:
+ 352 0020 00000000 	 .word crypto_kem_kyber1024_ref_kyber_shake256_prf
+ 353 0024 00000000 	 .word crypto_kem_kyber1024_ref_cbd
+ 354              	 .cfi_endproc
+ 355              	.LFE6:
+ 357              	 .section .text.crypto_kem_kyber1024_ref_poly_invntt_tomont,"ax",%progbits
+ 358              	 .align 1
+ 359              	 .global crypto_kem_kyber1024_ref_poly_invntt_tomont
+ 360              	 .syntax unified
+ 361              	 .thumb
+ 362              	 .thumb_func
+ 364              	crypto_kem_kyber1024_ref_poly_invntt_tomont:
+ 365              	.LVL28:
+ 366              	.LFB8:
+ 233:poly.c        **** 
+ 234:poly.c        **** /*************************************************
+ 235:poly.c        **** * Name:        poly_ntt
+ 236:poly.c        **** *
+ 237:poly.c        **** * Description: Computes negacyclic number-theoretic transform (NTT) of
+ 238:poly.c        **** *              a polynomial in place;
+ 239:poly.c        **** *              inputs assumed to be in normal order, output in bitreversed order
+ 240:poly.c        **** *
+ 241:poly.c        **** * Arguments:   - uint16_t *r: pointer to in/output polynomial
+ 242:poly.c        **** **************************************************/
+ 243:poly.c        **** void poly_ntt(poly *r)
+ 244:poly.c        **** {
+ 245:poly.c        ****   ntt(r->coeffs);
+ 246:poly.c        ****   poly_reduce(r);
+ 247:poly.c        **** }
+ 248:poly.c        **** 
+ 249:poly.c        **** /*************************************************
+ 250:poly.c        **** * Name:        poly_invntt_tomont
+ 251:poly.c        **** *
+ 252:poly.c        **** * Description: Computes inverse of negacyclic number-theoretic transform (NTT)
+ 253:poly.c        **** *              of a polynomial in place;
+ 254:poly.c        **** *              inputs assumed to be in bitreversed order, output in normal order
+ 255:poly.c        **** *
+ 256:poly.c        **** * Arguments:   - uint16_t *a: pointer to in/output polynomial
+ 257:poly.c        **** **************************************************/
+ 258:poly.c        **** void poly_invntt_tomont(poly *r)
+ 259:poly.c        **** {
+ 367              	 .loc 1 259 1 is_stmt 1 view-0
+ 368              	 .cfi_startproc
+ 369              	 
+ 370              	 
+ 371              	 
+ 260:poly.c        ****   invntt(r->coeffs);
+ 372              	 .loc 1 260 3 view .LVU110
+ 373 0000 004B     	 ldr r3,.L18
+ 374 0002 1847     	 bx r3
+ 375              	.LVL29:
+ 376              	.L19:
+ 377              	 .loc 1 260 3 is_stmt 0 view .LVU111
+ 378              	 .align 2
+ 379              	.L18:
+ 380 0004 00000000 	 .word crypto_kem_kyber1024_ref_invntt
+ 381              	 .cfi_endproc
+ 382              	.LFE8:
+ 384              	 .section .text.crypto_kem_kyber1024_ref_poly_basemul_montgomery,"ax",%progbits
+ 385              	 .align 1
+ 386              	 .global crypto_kem_kyber1024_ref_poly_basemul_montgomery
+ 387              	 .syntax unified
+ 388              	 .thumb
+ 389              	 .thumb_func
+ 391              	crypto_kem_kyber1024_ref_poly_basemul_montgomery:
+ 392              	.LVL30:
+ 393              	.LFB9:
+ 261:poly.c        **** }
+ 262:poly.c        **** 
+ 263:poly.c        **** /*************************************************
+ 264:poly.c        **** * Name:        poly_basemul_montgomery
+ 265:poly.c        **** *
+ 266:poly.c        **** * Description: Multiplication of two polynomials in NTT domain
+ 267:poly.c        **** *
+ 268:poly.c        **** * Arguments:   - poly *r:       pointer to output polynomial
+ 269:poly.c        **** *              - const poly *a: pointer to first input polynomial
+ 270:poly.c        **** *              - const poly *b: pointer to second input polynomial
+ 271:poly.c        **** **************************************************/
+ 272:poly.c        **** void poly_basemul_montgomery(poly *r, const poly *a, const poly *b)
+ 273:poly.c        **** {
+ 394              	 .loc 1 273 1 is_stmt 1 view-0
+ 395              	 .cfi_startproc
+ 396              	 
+ 397              	 
+ 274:poly.c        ****   unsigned int i;
+ 398              	 .loc 1 274 3 view .LVU113
+ 275:poly.c        ****   for(i=0;i<KYBER_N/4;i++) {
+ 399              	 .loc 1 275 3 view .LVU114
+ 400              	 .loc 1 275 12 discriminator 1 view .LVU115
+ 273:poly.c        ****   unsigned int i;
+ 401              	 .loc 1 273 1 is_stmt 0 view .LVU116
+ 402 0000 2DE9F047 	 push {r4,r5,r6,r7,r8,r9,r10,lr}
+ 403              	.LCFI8:
+ 404              	 .cfi_def_cfa_offset 32
+ 405              	 .cfi_offset 4,-32
+ 406              	 .cfi_offset 5,-28
+ 407              	 .cfi_offset 6,-24
+ 408              	 .cfi_offset 7,-20
+ 409              	 .cfi_offset 8,-16
+ 410              	 .cfi_offset 9,-12
+ 411              	 .cfi_offset 10,-8
+ 412              	 .cfi_offset 14,-4
+ 413 0004 0F4F     	 ldr r7,.L23
+ 276:poly.c        ****     basemul(&r->coeffs[4*i], &a->coeffs[4*i], &b->coeffs[4*i], zetas[64+i]);
+ 414              	 .loc 1 276 5 view .LVU117
+ 415 0006 DFF84090 	 ldr r9,.L23+4
+ 416 000a 061D     	 adds r6,r0,#4
+ 417 000c 0D1D     	 adds r5,r1,#4
+ 418 000e 141D     	 adds r4,r2,#4
+ 419 0010 07F1800A 	 add r10,r7,#128
+ 420              	.LVL31:
+ 421              	.L21:
+ 422              	 .loc 1 276 5 is_stmt 1 view .LVU118
+ 423              	 .loc 1 276 69 is_stmt 0 view .LVU119
+ 424 0014 37F9028F 	 ldrsh r8,[r7,#2]!
+ 425              	 .loc 1 276 5 view .LVU120
+ 426 0018 221F     	 subs r2,r4,#4
+ 427 001a 291F     	 subs r1,r5,#4
+ 428 001c 301F     	 subs r0,r6,#4
+ 429 001e 4346     	 mov r3,r8
+ 430 0020 C847     	 blx r9
+ 431              	.LVL32:
+ 277:poly.c        ****     basemul(&r->coeffs[4*i+2], &a->coeffs[4*i+2], &b->coeffs[4*i+2],
+ 432              	 .loc 1 277 5 is_stmt 1 view .LVU121
+ 433 0022 C8F10003 	 rsb r3,r8,#0
+ 434 0026 2246     	 mov r2,r4
+ 435 0028 2946     	 mov r1,r5
+ 436 002a 3046     	 mov r0,r6
+ 437 002c 1BB2     	 sxth r3,r3
+ 438 002e C847     	 blx r9
+ 439              	.LVL33:
+ 275:poly.c        ****     basemul(&r->coeffs[4*i], &a->coeffs[4*i], &b->coeffs[4*i], zetas[64+i]);
+ 440              	 .loc 1 275 24 discriminator 3 view .LVU122
+ 275:poly.c        ****     basemul(&r->coeffs[4*i], &a->coeffs[4*i], &b->coeffs[4*i], zetas[64+i]);
+ 441              	 .loc 1 275 12 discriminator 1 view .LVU123
+ 442 0030 5745     	 cmp r7,r10
+ 443 0032 06F10806 	 add r6,r6,#8
+ 444 0036 05F10805 	 add r5,r5,#8
+ 445 003a 04F10804 	 add r4,r4,#8
+ 446 003e E9D1     	 bne .L21
+ 278:poly.c        ****             -zetas[64+i]);
+ 279:poly.c        ****   }
+ 280:poly.c        **** }
+ 447              	 .loc 1 280 1 is_stmt 0 view .LVU124
+ 448 0040 BDE8F087 	 pop {r4,r5,r6,r7,r8,r9,r10,pc}
+ 449              	.L24:
+ 450              	 .align 2
+ 451              	.L23:
+ 452 0044 7E000000 	 .word crypto_kem_kyber1024_ref_zetas+126
+ 453 0048 00000000 	 .word crypto_kem_kyber1024_ref_basemul
+ 454              	 .cfi_endproc
+ 455              	.LFE9:
+ 457              	 .section .text.crypto_kem_kyber1024_ref_poly_tomont,"ax",%progbits
+ 458              	 .align 1
+ 459              	 .global crypto_kem_kyber1024_ref_poly_tomont
+ 460              	 .syntax unified
+ 461              	 .thumb
+ 462              	 .thumb_func
+ 464              	crypto_kem_kyber1024_ref_poly_tomont:
+ 465              	.LVL34:
+ 466              	.LFB10:
+ 281:poly.c        **** 
+ 282:poly.c        **** /*************************************************
+ 283:poly.c        **** * Name:        poly_tomont
+ 284:poly.c        **** *
+ 285:poly.c        **** * Description: Inplace conversion of all coefficients of a polynomial
+ 286:poly.c        **** *              from normal domain to Montgomery domain
+ 287:poly.c        **** *
+ 288:poly.c        **** * Arguments:   - poly *r: pointer to input/output polynomial
+ 289:poly.c        **** **************************************************/
+ 290:poly.c        **** void poly_tomont(poly *r)
+ 291:poly.c        **** {
+ 467              	 .loc 1 291 1 is_stmt 1 view-0
+ 468              	 .cfi_startproc
+ 469              	 
+ 470              	 
+ 292:poly.c        ****   unsigned int i;
+ 471              	 .loc 1 292 3 view .LVU126
+ 293:poly.c        ****   const int16_t f = (1ULL << 32) % KYBER_Q;
+ 472              	 .loc 1 293 3 view .LVU127
+ 294:poly.c        ****   for(i=0;i<KYBER_N;i++)
+ 473              	 .loc 1 294 3 view .LVU128
+ 474              	 .loc 1 294 12 discriminator 1 view .LVU129
+ 291:poly.c        ****   unsigned int i;
+ 475              	 .loc 1 291 1 is_stmt 0 view .LVU130
+ 476 0000 F8B5     	 push {r3,r4,r5,r6,r7,lr}
+ 477              	.LCFI9:
+ 478              	 .cfi_def_cfa_offset 24
+ 479              	 .cfi_offset 3,-24
+ 480              	 .cfi_offset 4,-20
+ 481              	 .cfi_offset 5,-16
+ 482              	 .cfi_offset 6,-12
+ 483              	 .cfi_offset 7,-8
+ 484              	 .cfi_offset 14,-4
+ 295:poly.c        ****     r->coeffs[i] = montgomery_reduce((int32_t)r->coeffs[i]*f);
+ 485              	 .loc 1 295 20 view .LVU131
+ 486 0002 074E     	 ldr r6,.L28
+ 487 0004 851E     	 subs r5,r0,#2
+ 488 0006 00F5FF74 	 add r4,r0,#510
+ 489 000a 40F24957 	 movw r7,#1353
+ 490              	.LVL35:
+ 491              	.L26:
+ 492              	 .loc 1 295 5 is_stmt 1 view .LVU132
+ 493              	 .loc 1 295 20 is_stmt 0 view .LVU133
+ 494 000e 35F9020F 	 ldrsh r0,[r5,#2]!
+ 495 0012 7843     	 muls r0,r7,r0
+ 496 0014 B047     	 blx r6
+ 497              	.LVL36:
+ 294:poly.c        ****   for(i=0;i<KYBER_N;i++)
+ 498              	 .loc 1 294 12 discriminator 1 view .LVU134
+ 499 0016 A542     	 cmp r5,r4
+ 500              	 .loc 1 295 18 discriminator 1 view .LVU135
+ 501 0018 2880     	 strh r0,[r5]
+ 294:poly.c        ****   for(i=0;i<KYBER_N;i++)
+ 502              	 .loc 1 294 22 is_stmt 1 discriminator 3 view .LVU136
+ 294:poly.c        ****   for(i=0;i<KYBER_N;i++)
+ 503              	 .loc 1 294 12 discriminator 1 view .LVU137
+ 504 001a F8D1     	 bne .L26
+ 296:poly.c        **** }
+ 505              	 .loc 1 296 1 is_stmt 0 view .LVU138
+ 506 001c F8BD     	 pop {r3,r4,r5,r6,r7,pc}
+ 507              	.LVL37:
+ 508              	.L29:
+ 509              	 .loc 1 296 1 view .LVU139
+ 510 001e 00BF     	 .align 2
+ 511              	.L28:
+ 512 0020 00000000 	 .word crypto_kem_kyber1024_ref_montgomery_reduce
+ 513              	 .cfi_endproc
+ 514              	.LFE10:
+ 516              	 .section .text.crypto_kem_kyber1024_ref_poly_reduce,"ax",%progbits
+ 517              	 .align 1
+ 518              	 .global crypto_kem_kyber1024_ref_poly_reduce
+ 519              	 .syntax unified
+ 520              	 .thumb
+ 521              	 .thumb_func
+ 523              	crypto_kem_kyber1024_ref_poly_reduce:
+ 524              	.LVL38:
+ 525              	.LFB11:
+ 297:poly.c        **** 
+ 298:poly.c        **** /*************************************************
+ 299:poly.c        **** * Name:        poly_reduce
+ 300:poly.c        **** *
+ 301:poly.c        **** * Description: Applies Barrett reduction to all coefficients of a polynomial
+ 302:poly.c        **** *              for details of the Barrett reduction see comments in reduce.c
+ 303:poly.c        **** *
+ 304:poly.c        **** * Arguments:   - poly *r: pointer to input/output polynomial
+ 305:poly.c        **** **************************************************/
+ 306:poly.c        **** void poly_reduce(poly *r)
+ 307:poly.c        **** {
+ 526              	 .loc 1 307 1 is_stmt 1 view-0
+ 527              	 .cfi_startproc
+ 528              	 
+ 529              	 
+ 308:poly.c        ****   unsigned int i;
+ 530              	 .loc 1 308 3 view .LVU141
+ 309:poly.c        ****   for(i=0;i<KYBER_N;i++)
+ 531              	 .loc 1 309 3 view .LVU142
+ 532              	 .loc 1 309 12 discriminator 1 view .LVU143
+ 307:poly.c        ****   unsigned int i;
+ 533              	 .loc 1 307 1 is_stmt 0 view .LVU144
+ 534 0000 70B5     	 push {r4,r5,r6,lr}
+ 535              	.LCFI10:
+ 536              	 .cfi_def_cfa_offset 16
+ 537              	 .cfi_offset 4,-16
+ 538              	 .cfi_offset 5,-12
+ 539              	 .cfi_offset 6,-8
+ 540              	 .cfi_offset 14,-4
+ 310:poly.c        ****     r->coeffs[i] = barrett_reduce(r->coeffs[i]);
+ 541              	 .loc 1 310 20 view .LVU145
+ 542 0002 054E     	 ldr r6,.L33
+ 543 0004 851E     	 subs r5,r0,#2
+ 544 0006 00F5FF74 	 add r4,r0,#510
+ 545              	.LVL39:
+ 546              	.L31:
+ 547              	 .loc 1 310 5 is_stmt 1 view .LVU146
+ 548              	 .loc 1 310 20 is_stmt 0 view .LVU147
+ 549 000a 35F9020F 	 ldrsh r0,[r5,#2]!
+ 550 000e B047     	 blx r6
+ 551              	.LVL40:
+ 309:poly.c        ****   for(i=0;i<KYBER_N;i++)
+ 552              	 .loc 1 309 12 discriminator 1 view .LVU148
+ 553 0010 A542     	 cmp r5,r4
+ 554              	 .loc 1 310 18 discriminator 1 view .LVU149
+ 555 0012 2880     	 strh r0,[r5]
+ 309:poly.c        ****   for(i=0;i<KYBER_N;i++)
+ 556              	 .loc 1 309 22 is_stmt 1 discriminator 3 view .LVU150
+ 309:poly.c        ****   for(i=0;i<KYBER_N;i++)
+ 557              	 .loc 1 309 12 discriminator 1 view .LVU151
+ 558 0014 F9D1     	 bne .L31
+ 311:poly.c        **** }
+ 559              	 .loc 1 311 1 is_stmt 0 view .LVU152
+ 560 0016 70BD     	 pop {r4,r5,r6,pc}
+ 561              	.LVL41:
+ 562              	.L34:
+ 563              	 .loc 1 311 1 view .LVU153
+ 564              	 .align 2
+ 565              	.L33:
+ 566 0018 00000000 	 .word crypto_kem_kyber1024_ref_barrett_reduce
+ 567              	 .cfi_endproc
+ 568              	.LFE11:
+ 570              	 .section .text.crypto_kem_kyber1024_ref_poly_ntt,"ax",%progbits
+ 571              	 .align 1
+ 572              	 .global crypto_kem_kyber1024_ref_poly_ntt
+ 573              	 .syntax unified
+ 574              	 .thumb
+ 575              	 .thumb_func
+ 577              	crypto_kem_kyber1024_ref_poly_ntt:
+ 578              	.LVL42:
+ 579              	.LFB7:
+ 244:poly.c        ****   ntt(r->coeffs);
+ 580              	 .loc 1 244 1 is_stmt 1 view-0
+ 581              	 .cfi_startproc
+ 582              	 
+ 583              	 
+ 245:poly.c        ****   poly_reduce(r);
+ 584              	 .loc 1 245 3 view .LVU155
+ 244:poly.c        ****   ntt(r->coeffs);
+ 585              	 .loc 1 244 1 is_stmt 0 view .LVU156
+ 586 0000 10B5     	 push {r4,lr}
+ 587              	.LCFI11:
+ 588              	 .cfi_def_cfa_offset 8
+ 589              	 .cfi_offset 4,-8
+ 590              	 .cfi_offset 14,-4
+ 245:poly.c        ****   poly_reduce(r);
+ 591              	 .loc 1 245 3 view .LVU157
+ 592 0002 044B     	 ldr r3,.L36
+ 244:poly.c        ****   ntt(r->coeffs);
+ 593              	 .loc 1 244 1 view .LVU158
+ 594 0004 0446     	 mov r4,r0
+ 245:poly.c        ****   poly_reduce(r);
+ 595              	 .loc 1 245 3 view .LVU159
+ 596 0006 9847     	 blx r3
+ 597              	.LVL43:
+ 246:poly.c        **** }
+ 598              	 .loc 1 246 3 is_stmt 1 view .LVU160
+ 599 0008 2046     	 mov r0,r4
+ 600 000a 034B     	 ldr r3,.L36+4
+ 247:poly.c        **** 
+ 601              	 .loc 1 247 1 is_stmt 0 view .LVU161
+ 602 000c BDE81040 	 pop {r4,lr}
+ 603              	.LCFI12:
+ 604              	 .cfi_restore 14
+ 605              	 .cfi_restore 4
+ 606              	 .cfi_def_cfa_offset 0
+ 607              	.LVL44:
+ 246:poly.c        **** }
+ 608              	 .loc 1 246 3 view .LVU162
+ 609 0010 1847     	 bx r3
+ 610              	.LVL45:
+ 611              	.L37:
+ 246:poly.c        **** }
+ 612              	 .loc 1 246 3 view .LVU163
+ 613 0012 00BF     	 .align 2
+ 614              	.L36:
+ 615 0014 00000000 	 .word crypto_kem_kyber1024_ref_ntt
+ 616 0018 00000000 	 .word crypto_kem_kyber1024_ref_poly_reduce
+ 617              	 .cfi_endproc
+ 618              	.LFE7:
+ 620              	 .section .text.crypto_kem_kyber1024_ref_poly_csubq,"ax",%progbits
+ 621              	 .align 1
+ 622              	 .global crypto_kem_kyber1024_ref_poly_csubq
+ 623              	 .syntax unified
+ 624              	 .thumb
+ 625              	 .thumb_func
+ 627              	crypto_kem_kyber1024_ref_poly_csubq:
+ 628              	.LVL46:
+ 629              	.LFB12:
+ 312:poly.c        **** 
+ 313:poly.c        **** /*************************************************
+ 314:poly.c        **** * Name:        poly_csubq
+ 315:poly.c        **** *
+ 316:poly.c        **** * Description: Applies conditional subtraction of q to each coefficient
+ 317:poly.c        **** *              of a polynomial. For details of conditional subtraction
+ 318:poly.c        **** *              of q see comments in reduce.c
+ 319:poly.c        **** *
+ 320:poly.c        **** * Arguments:   - poly *r: pointer to input/output polynomial
+ 321:poly.c        **** **************************************************/
+ 322:poly.c        **** void poly_csubq(poly *r)
+ 323:poly.c        **** {
+ 630              	 .loc 1 323 1 is_stmt 1 view-0
+ 631              	 .cfi_startproc
+ 632              	 
+ 633              	 
+ 324:poly.c        ****   unsigned int i;
+ 634              	 .loc 1 324 3 view .LVU165
+ 325:poly.c        ****   for(i=0;i<KYBER_N;i++)
+ 635              	 .loc 1 325 3 view .LVU166
+ 636              	 .loc 1 325 12 discriminator 1 view .LVU167
+ 323:poly.c        ****   unsigned int i;
+ 637              	 .loc 1 323 1 is_stmt 0 view .LVU168
+ 638 0000 70B5     	 push {r4,r5,r6,lr}
+ 639              	.LCFI13:
+ 640              	 .cfi_def_cfa_offset 16
+ 641              	 .cfi_offset 4,-16
+ 642              	 .cfi_offset 5,-12
+ 643              	 .cfi_offset 6,-8
+ 644              	 .cfi_offset 14,-4
+ 326:poly.c        ****     r->coeffs[i] = csubq(r->coeffs[i]);
+ 645              	 .loc 1 326 20 view .LVU169
+ 646 0002 054E     	 ldr r6,.L41
+ 647 0004 851E     	 subs r5,r0,#2
+ 648 0006 00F5FF74 	 add r4,r0,#510
+ 649              	.LVL47:
+ 650              	.L39:
+ 651              	 .loc 1 326 5 is_stmt 1 view .LVU170
+ 652              	 .loc 1 326 20 is_stmt 0 view .LVU171
+ 653 000a 35F9020F 	 ldrsh r0,[r5,#2]!
+ 654 000e B047     	 blx r6
+ 655              	.LVL48:
+ 325:poly.c        ****   for(i=0;i<KYBER_N;i++)
+ 656              	 .loc 1 325 12 discriminator 1 view .LVU172
+ 657 0010 A542     	 cmp r5,r4
+ 658              	 .loc 1 326 18 discriminator 1 view .LVU173
+ 659 0012 2880     	 strh r0,[r5]
+ 325:poly.c        ****   for(i=0;i<KYBER_N;i++)
+ 660              	 .loc 1 325 22 is_stmt 1 discriminator 3 view .LVU174
+ 325:poly.c        ****   for(i=0;i<KYBER_N;i++)
+ 661              	 .loc 1 325 12 discriminator 1 view .LVU175
+ 662 0014 F9D1     	 bne .L39
+ 327:poly.c        **** }
+ 663              	 .loc 1 327 1 is_stmt 0 view .LVU176
+ 664 0016 70BD     	 pop {r4,r5,r6,pc}
+ 665              	.LVL49:
+ 666              	.L42:
+ 667              	 .loc 1 327 1 view .LVU177
+ 668              	 .align 2
+ 669              	.L41:
+ 670 0018 00000000 	 .word crypto_kem_kyber1024_ref_csubq
+ 671              	 .cfi_endproc
+ 672              	.LFE12:
+ 674              	 .section .text.crypto_kem_kyber1024_ref_poly_compress,"ax",%progbits
+ 675              	 .align 1
+ 676              	 .global crypto_kem_kyber1024_ref_poly_compress
+ 677              	 .syntax unified
+ 678              	 .thumb
+ 679              	 .thumb_func
+ 681              	crypto_kem_kyber1024_ref_poly_compress:
+ 682              	.LVL50:
+ 683              	.LFB0:
+  19:poly.c        ****   unsigned int i,j;
+ 684              	 .loc 1 19 1 is_stmt 1 view-0
+ 685              	 .cfi_startproc
+ 686              	 
+ 687              	 
+  20:poly.c        ****   uint8_t t[8];
+ 688              	 .loc 1 20 3 view .LVU179
+  21:poly.c        **** 
+ 689              	 .loc 1 21 3 view .LVU180
+  23:poly.c        **** 
+ 690              	 .loc 1 23 3 view .LVU181
+  19:poly.c        ****   unsigned int i,j;
+ 691              	 .loc 1 19 1 is_stmt 0 view .LVU182
+ 692 0000 73B5     	 push {r0,r1,r4,r5,r6,lr}
+ 693              	.LCFI14:
+ 694              	 .cfi_def_cfa_offset 24
+ 695              	 .cfi_offset 4,-16
+ 696              	 .cfi_offset 5,-12
+ 697              	 .cfi_offset 6,-8
+ 698              	 .cfi_offset 14,-4
+  23:poly.c        **** 
+ 699              	 .loc 1 23 3 view .LVU183
+ 700 0002 274B     	 ldr r3,.L48
+  19:poly.c        ****   unsigned int i,j;
+ 701              	 .loc 1 19 1 view .LVU184
+ 702 0004 0546     	 mov r5,r0
+ 703 0006 0C46     	 mov r4,r1
+  23:poly.c        **** 
+ 704              	 .loc 1 23 3 view .LVU185
+ 705 0008 0846     	 mov r0,r1
+ 706              	.LVL51:
+  23:poly.c        **** 
+ 707              	 .loc 1 23 3 view .LVU186
+ 708 000a 9847     	 blx r3
+ 709              	.LVL52:
+  47:poly.c        ****     for(j=0;j<8;j++)
+ 710              	 .loc 1 47 3 is_stmt 1 view .LVU187
+  47:poly.c        ****     for(j=0;j<8;j++)
+ 711              	 .loc 1 47 12 discriminator 1 view .LVU188
+ 712 000c 6B1D     	 adds r3,r5,#5
+ 713 000e 2146     	 mov r1,r4
+  49:poly.c        **** 
+ 714              	 .loc 1 49 62 is_stmt 0 view .LVU189
+ 715 0010 40F60155 	 movw r5,#3329
+ 716              	.LVL53:
+  23:poly.c        **** 
+ 717              	 .loc 1 23 3 view .LVU190
+ 718 0014 0024     	 movs r4,#0
+ 719              	.LVL54:
+ 720              	.L44:
+  48:poly.c        ****       t[j] = ((((uint32_t)a->coeffs[8*i+j] << 5) + KYBER_Q/2)/KYBER_Q) & 31;
+ 721              	 .loc 1 48 14 is_stmt 1 discriminator 1 view .LVU191
+ 722 0016 6846     	 mov r0,sp
+ 723 0018 01F11006 	 add r6,r1,#16
+ 724              	.LVL55:
+ 725              	.L45:
+  49:poly.c        **** 
+ 726              	 .loc 1 49 7 view .LVU192
+  49:poly.c        **** 
+ 727              	 .loc 1 49 36 is_stmt 0 view .LVU193
+ 728 001c 31F9022B 	 ldrsh r2,[r1],#2
+  49:poly.c        **** 
+ 729              	 .loc 1 49 44 view .LVU194
+ 730 0020 5201     	 lsls r2,r2,#5
+  49:poly.c        **** 
+ 731              	 .loc 1 49 50 view .LVU195
+ 732 0022 02F5D062 	 add r2,r2,#1664
+  48:poly.c        ****       t[j] = ((((uint32_t)a->coeffs[8*i+j] << 5) + KYBER_Q/2)/KYBER_Q) & 31;
+ 733              	 .loc 1 48 14 discriminator 1 view .LVU196
+ 734 0026 B142     	 cmp r1,r6
+  49:poly.c        **** 
+ 735              	 .loc 1 49 62 view .LVU197
+ 736 0028 B2FBF5F2 	 udiv r2,r2,r5
+  49:poly.c        **** 
+ 737              	 .loc 1 49 72 view .LVU198
+ 738 002c 02F01F02 	 and r2,r2,#31
+  49:poly.c        **** 
+ 739              	 .loc 1 49 12 view .LVU199
+ 740 0030 00F8012B 	 strb r2,[r0],#1
+ 741              	.LVL56:
+  48:poly.c        ****       t[j] = ((((uint32_t)a->coeffs[8*i+j] << 5) + KYBER_Q/2)/KYBER_Q) & 31;
+ 742              	 .loc 1 48 18 is_stmt 1 discriminator 3 view .LVU200
+  48:poly.c        ****       t[j] = ((((uint32_t)a->coeffs[8*i+j] << 5) + KYBER_Q/2)/KYBER_Q) & 31;
+ 743              	 .loc 1 48 14 discriminator 1 view .LVU201
+ 744 0034 F2D1     	 bne .L45
+  51:poly.c        ****     r[1] = (t[1] >> 3) | (t[2] << 2) | (t[3] << 7);
+ 745              	 .loc 1 51 5 view .LVU202
+  51:poly.c        ****     r[1] = (t[1] >> 3) | (t[2] << 2) | (t[3] << 7);
+ 746              	 .loc 1 51 28 is_stmt 0 view .LVU203
+ 747 0036 9DF80120 	 ldrb r2,[sp,#1]
+  51:poly.c        ****     r[1] = (t[1] >> 3) | (t[2] << 2) | (t[3] << 7);
+ 748              	 .loc 1 51 24 view .LVU204
+ 749 003a 9DF80000 	 ldrb r0,[sp]
+ 750              	.LVL57:
+  52:poly.c        ****     r[2] = (t[3] >> 1) | (t[4] << 4);
+ 751              	 .loc 1 52 42 view .LVU205
+ 752 003e 9DF80360 	 ldrb r6,[sp,#3]
+  51:poly.c        ****     r[1] = (t[1] >> 3) | (t[2] << 2) | (t[3] << 7);
+ 753              	 .loc 1 51 24 view .LVU206
+ 754 0042 40EA4210 	 orr r0,r0,r2,lsl#5
+  51:poly.c        ****     r[1] = (t[1] >> 3) | (t[2] << 2) | (t[3] << 7);
+ 755              	 .loc 1 51 10 view .LVU207
+ 756 0046 03F8050C 	 strb r0,[r3,#-5]
+  52:poly.c        ****     r[2] = (t[3] >> 1) | (t[4] << 4);
+ 757              	 .loc 1 52 5 is_stmt 1 view .LVU208
+  52:poly.c        ****     r[2] = (t[3] >> 1) | (t[4] << 4);
+ 758              	 .loc 1 52 24 is_stmt 0 view .LVU209
+ 759 004a 9DF80200 	 ldrb r0,[sp,#2]
+ 760 004e D208     	 lsrs r2,r2,#3
+ 761 0050 42EA8002 	 orr r2,r2,r0,lsl#2
+  52:poly.c        ****     r[2] = (t[3] >> 1) | (t[4] << 4);
+ 762              	 .loc 1 52 38 view .LVU210
+ 763 0054 42EAC612 	 orr r2,r2,r6,lsl#7
+  52:poly.c        ****     r[2] = (t[3] >> 1) | (t[4] << 4);
+ 764              	 .loc 1 52 10 view .LVU211
+ 765 0058 03F8042C 	 strb r2,[r3,#-4]
+  53:poly.c        ****     r[3] = (t[4] >> 4) | (t[5] << 1) | (t[6] << 6);
+ 766              	 .loc 1 53 5 is_stmt 1 view .LVU212
+  53:poly.c        ****     r[3] = (t[4] >> 4) | (t[5] << 1) | (t[6] << 6);
+ 767              	 .loc 1 53 28 is_stmt 0 view .LVU213
+ 768 005c 9DF80420 	 ldrb r2,[sp,#4]
+  53:poly.c        ****     r[3] = (t[4] >> 4) | (t[5] << 1) | (t[6] << 6);
+ 769              	 .loc 1 53 24 view .LVU214
+ 770 0060 1001     	 lsls r0,r2,#4
+ 771 0062 40EA5600 	 orr r0,r0,r6,lsr#1
+  54:poly.c        ****     r[4] = (t[6] >> 2) | (t[7] << 3);
+ 772              	 .loc 1 54 24 view .LVU215
+ 773 0066 9DF80560 	 ldrb r6,[sp,#5]
+  53:poly.c        ****     r[3] = (t[4] >> 4) | (t[5] << 1) | (t[6] << 6);
+ 774              	 .loc 1 53 10 view .LVU216
+ 775 006a 03F8030C 	 strb r0,[r3,#-3]
+  54:poly.c        ****     r[4] = (t[6] >> 2) | (t[7] << 3);
+ 776              	 .loc 1 54 5 is_stmt 1 view .LVU217
+  54:poly.c        ****     r[4] = (t[6] >> 2) | (t[7] << 3);
+ 777              	 .loc 1 54 24 is_stmt 0 view .LVU218
+ 778 006e 1209     	 lsrs r2,r2,#4
+  54:poly.c        ****     r[4] = (t[6] >> 2) | (t[7] << 3);
+ 779              	 .loc 1 54 42 view .LVU219
+ 780 0070 9DF80600 	 ldrb r0,[sp,#6]
+  54:poly.c        ****     r[4] = (t[6] >> 2) | (t[7] << 3);
+ 781              	 .loc 1 54 24 view .LVU220
+ 782 0074 42EA4602 	 orr r2,r2,r6,lsl#1
+  54:poly.c        ****     r[4] = (t[6] >> 2) | (t[7] << 3);
+ 783              	 .loc 1 54 38 view .LVU221
+ 784 0078 42EA8012 	 orr r2,r2,r0,lsl#6
+  54:poly.c        ****     r[4] = (t[6] >> 2) | (t[7] << 3);
+ 785              	 .loc 1 54 10 view .LVU222
+ 786 007c 03F8022C 	 strb r2,[r3,#-2]
+  55:poly.c        ****     r += 5;
+ 787              	 .loc 1 55 5 is_stmt 1 view .LVU223
+  55:poly.c        ****     r += 5;
+ 788              	 .loc 1 55 24 is_stmt 0 view .LVU224
+ 789 0080 9DF80720 	 ldrb r2,[sp,#7]
+ 790 0084 8008     	 lsrs r0,r0,#2
+  47:poly.c        ****     for(j=0;j<8;j++)
+ 791              	 .loc 1 47 12 discriminator 1 view .LVU225
+ 792 0086 0834     	 adds r4,r4,#8
+  55:poly.c        ****     r += 5;
+ 793              	 .loc 1 55 24 view .LVU226
+ 794 0088 40EAC200 	 orr r0,r0,r2,lsl#3
+  47:poly.c        ****     for(j=0;j<8;j++)
+ 795              	 .loc 1 47 12 discriminator 1 view .LVU227
+ 796 008c B4F5807F 	 cmp r4,#256
+  55:poly.c        ****     r += 5;
+ 797              	 .loc 1 55 10 view .LVU228
+ 798 0090 03F8010C 	 strb r0,[r3,#-1]
+  56:poly.c        ****   }
+ 799              	 .loc 1 56 5 is_stmt 1 view .LVU229
+ 800              	.LVL58:
+  47:poly.c        ****     for(j=0;j<8;j++)
+ 801              	 .loc 1 47 24 discriminator 2 view .LVU230
+  47:poly.c        ****     for(j=0;j<8;j++)
+ 802              	 .loc 1 47 12 discriminator 1 view .LVU231
+ 803 0094 03F10503 	 add r3,r3,#5
+ 804              	.LVL59:
+  47:poly.c        ****     for(j=0;j<8;j++)
+ 805              	 .loc 1 47 12 is_stmt 0 discriminator 1 view .LVU232
+ 806 0098 BDD1     	 bne .L44
+  61:poly.c        **** 
+ 807              	 .loc 1 61 1 view .LVU233
+ 808 009a 02B0     	 add sp,sp,#8
+ 809              	.LCFI15:
+ 810              	 .cfi_def_cfa_offset 16
+ 811              	 
+ 812 009c 70BD     	 pop {r4,r5,r6,pc}
+ 813              	.L49:
+ 814 009e 00BF     	 .align 2
+ 815              	.L48:
+ 816 00a0 00000000 	 .word crypto_kem_kyber1024_ref_poly_csubq
+ 817              	 .cfi_endproc
+ 818              	.LFE0:
+ 820              	 .section .text.crypto_kem_kyber1024_ref_poly_tobytes,"ax",%progbits
+ 821              	 .align 1
+ 822              	 .global crypto_kem_kyber1024_ref_poly_tobytes
+ 823              	 .syntax unified
+ 824              	 .thumb
+ 825              	 .thumb_func
+ 827              	crypto_kem_kyber1024_ref_poly_tobytes:
+ 828              	.LVL60:
+ 829              	.LFB2:
+ 132:poly.c        ****   unsigned int i;
+ 830              	 .loc 1 132 1 is_stmt 1 view-0
+ 831              	 .cfi_startproc
+ 832              	 
+ 833              	 
+ 133:poly.c        ****   uint16_t t0, t1;
+ 834              	 .loc 1 133 3 view .LVU235
+ 134:poly.c        **** 
+ 835              	 .loc 1 134 3 view .LVU236
+ 136:poly.c        **** 
+ 836              	 .loc 1 136 3 view .LVU237
+ 132:poly.c        ****   unsigned int i;
+ 837              	 .loc 1 132 1 is_stmt 0 view .LVU238
+ 838 0000 38B5     	 push {r3,r4,r5,lr}
+ 839              	.LCFI16:
+ 840              	 .cfi_def_cfa_offset 16
+ 841              	 .cfi_offset 3,-16
+ 842              	 .cfi_offset 4,-12
+ 843              	 .cfi_offset 5,-8
+ 844              	 .cfi_offset 14,-4
+ 132:poly.c        ****   unsigned int i;
+ 845              	 .loc 1 132 1 view .LVU239
+ 846 0002 0446     	 mov r4,r0
+ 136:poly.c        **** 
+ 847              	 .loc 1 136 3 view .LVU240
+ 848 0004 0C4B     	 ldr r3,.L53
+ 132:poly.c        ****   unsigned int i;
+ 849              	 .loc 1 132 1 view .LVU241
+ 850 0006 0D46     	 mov r5,r1
+ 136:poly.c        **** 
+ 851              	 .loc 1 136 3 view .LVU242
+ 852 0008 0846     	 mov r0,r1
+ 853              	.LVL61:
+ 136:poly.c        **** 
+ 854              	 .loc 1 136 3 view .LVU243
+ 855 000a 9847     	 blx r3
+ 856              	.LVL62:
+ 138:poly.c        ****     t0 = a->coeffs[2*i];
+ 857              	 .loc 1 138 3 is_stmt 1 view .LVU244
+ 138:poly.c        ****     t0 = a->coeffs[2*i];
+ 858              	 .loc 1 138 12 discriminator 1 view .LVU245
+ 859 000c 2346     	 mov r3,r4
+ 140:poly.c        ****     r[3*i+0] = (t0 >> 0);
+ 860              	 .loc 1 140 19 is_stmt 0 view .LVU246
+ 861 000e A81C     	 adds r0,r5,#2
+ 138:poly.c        ****     t0 = a->coeffs[2*i];
+ 862              	 .loc 1 138 8 view .LVU247
+ 863 0010 0024     	 movs r4,#0
+ 864              	.LVL63:
+ 865              	.L51:
+ 139:poly.c        ****     t1 = a->coeffs[2*i+1];
+ 866              	 .loc 1 139 5 is_stmt 1 view .LVU248
+ 139:poly.c        ****     t1 = a->coeffs[2*i+1];
+ 867              	 .loc 1 139 19 is_stmt 0 view .LVU249
+ 868 0012 35F92420 	 ldrsh r2,[r5,r4,lsl#2]
+ 869              	.LVL64:
+ 140:poly.c        ****     r[3*i+0] = (t0 >> 0);
+ 870              	 .loc 1 140 5 is_stmt 1 view .LVU250
+ 140:poly.c        ****     r[3*i+0] = (t0 >> 0);
+ 871              	 .loc 1 140 19 is_stmt 0 view .LVU251
+ 872 0016 30F92410 	 ldrsh r1,[r0,r4,lsl#2]
+ 873              	.LVL65:
+ 141:poly.c        ****     r[3*i+1] = (t0 >> 8) | (t1 << 4);
+ 874              	 .loc 1 141 5 is_stmt 1 view .LVU252
+ 141:poly.c        ****     r[3*i+1] = (t0 >> 8) | (t1 << 4);
+ 875              	 .loc 1 141 14 is_stmt 0 view .LVU253
+ 876 001a 1A70     	 strb r2,[r3]
+ 142:poly.c        ****     r[3*i+2] = (t1 >> 4);
+ 877              	 .loc 1 142 5 is_stmt 1 view .LVU254
+ 138:poly.c        ****     t0 = a->coeffs[2*i];
+ 878              	 .loc 1 138 24 is_stmt 0 discriminator 3 view .LVU255
+ 879 001c 0134     	 adds r4,r4,#1
+ 880              	.LVL66:
+ 142:poly.c        ****     r[3*i+2] = (t1 >> 4);
+ 881              	 .loc 1 142 26 view .LVU256
+ 882 001e C2F30722 	 ubfx r2,r2,#8,#8
+ 883              	.LVL67:
+ 142:poly.c        ****     r[3*i+2] = (t1 >> 4);
+ 884              	 .loc 1 142 26 view .LVU257
+ 885 0022 42EA0112 	 orr r2,r2,r1,lsl#4
+ 138:poly.c        ****     t0 = a->coeffs[2*i];
+ 886              	 .loc 1 138 12 discriminator 1 view .LVU258
+ 887 0026 802C     	 cmp r4,#128
+ 143:poly.c        ****   }
+ 888              	 .loc 1 143 14 view .LVU259
+ 889 0028 C1F30B11 	 ubfx r1,r1,#4,#12
+ 890              	.LVL68:
+ 142:poly.c        ****     r[3*i+2] = (t1 >> 4);
+ 891              	 .loc 1 142 14 view .LVU260
+ 892 002c 5A70     	 strb r2,[r3,#1]
+ 143:poly.c        ****   }
+ 893              	 .loc 1 143 5 is_stmt 1 view .LVU261
+ 143:poly.c        ****   }
+ 894              	 .loc 1 143 14 is_stmt 0 view .LVU262
+ 895 002e 9970     	 strb r1,[r3,#2]
+ 138:poly.c        ****     t0 = a->coeffs[2*i];
+ 896              	 .loc 1 138 24 is_stmt 1 discriminator 3 view .LVU263
+ 897              	.LVL69:
+ 138:poly.c        ****     t0 = a->coeffs[2*i];
+ 898              	 .loc 1 138 12 discriminator 1 view .LVU264
+ 899 0030 03F10303 	 add r3,r3,#3
+ 900 0034 EDD1     	 bne .L51
+ 145:poly.c        **** 
+ 901              	 .loc 1 145 1 is_stmt 0 view .LVU265
+ 902 0036 38BD     	 pop {r3,r4,r5,pc}
+ 903              	.LVL70:
+ 904              	.L54:
+ 145:poly.c        **** 
+ 905              	 .loc 1 145 1 view .LVU266
+ 906              	 .align 2
+ 907              	.L53:
+ 908 0038 00000000 	 .word crypto_kem_kyber1024_ref_poly_csubq
+ 909              	 .cfi_endproc
+ 910              	.LFE2:
+ 912              	 .section .text.crypto_kem_kyber1024_ref_poly_tomsg,"ax",%progbits
+ 913              	 .align 1
+ 914              	 .global crypto_kem_kyber1024_ref_poly_tomsg
+ 915              	 .syntax unified
+ 916              	 .thumb
+ 917              	 .thumb_func
+ 919              	crypto_kem_kyber1024_ref_poly_tomsg:
+ 920              	.LVL71:
+ 921              	.LFB5:
+ 200:poly.c        ****   unsigned int i,j;
+ 922              	 .loc 1 200 1 is_stmt 1 view-0
+ 923              	 .cfi_startproc
+ 924              	 
+ 925              	 
+ 201:poly.c        ****   uint16_t t;
+ 926              	 .loc 1 201 3 view .LVU268
+ 202:poly.c        **** 
+ 927              	 .loc 1 202 3 view .LVU269
+ 204:poly.c        **** 
+ 928              	 .loc 1 204 3 view .LVU270
+ 200:poly.c        ****   unsigned int i,j;
+ 929              	 .loc 1 200 1 is_stmt 0 view .LVU271
+ 930 0000 F8B5     	 push {r3,r4,r5,r6,r7,lr}
+ 931              	.LCFI17:
+ 932              	 .cfi_def_cfa_offset 24
+ 933              	 .cfi_offset 3,-24
+ 934              	 .cfi_offset 4,-20
+ 935              	 .cfi_offset 5,-16
+ 936              	 .cfi_offset 6,-12
+ 937              	 .cfi_offset 7,-8
+ 938              	 .cfi_offset 14,-4
+ 200:poly.c        ****   unsigned int i,j;
+ 939              	 .loc 1 200 1 view .LVU272
+ 940 0002 0446     	 mov r4,r0
+ 204:poly.c        **** 
+ 941              	 .loc 1 204 3 view .LVU273
+ 942 0004 114B     	 ldr r3,.L60
+ 943 0006 0846     	 mov r0,r1
+ 944              	.LVL72:
+ 204:poly.c        **** 
+ 945              	 .loc 1 204 3 view .LVU274
+ 946 0008 0025     	 movs r5,#0
+ 200:poly.c        ****   unsigned int i,j;
+ 947              	 .loc 1 200 1 view .LVU275
+ 948 000a 0E46     	 mov r6,r1
+ 207:poly.c        ****     for(j=0;j<8;j++) {
+ 949              	 .loc 1 207 12 view .LVU276
+ 950 000c 2F46     	 mov r7,r5
+ 204:poly.c        **** 
+ 951              	 .loc 1 204 3 view .LVU277
+ 952 000e 9847     	 blx r3
+ 953              	.LVL73:
+ 206:poly.c        ****     msg[i] = 0;
+ 954              	 .loc 1 206 3 is_stmt 1 view .LVU278
+ 206:poly.c        ****     msg[i] = 0;
+ 955              	 .loc 1 206 12 discriminator 1 view .LVU279
+ 956 0010 621E     	 subs r2,r4,#1
+ 209:poly.c        ****       msg[i] |= t << j;
+ 957              	 .loc 1 209 59 is_stmt 0 view .LVU280
+ 958 0012 40F6015C 	 movw ip,#3329
+ 959              	.LVL74:
+ 960              	.L57:
+ 207:poly.c        ****     for(j=0;j<8;j++) {
+ 961              	 .loc 1 207 5 is_stmt 1 view .LVU281
+ 207:poly.c        ****     for(j=0;j<8;j++) {
+ 962              	 .loc 1 207 12 is_stmt 0 view .LVU282
+ 963 0016 0024     	 movs r4,#0
+ 964 0018 02F8017F 	 strb r7,[r2,#1]!
+ 965              	.LVL75:
+ 208:poly.c        ****       t = ((((uint16_t)a->coeffs[8*i+j] << 1) + KYBER_Q/2)/KYBER_Q) & 1;
+ 966              	 .loc 1 208 5 is_stmt 1 view .LVU283
+ 208:poly.c        ****       t = ((((uint16_t)a->coeffs[8*i+j] << 1) + KYBER_Q/2)/KYBER_Q) & 1;
+ 967              	 .loc 1 208 14 discriminator 1 view .LVU284
+ 968 001c 06EB4500 	 add r0,r6,r5,lsl#1
+ 208:poly.c        ****       t = ((((uint16_t)a->coeffs[8*i+j] << 1) + KYBER_Q/2)/KYBER_Q) & 1;
+ 969              	 .loc 1 208 10 is_stmt 0 view .LVU285
+ 970 0020 2146     	 mov r1,r4
+ 971              	.LVL76:
+ 972              	.L56:
+ 209:poly.c        ****       msg[i] |= t << j;
+ 973              	 .loc 1 209 7 is_stmt 1 view .LVU286
+ 210:poly.c        ****     }
+ 974              	 .loc 1 210 7 view .LVU287
+ 209:poly.c        ****       msg[i] |= t << j;
+ 975              	 .loc 1 209 14 is_stmt 0 view .LVU288
+ 976 0022 30F8023B 	 ldrh r3,[r0],#2
+ 977              	.LVL77:
+ 209:poly.c        ****       msg[i] |= t << j;
+ 978              	 .loc 1 209 41 view .LVU289
+ 979 0026 5B00     	 lsls r3,r3,#1
+ 980              	.LVL78:
+ 209:poly.c        ****       msg[i] |= t << j;
+ 981              	 .loc 1 209 47 view .LVU290
+ 982 0028 03F5D063 	 add r3,r3,#1664
+ 983              	.LVL79:
+ 209:poly.c        ****       msg[i] |= t << j;
+ 984              	 .loc 1 209 59 view .LVU291
+ 985 002c B3FBFCF3 	 udiv r3,r3,ip
+ 986              	.LVL80:
+ 210:poly.c        ****     }
+ 987              	 .loc 1 210 19 view .LVU292
+ 988 0030 03F00103 	 and r3,r3,#1
+ 989 0034 8B40     	 lsls r3,r3,r1
+ 210:poly.c        ****     }
+ 990              	 .loc 1 210 14 view .LVU293
+ 991 0036 1C43     	 orrs r4,r4,r3
+ 208:poly.c        ****       t = ((((uint16_t)a->coeffs[8*i+j] << 1) + KYBER_Q/2)/KYBER_Q) & 1;
+ 992              	 .loc 1 208 18 discriminator 3 view .LVU294
+ 993 0038 0131     	 adds r1,r1,#1
+ 994              	.LVL81:
+ 210:poly.c        ****     }
+ 995              	 .loc 1 210 14 view .LVU295
+ 996 003a E4B2     	 uxtb r4,r4
+ 208:poly.c        ****       t = ((((uint16_t)a->coeffs[8*i+j] << 1) + KYBER_Q/2)/KYBER_Q) & 1;
+ 997              	 .loc 1 208 14 discriminator 1 view .LVU296
+ 998 003c 0829     	 cmp r1,#8
+ 210:poly.c        ****     }
+ 999              	 .loc 1 210 14 view .LVU297
+ 1000 003e 1470     	 strb r4,[r2]
+ 1001              	.LVL82:
+ 208:poly.c        ****       t = ((((uint16_t)a->coeffs[8*i+j] << 1) + KYBER_Q/2)/KYBER_Q) & 1;
+ 1002              	 .loc 1 208 18 is_stmt 1 discriminator 3 view .LVU298
+ 208:poly.c        ****       t = ((((uint16_t)a->coeffs[8*i+j] << 1) + KYBER_Q/2)/KYBER_Q) & 1;
+ 1003              	 .loc 1 208 14 discriminator 1 view .LVU299
+ 1004 0040 EFD1     	 bne .L56
+ 206:poly.c        ****     msg[i] = 0;
+ 1005              	 .loc 1 206 24 discriminator 2 view .LVU300
+ 1006              	.LVL83:
+ 206:poly.c        ****     msg[i] = 0;
+ 1007              	 .loc 1 206 12 discriminator 1 view .LVU301
+ 1008 0042 0835     	 adds r5,r5,#8
+ 1009 0044 B5F5807F 	 cmp r5,#256
+ 1010 0048 E5D1     	 bne .L57
+ 213:poly.c        **** 
+ 1011              	 .loc 1 213 1 is_stmt 0 view .LVU302
+ 1012 004a F8BD     	 pop {r3,r4,r5,r6,r7,pc}
+ 1013              	.LVL84:
+ 1014              	.L61:
+ 213:poly.c        **** 
+ 1015              	 .loc 1 213 1 view .LVU303
+ 1016              	 .align 2
+ 1017              	.L60:
+ 1018 004c 00000000 	 .word crypto_kem_kyber1024_ref_poly_csubq
+ 1019              	 .cfi_endproc
+ 1020              	.LFE5:
+ 1022              	 .section .text.crypto_kem_kyber1024_ref_poly_add,"ax",%progbits
+ 1023              	 .align 1
+ 1024              	 .global crypto_kem_kyber1024_ref_poly_add
+ 1025              	 .syntax unified
+ 1026              	 .thumb
+ 1027              	 .thumb_func
+ 1029              	crypto_kem_kyber1024_ref_poly_add:
+ 1030              	.LVL85:
+ 1031              	.LFB13:
+ 328:poly.c        **** 
+ 329:poly.c        **** /*************************************************
+ 330:poly.c        **** * Name:        poly_add
+ 331:poly.c        **** *
+ 332:poly.c        **** * Description: Add two polynomials
+ 333:poly.c        **** *
+ 334:poly.c        **** * Arguments: - poly *r:       pointer to output polynomial
+ 335:poly.c        **** *            - const poly *a: pointer to first input polynomial
+ 336:poly.c        **** *            - const poly *b: pointer to second input polynomial
+ 337:poly.c        **** **************************************************/
+ 338:poly.c        **** void poly_add(poly *r, const poly *a, const poly *b)
+ 339:poly.c        **** {
+ 1032              	 .loc 1 339 1 is_stmt 1 view-0
+ 1033              	 .cfi_startproc
+ 1034              	 
+ 1035              	 
+ 340:poly.c        ****   unsigned int i;
+ 1036              	 .loc 1 340 3 view .LVU305
+ 341:poly.c        ****   for(i=0;i<KYBER_N;i++)
+ 1037              	 .loc 1 341 3 view .LVU306
+ 1038              	 .loc 1 341 12 discriminator 1 view .LVU307
+ 339:poly.c        ****   unsigned int i;
+ 1039              	 .loc 1 339 1 is_stmt 0 view .LVU308
+ 1040 0000 30B5     	 push {r4,r5,lr}
+ 1041              	.LCFI18:
+ 1042              	 .cfi_def_cfa_offset 12
+ 1043              	 .cfi_offset 4,-12
+ 1044              	 .cfi_offset 5,-8
+ 1045              	 .cfi_offset 14,-4
+ 1046              	 .loc 1 341 8 view .LVU309
+ 1047 0002 0023     	 movs r3,#0
+ 1048              	.LVL86:
+ 1049              	.L63:
+ 342:poly.c        ****     r->coeffs[i] = a->coeffs[i] + b->coeffs[i];
+ 1050              	 .loc 1 342 5 is_stmt 1 view .LVU310
+ 1051              	 .loc 1 342 33 is_stmt 0 view .LVU311
+ 1052 0004 31F81340 	 ldrh r4,[r1,r3,lsl#1]
+ 1053 0008 32F81350 	 ldrh r5,[r2,r3,lsl#1]
+ 1054 000c 2C44     	 add r4,r4,r5
+ 1055              	 .loc 1 342 18 view .LVU312
+ 1056 000e 20F81340 	 strh r4,[r0,r3,lsl#1]
+ 341:poly.c        ****   for(i=0;i<KYBER_N;i++)
+ 1057              	 .loc 1 341 22 is_stmt 1 discriminator 3 view .LVU313
+ 1058 0012 0133     	 adds r3,r3,#1
+ 1059              	.LVL87:
+ 341:poly.c        ****   for(i=0;i<KYBER_N;i++)
+ 1060              	 .loc 1 341 12 discriminator 1 view .LVU314
+ 1061 0014 B3F5807F 	 cmp r3,#256
+ 1062 0018 F4D1     	 bne .L63
+ 343:poly.c        **** }
+ 1063              	 .loc 1 343 1 is_stmt 0 view .LVU315
+ 1064 001a 30BD     	 pop {r4,r5,pc}
+ 1065              	 .cfi_endproc
+ 1066              	.LFE13:
+ 1068              	 .section .text.crypto_kem_kyber1024_ref_poly_sub,"ax",%progbits
+ 1069              	 .align 1
+ 1070              	 .global crypto_kem_kyber1024_ref_poly_sub
+ 1071              	 .syntax unified
+ 1072              	 .thumb
+ 1073              	 .thumb_func
+ 1075              	crypto_kem_kyber1024_ref_poly_sub:
+ 1076              	.LVL88:
+ 1077              	.LFB14:
+ 344:poly.c        **** 
+ 345:poly.c        **** /*************************************************
+ 346:poly.c        **** * Name:        poly_sub
+ 347:poly.c        **** *
+ 348:poly.c        **** * Description: Subtract two polynomials
+ 349:poly.c        **** *
+ 350:poly.c        **** * Arguments: - poly *r:       pointer to output polynomial
+ 351:poly.c        **** *            - const poly *a: pointer to first input polynomial
+ 352:poly.c        **** *            - const poly *b: pointer to second input polynomial
+ 353:poly.c        **** **************************************************/
+ 354:poly.c        **** void poly_sub(poly *r, const poly *a, const poly *b)
+ 355:poly.c        **** {
+ 1078              	 .loc 1 355 1 is_stmt 1 view-0
+ 1079              	 .cfi_startproc
+ 1080              	 
+ 1081              	 
+ 356:poly.c        ****   unsigned int i;
+ 1082              	 .loc 1 356 3 view .LVU317
+ 357:poly.c        ****   for(i=0;i<KYBER_N;i++)
+ 1083              	 .loc 1 357 3 view .LVU318
+ 1084              	 .loc 1 357 12 discriminator 1 view .LVU319
+ 355:poly.c        ****   unsigned int i;
+ 1085              	 .loc 1 355 1 is_stmt 0 view .LVU320
+ 1086 0000 30B5     	 push {r4,r5,lr}
+ 1087              	.LCFI19:
+ 1088              	 .cfi_def_cfa_offset 12
+ 1089              	 .cfi_offset 4,-12
+ 1090              	 .cfi_offset 5,-8
+ 1091              	 .cfi_offset 14,-4
+ 1092              	 .loc 1 357 8 view .LVU321
+ 1093 0002 0023     	 movs r3,#0
+ 1094              	.LVL89:
+ 1095              	.L66:
+ 358:poly.c        ****     r->coeffs[i] = a->coeffs[i] - b->coeffs[i];
+ 1096              	 .loc 1 358 5 is_stmt 1 view .LVU322
+ 1097              	 .loc 1 358 33 is_stmt 0 view .LVU323
+ 1098 0004 31F81340 	 ldrh r4,[r1,r3,lsl#1]
+ 1099 0008 32F81350 	 ldrh r5,[r2,r3,lsl#1]
+ 1100 000c 641B     	 subs r4,r4,r5
+ 1101              	 .loc 1 358 18 view .LVU324
+ 1102 000e 20F81340 	 strh r4,[r0,r3,lsl#1]
+ 357:poly.c        ****   for(i=0;i<KYBER_N;i++)
+ 1103              	 .loc 1 357 22 is_stmt 1 discriminator 3 view .LVU325
+ 1104 0012 0133     	 adds r3,r3,#1
+ 1105              	.LVL90:
+ 357:poly.c        ****   for(i=0;i<KYBER_N;i++)
+ 1106              	 .loc 1 357 12 discriminator 1 view .LVU326
+ 1107 0014 B3F5807F 	 cmp r3,#256
+ 1108 0018 F4D1     	 bne .L66
+ 359:poly.c        **** }
+ 1109              	 .loc 1 359 1 is_stmt 0 view .LVU327
+ 1110 001a 30BD     	 pop {r4,r5,pc}
+ 1111              	 .cfi_endproc
+ 1112              	.LFE14:
+ 1114              	 .text
+ 1115              	.Letext0:
+ 1116              	 .file 2 "/usr/lib/gcc/arm-none-eabi/14.2.1/include/stdint.h"
+ 1117              	 .file 3 "poly.h"
+ 1118              	 .file 4 "/usr/lib/gcc/arm-none-eabi/14.2.1/include/stddef.h"
+ 1119              	 .file 5 "reduce.h"
+ 1120              	 .file 6 "ntt.h"
+ 1121              	 .file 7 "cbd.h"
+ 1122              	 .file 8 "symmetric.h"
+DEFINED SYMBOLS
+                            *ABS*:00000000 poly.c
+    {standard input}:19     .text.crypto_kem_kyber1024_ref_poly_decompress:00000000 $t
+    {standard input}:25     .text.crypto_kem_kyber1024_ref_poly_decompress:00000000 crypto_kem_kyber1024_ref_poly_decompress
+    {standard input}:160    .text.crypto_kem_kyber1024_ref_poly_frombytes:00000000 $t
+    {standard input}:166    .text.crypto_kem_kyber1024_ref_poly_frombytes:00000000 crypto_kem_kyber1024_ref_poly_frombytes
+    {standard input}:221    .text.crypto_kem_kyber1024_ref_poly_frommsg:00000000 $t
+    {standard input}:227    .text.crypto_kem_kyber1024_ref_poly_frommsg:00000000 crypto_kem_kyber1024_ref_poly_frommsg
+    {standard input}:294    .text.crypto_kem_kyber1024_ref_poly_getnoise:00000000 $t
+    {standard input}:300    .text.crypto_kem_kyber1024_ref_poly_getnoise:00000000 crypto_kem_kyber1024_ref_poly_getnoise
+    {standard input}:352    .text.crypto_kem_kyber1024_ref_poly_getnoise:00000020 $d
+    {standard input}:358    .text.crypto_kem_kyber1024_ref_poly_invntt_tomont:00000000 $t
+    {standard input}:364    .text.crypto_kem_kyber1024_ref_poly_invntt_tomont:00000000 crypto_kem_kyber1024_ref_poly_invntt_tomont
+    {standard input}:380    .text.crypto_kem_kyber1024_ref_poly_invntt_tomont:00000004 $d
+    {standard input}:385    .text.crypto_kem_kyber1024_ref_poly_basemul_montgomery:00000000 $t
+    {standard input}:391    .text.crypto_kem_kyber1024_ref_poly_basemul_montgomery:00000000 crypto_kem_kyber1024_ref_poly_basemul_montgomery
+    {standard input}:452    .text.crypto_kem_kyber1024_ref_poly_basemul_montgomery:00000044 $d
+    {standard input}:458    .text.crypto_kem_kyber1024_ref_poly_tomont:00000000 $t
+    {standard input}:464    .text.crypto_kem_kyber1024_ref_poly_tomont:00000000 crypto_kem_kyber1024_ref_poly_tomont
+    {standard input}:512    .text.crypto_kem_kyber1024_ref_poly_tomont:00000020 $d
+    {standard input}:517    .text.crypto_kem_kyber1024_ref_poly_reduce:00000000 $t
+    {standard input}:523    .text.crypto_kem_kyber1024_ref_poly_reduce:00000000 crypto_kem_kyber1024_ref_poly_reduce
+    {standard input}:566    .text.crypto_kem_kyber1024_ref_poly_reduce:00000018 $d
+    {standard input}:571    .text.crypto_kem_kyber1024_ref_poly_ntt:00000000 $t
+    {standard input}:577    .text.crypto_kem_kyber1024_ref_poly_ntt:00000000 crypto_kem_kyber1024_ref_poly_ntt
+    {standard input}:615    .text.crypto_kem_kyber1024_ref_poly_ntt:00000014 $d
+    {standard input}:621    .text.crypto_kem_kyber1024_ref_poly_csubq:00000000 $t
+    {standard input}:627    .text.crypto_kem_kyber1024_ref_poly_csubq:00000000 crypto_kem_kyber1024_ref_poly_csubq
+    {standard input}:670    .text.crypto_kem_kyber1024_ref_poly_csubq:00000018 $d
+    {standard input}:675    .text.crypto_kem_kyber1024_ref_poly_compress:00000000 $t
+    {standard input}:681    .text.crypto_kem_kyber1024_ref_poly_compress:00000000 crypto_kem_kyber1024_ref_poly_compress
+    {standard input}:816    .text.crypto_kem_kyber1024_ref_poly_compress:000000a0 $d
+    {standard input}:821    .text.crypto_kem_kyber1024_ref_poly_tobytes:00000000 $t
+    {standard input}:827    .text.crypto_kem_kyber1024_ref_poly_tobytes:00000000 crypto_kem_kyber1024_ref_poly_tobytes
+    {standard input}:908    .text.crypto_kem_kyber1024_ref_poly_tobytes:00000038 $d
+    {standard input}:913    .text.crypto_kem_kyber1024_ref_poly_tomsg:00000000 $t
+    {standard input}:919    .text.crypto_kem_kyber1024_ref_poly_tomsg:00000000 crypto_kem_kyber1024_ref_poly_tomsg
+    {standard input}:1018   .text.crypto_kem_kyber1024_ref_poly_tomsg:0000004c $d
+    {standard input}:1023   .text.crypto_kem_kyber1024_ref_poly_add:00000000 $t
+    {standard input}:1029   .text.crypto_kem_kyber1024_ref_poly_add:00000000 crypto_kem_kyber1024_ref_poly_add
+    {standard input}:1069   .text.crypto_kem_kyber1024_ref_poly_sub:00000000 $t
+    {standard input}:1075   .text.crypto_kem_kyber1024_ref_poly_sub:00000000 crypto_kem_kyber1024_ref_poly_sub
+                           .group:00000000 wm4.0.9f3a4c6b5812d20634d55e39ed31011a
+                           .group:00000000 wm4.stdint.h.29.6d480f4ba0f60596e88234283d42444f
+                           .group:00000000 wm4.params.h.2.424e8b69daf74be3d402b39ff8b011f8
+                           .group:00000000 wm4.poly.h.2.b6919fe31c15bb5e938a7c84e2ea1b4c
+                           .group:00000000 wm4.ntt.h.2.897e2440bcde6b9a3d89d32fabc9dbcf
+                           .group:00000000 wm4.reduce.h.2.2aa0dc60c9bf1e8d9898cffaf25fbf0d
+                           .group:00000000 wm4.cbd.h.2.44e49311087e4444d869783b60f35334
+                           .group:00000000 wm4.stddef.h.39.38eb7ec030421799c657b13be5aa21c7
+                           .group:00000000 wm4.fips202.h.8.8779f48eea13226fdfe94b9f248ada05
+                           .group:00000000 wm4.symmetric.h.49.11f302b73b08542b87200e689a54420a
+
+UNDEFINED SYMBOLS
+crypto_kem_kyber1024_ref_kyber_shake256_prf
+crypto_kem_kyber1024_ref_cbd
+crypto_kem_kyber1024_ref_invntt
+crypto_kem_kyber1024_ref_zetas
+crypto_kem_kyber1024_ref_basemul
+crypto_kem_kyber1024_ref_montgomery_reduce
+crypto_kem_kyber1024_ref_barrett_reduce
+crypto_kem_kyber1024_ref_ntt
+crypto_kem_kyber1024_ref_csubq

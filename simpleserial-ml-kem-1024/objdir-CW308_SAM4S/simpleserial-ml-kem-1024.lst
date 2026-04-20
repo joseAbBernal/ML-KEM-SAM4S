@@ -1,0 +1,1818 @@
+   1              	 .cpu cortex-m4
+   2              	 .arch armv7e-m
+   3              	 .fpu softvfp
+   4              	 .eabi_attribute 20,1
+   5              	 .eabi_attribute 21,1
+   6              	 .eabi_attribute 23,3
+   7              	 .eabi_attribute 24,1
+   8              	 .eabi_attribute 25,1
+   9              	 .eabi_attribute 26,1
+  10              	 .eabi_attribute 30,4
+  11              	 .eabi_attribute 34,1
+  12              	 .eabi_attribute 18,4
+  13              	 .file "simpleserial-ml-kem-1024.c"
+  14              	 .text
+  15              	.Ltext0:
+  16              	 .cfi_sections .debug_frame
+  17              	 .file 1 "simpleserial-ml-kem-1024.c"
+  18              	 .section .text.mlkem_reset,"ax",%progbits
+  19              	 .align 1
+  20              	 .global mlkem_reset
+  21              	 .syntax unified
+  22              	 .thumb
+  23              	 .thumb_func
+  25              	mlkem_reset:
+  26              	.LVL0:
+  27              	.LFB3:
+   1:simpleserial-ml-kem-1024.c **** /*
+   2:simpleserial-ml-kem-1024.c ****     ML-KEM-1024 (Kyber1024) SimpleSerial Target
+   3:simpleserial-ml-kem-1024.c ****     Adapted for ChipWhisperer
+   4:simpleserial-ml-kem-1024.c ****     
+   5:simpleserial-ml-kem-1024.c ****     This implements the ML-KEM-1024 key encapsulation mechanism
+   6:simpleserial-ml-kem-1024.c ****     with SimpleSerial v1.x and v2.1 support.
+   7:simpleserial-ml-kem-1024.c ****     
+   8:simpleserial-ml-kem-1024.c ****     Protocol (SS 2.1):
+   9:simpleserial-ml-kem-1024.c ****     - Command 0x01: Key generation (keypair)
+  10:simpleserial-ml-kem-1024.c ****       - scmd 0x01: Generate keypair, return first chunk of pk
+  11:simpleserial-ml-kem-1024.c ****       - scmd 0x02: Get pk chunk (buf[0]=chunk_num, returns 240 bytes)
+  12:simpleserial-ml-kem-1024.c ****       - scmd 0x04: Get sk chunk (buf[0]=chunk_num, returns 240 bytes)
+  13:simpleserial-ml-kem-1024.c ****       - scmd 0x10: Load pk chunk (buf[0]=chunk_num + 239 bytes data)
+  14:simpleserial-ml-kem-1024.c ****       - scmd 0x20: Load sk chunk (buf[0]=chunk_num + 239 bytes data)
+  15:simpleserial-ml-kem-1024.c ****     
+  16:simpleserial-ml-kem-1024.c ****     - Command 0x02: Encapsulation
+  17:simpleserial-ml-kem-1024.c ****       - scmd 0x01: Encapsulate using stored pk, return first chunk of ct
+  18:simpleserial-ml-kem-1024.c ****       - scmd 0x02: Get ct chunk (buf[0]=chunk_num, returns 240 bytes)
+  19:simpleserial-ml-kem-1024.c ****       - scmd 0x10: Load pk chunk for encapsulation
+  20:simpleserial-ml-kem-1024.c ****     
+  21:simpleserial-ml-kem-1024.c ****     - Command 0x03: Decapsulation
+  22:simpleserial-ml-kem-1024.c ****       - scmd 0x01: Decapsulate using stored sk + ct, return ss (32 bytes)
+  23:simpleserial-ml-kem-1024.c ****       - scmd 0x10: Load ct chunk for decapsulation
+  24:simpleserial-ml-kem-1024.c ****     
+  25:simpleserial-ml-kem-1024.c ****     For SS v1.x:
+  26:simpleserial-ml-kem-1024.c ****     - 'k': Generate keypair
+  27:simpleserial-ml-kem-1024.c ****     - 'p': Get public key (returns all 1568 bytes)
+  28:simpleserial-ml-kem-1024.c ****     - 's': Get secret key (returns all 3168 bytes)
+  29:simpleserial-ml-kem-1024.c ****     - 'e': Encapsulate (uses stored pk, returns ct)
+  30:simpleserial-ml-kem-1024.c ****     - 'd': Decapsulate (uses stored sk + received ct, returns ss)
+  31:simpleserial-ml-kem-1024.c ****     - 'x': Reset/clear stored keys
+  32:simpleserial-ml-kem-1024.c **** */
+  33:simpleserial-ml-kem-1024.c **** 
+  34:simpleserial-ml-kem-1024.c **** #include "hal.h"
+  35:simpleserial-ml-kem-1024.c **** #include "simpleserial.h"
+  36:simpleserial-ml-kem-1024.c **** #include "api.h"
+  37:simpleserial-ml-kem-1024.c **** #include "params.h"
+  38:simpleserial-ml-kem-1024.c **** #include <stdint.h>
+  39:simpleserial-ml-kem-1024.c **** #include <string.h>
+  40:simpleserial-ml-kem-1024.c **** 
+  41:simpleserial-ml-kem-1024.c **** /* ML-KEM-1024 sizes */
+  42:simpleserial-ml-kem-1024.c **** #define MLKEM_PKBYTES  1568  /* Public key bytes */
+  43:simpleserial-ml-kem-1024.c **** #define MLKEM_SKBYTES  3168  /* Secret key bytes */
+  44:simpleserial-ml-kem-1024.c **** #define MLKEM_CTBYTES  1568  /* Ciphertext bytes */
+  45:simpleserial-ml-kem-1024.c **** #define MLKEM_SSBYTES  32    /* Shared secret bytes */
+  46:simpleserial-ml-kem-1024.c **** 
+  47:simpleserial-ml-kem-1024.c **** #define CHUNK_SIZE 240       /* Max chunk size for SS 2.1 */
+  48:simpleserial-ml-kem-1024.c **** 
+  49:simpleserial-ml-kem-1024.c **** /* Storage for keys and ciphertext */
+  50:simpleserial-ml-kem-1024.c **** static uint8_t pk[MLKEM_PKBYTES];
+  51:simpleserial-ml-kem-1024.c **** static uint8_t sk[MLKEM_SKBYTES];
+  52:simpleserial-ml-kem-1024.c **** static uint8_t ct[MLKEM_CTBYTES];
+  53:simpleserial-ml-kem-1024.c **** static uint8_t ss[MLKEM_SSBYTES];
+  54:simpleserial-ml-kem-1024.c **** 
+  55:simpleserial-ml-kem-1024.c **** static int pk_loaded = 0;
+  56:simpleserial-ml-kem-1024.c **** static int sk_loaded = 0;
+  57:simpleserial-ml-kem-1024.c **** static int ct_loaded = 0;
+  58:simpleserial-ml-kem-1024.c **** 
+  59:simpleserial-ml-kem-1024.c **** /* Maximum number of chunks */
+  60:simpleserial-ml-kem-1024.c **** #define MAX_PK_CHUNKS  ((MLKEM_PKBYTES + CHUNK_SIZE - 1) / CHUNK_SIZE)  /* 7 */
+  61:simpleserial-ml-kem-1024.c **** #define MAX_SK_CHUNKS  ((MLKEM_SKBYTES + CHUNK_SIZE - 1) / CHUNK_SIZE)  /* 14 */
+  62:simpleserial-ml-kem-1024.c **** #define MAX_CT_CHUNKS  ((MLKEM_CTBYTES + CHUNK_SIZE - 1) / CHUNK_SIZE)  /* 7 */
+  63:simpleserial-ml-kem-1024.c **** 
+  64:simpleserial-ml-kem-1024.c **** /*******************************************/
+  65:simpleserial-ml-kem-1024.c **** /* SimpleSerial v2.1 Command Handler       */
+  66:simpleserial-ml-kem-1024.c **** /*******************************************/
+  67:simpleserial-ml-kem-1024.c **** 
+  68:simpleserial-ml-kem-1024.c **** #if SS_VER == SS_VER_2_1
+  69:simpleserial-ml-kem-1024.c **** 
+  70:simpleserial-ml-kem-1024.c **** /* Command 0x01: Key Generation */
+  71:simpleserial-ml-kem-1024.c **** uint8_t mlkem_keygen(uint8_t cmd, uint8_t scmd, uint8_t len, uint8_t *buf)
+  72:simpleserial-ml-kem-1024.c **** {
+  73:simpleserial-ml-kem-1024.c ****     uint8_t chunk;
+  74:simpleserial-ml-kem-1024.c ****     uint16_t offset;
+  75:simpleserial-ml-kem-1024.c ****     uint8_t num_bytes;
+  76:simpleserial-ml-kem-1024.c ****     
+  77:simpleserial-ml-kem-1024.c ****     if (scmd == 0x01) {
+  78:simpleserial-ml-kem-1024.c ****         /* Generate keypair */
+  79:simpleserial-ml-kem-1024.c ****         trigger_high();
+  80:simpleserial-ml-kem-1024.c ****         crypto_kem_keypair(pk, sk);
+  81:simpleserial-ml-kem-1024.c ****         trigger_low();
+  82:simpleserial-ml-kem-1024.c ****         
+  83:simpleserial-ml-kem-1024.c ****         pk_loaded = 1;
+  84:simpleserial-ml-kem-1024.c ****         sk_loaded = 1;
+  85:simpleserial-ml-kem-1024.c ****         
+  86:simpleserial-ml-kem-1024.c ****         /* Return first chunk of pk (240 bytes or less) */
+  87:simpleserial-ml-kem-1024.c ****         num_bytes = (MLKEM_PKBYTES > CHUNK_SIZE) ? CHUNK_SIZE : MLKEM_PKBYTES;
+  88:simpleserial-ml-kem-1024.c ****         memcpy(buf, pk, num_bytes);
+  89:simpleserial-ml-kem-1024.c ****         return 0;
+  90:simpleserial-ml-kem-1024.c ****     }
+  91:simpleserial-ml-kem-1024.c ****     else if (scmd == 0x02) {
+  92:simpleserial-ml-kem-1024.c ****         /* Get pk chunk */
+  93:simpleserial-ml-kem-1024.c ****         if (len < 1) return SS_ERR_LEN;
+  94:simpleserial-ml-kem-1024.c ****         chunk = buf[0];
+  95:simpleserial-ml-kem-1024.c ****         offset = chunk * CHUNK_SIZE;
+  96:simpleserial-ml-kem-1024.c ****         
+  97:simpleserial-ml-kem-1024.c ****         if (offset >= MLKEM_PKBYTES) {
+  98:simpleserial-ml-kem-1024.c ****             /* Return empty if beyond data */
+  99:simpleserial-ml-kem-1024.c ****             return 0;
+ 100:simpleserial-ml-kem-1024.c ****         }
+ 101:simpleserial-ml-kem-1024.c ****         
+ 102:simpleserial-ml-kem-1024.c ****         num_bytes = ((MLKEM_PKBYTES - offset) > CHUNK_SIZE) ? CHUNK_SIZE : (MLKEM_PKBYTES - offset)
+ 103:simpleserial-ml-kem-1024.c ****         memcpy(buf, pk + offset, num_bytes);
+ 104:simpleserial-ml-kem-1024.c ****         return 0;
+ 105:simpleserial-ml-kem-1024.c ****     }
+ 106:simpleserial-ml-kem-1024.c ****     else if (scmd == 0x04) {
+ 107:simpleserial-ml-kem-1024.c ****         /* Get sk chunk */
+ 108:simpleserial-ml-kem-1024.c ****         if (len < 1) return SS_ERR_LEN;
+ 109:simpleserial-ml-kem-1024.c ****         chunk = buf[0];
+ 110:simpleserial-ml-kem-1024.c ****         offset = chunk * CHUNK_SIZE;
+ 111:simpleserial-ml-kem-1024.c ****         
+ 112:simpleserial-ml-kem-1024.c ****         if (offset >= MLKEM_SKBYTES) {
+ 113:simpleserial-ml-kem-1024.c ****             return 0;
+ 114:simpleserial-ml-kem-1024.c ****         }
+ 115:simpleserial-ml-kem-1024.c ****         
+ 116:simpleserial-ml-kem-1024.c ****         num_bytes = ((MLKEM_SKBYTES - offset) > CHUNK_SIZE) ? CHUNK_SIZE : (MLKEM_SKBYTES - offset)
+ 117:simpleserial-ml-kem-1024.c ****         memcpy(buf, sk + offset, num_bytes);
+ 118:simpleserial-ml-kem-1024.c ****         return 0;
+ 119:simpleserial-ml-kem-1024.c ****     }
+ 120:simpleserial-ml-kem-1024.c ****     else if (scmd == 0x10) {
+ 121:simpleserial-ml-kem-1024.c ****         /* Load pk chunk */
+ 122:simpleserial-ml-kem-1024.c ****         if (len < 1) return SS_ERR_LEN;
+ 123:simpleserial-ml-kem-1024.c ****         chunk = buf[0];
+ 124:simpleserial-ml-kem-1024.c ****         offset = chunk * CHUNK_SIZE;
+ 125:simpleserial-ml-kem-1024.c ****         
+ 126:simpleserial-ml-kem-1024.c ****         if (offset >= MLKEM_PKBYTES) {
+ 127:simpleserial-ml-kem-1024.c ****             return SS_ERR_LEN;
+ 128:simpleserial-ml-kem-1024.c ****         }
+ 129:simpleserial-ml-kem-1024.c ****         
+ 130:simpleserial-ml-kem-1024.c ****         /* Copy data (len-1 bytes of actual data) */
+ 131:simpleserial-ml-kem-1024.c ****         num_bytes = len - 1;
+ 132:simpleserial-ml-kem-1024.c ****         if (num_bytes + offset > MLKEM_PKBYTES) {
+ 133:simpleserial-ml-kem-1024.c ****             num_bytes = MLKEM_PKBYTES - offset;
+ 134:simpleserial-ml-kem-1024.c ****         }
+ 135:simpleserial-ml-kem-1024.c ****         memcpy(pk + offset, buf + 1, num_bytes);
+ 136:simpleserial-ml-kem-1024.c ****         
+ 137:simpleserial-ml-kem-1024.c ****         /* Check if full pk loaded */
+ 138:simpleserial-ml-kem-1024.c ****         if (offset + num_bytes >= MLKEM_PKBYTES) {
+ 139:simpleserial-ml-kem-1024.c ****             pk_loaded = 1;
+ 140:simpleserial-ml-kem-1024.c ****         }
+ 141:simpleserial-ml-kem-1024.c ****         return 0;
+ 142:simpleserial-ml-kem-1024.c ****     }
+ 143:simpleserial-ml-kem-1024.c ****     else if (scmd == 0x20) {
+ 144:simpleserial-ml-kem-1024.c ****         /* Load sk chunk */
+ 145:simpleserial-ml-kem-1024.c ****         if (len < 1) return SS_ERR_LEN;
+ 146:simpleserial-ml-kem-1024.c ****         chunk = buf[0];
+ 147:simpleserial-ml-kem-1024.c ****         offset = chunk * CHUNK_SIZE;
+ 148:simpleserial-ml-kem-1024.c ****         
+ 149:simpleserial-ml-kem-1024.c ****         if (offset >= MLKEM_SKBYTES) {
+ 150:simpleserial-ml-kem-1024.c ****             return SS_ERR_LEN;
+ 151:simpleserial-ml-kem-1024.c ****         }
+ 152:simpleserial-ml-kem-1024.c ****         
+ 153:simpleserial-ml-kem-1024.c ****         num_bytes = len - 1;
+ 154:simpleserial-ml-kem-1024.c ****         if (num_bytes + offset > MLKEM_SKBYTES) {
+ 155:simpleserial-ml-kem-1024.c ****             num_bytes = MLKEM_SKBYTES - offset;
+ 156:simpleserial-ml-kem-1024.c ****         }
+ 157:simpleserial-ml-kem-1024.c ****         memcpy(sk + offset, buf + 1, num_bytes);
+ 158:simpleserial-ml-kem-1024.c ****         
+ 159:simpleserial-ml-kem-1024.c ****         /* Check if full sk loaded */
+ 160:simpleserial-ml-kem-1024.c ****         if (offset + num_bytes >= MLKEM_SKBYTES) {
+ 161:simpleserial-ml-kem-1024.c ****             sk_loaded = 1;
+ 162:simpleserial-ml-kem-1024.c ****         }
+ 163:simpleserial-ml-kem-1024.c ****         return 0;
+ 164:simpleserial-ml-kem-1024.c ****     }
+ 165:simpleserial-ml-kem-1024.c ****     
+ 166:simpleserial-ml-kem-1024.c ****     return SS_ERR_CMD;
+ 167:simpleserial-ml-kem-1024.c **** }
+ 168:simpleserial-ml-kem-1024.c **** 
+ 169:simpleserial-ml-kem-1024.c **** /* Command 0x02: Encapsulation */
+ 170:simpleserial-ml-kem-1024.c **** uint8_t mlkem_encaps(uint8_t cmd, uint8_t scmd, uint8_t len, uint8_t *buf)
+ 171:simpleserial-ml-kem-1024.c **** {
+ 172:simpleserial-ml-kem-1024.c ****     uint8_t chunk;
+ 173:simpleserial-ml-kem-1024.c ****     uint16_t offset;
+ 174:simpleserial-ml-kem-1024.c ****     uint8_t num_bytes;
+ 175:simpleserial-ml-kem-1024.c ****     
+ 176:simpleserial-ml-kem-1024.c ****     if (!pk_loaded) {
+ 177:simpleserial-ml-kem-1024.c ****         /* No pk loaded, cannot encapsulate */
+ 178:simpleserial-ml-kem-1024.c ****         return SS_ERR_CMD;
+ 179:simpleserial-ml-kem-1024.c ****     }
+ 180:simpleserial-ml-kem-1024.c ****     
+ 181:simpleserial-ml-kem-1024.c ****     if (scmd == 0x01) {
+ 182:simpleserial-ml-kem-1024.c ****         /* Perform encapsulation */
+ 183:simpleserial-ml-kem-1024.c ****         trigger_high();
+ 184:simpleserial-ml-kem-1024.c ****         crypto_kem_enc(ct, ss, pk);
+ 185:simpleserial-ml-kem-1024.c ****         trigger_low();
+ 186:simpleserial-ml-kem-1024.c ****         
+ 187:simpleserial-ml-kem-1024.c ****         ct_loaded = 1;
+ 188:simpleserial-ml-kem-1024.c ****         
+ 189:simpleserial-ml-kem-1024.c ****         /* Return first chunk of ct */
+ 190:simpleserial-ml-kem-1024.c ****         num_bytes = (MLKEM_CTBYTES > CHUNK_SIZE) ? CHUNK_SIZE : MLKEM_CTBYTES;
+ 191:simpleserial-ml-kem-1024.c ****         memcpy(buf, ct, num_bytes);
+ 192:simpleserial-ml-kem-1024.c ****         return 0;
+ 193:simpleserial-ml-kem-1024.c ****     }
+ 194:simpleserial-ml-kem-1024.c ****     else if (scmd == 0x02) {
+ 195:simpleserial-ml-kem-1024.c ****         /* Get ct chunk */
+ 196:simpleserial-ml-kem-1024.c ****         if (len < 1) return SS_ERR_LEN;
+ 197:simpleserial-ml-kem-1024.c ****         chunk = buf[0];
+ 198:simpleserial-ml-kem-1024.c ****         offset = chunk * CHUNK_SIZE;
+ 199:simpleserial-ml-kem-1024.c ****         
+ 200:simpleserial-ml-kem-1024.c ****         if (offset >= MLKEM_CTBYTES) {
+ 201:simpleserial-ml-kem-1024.c ****             return 0;
+ 202:simpleserial-ml-kem-1024.c ****         }
+ 203:simpleserial-ml-kem-1024.c ****         
+ 204:simpleserial-ml-kem-1024.c ****         num_bytes = ((MLKEM_CTBYTES - offset) > CHUNK_SIZE) ? CHUNK_SIZE : (MLKEM_CTBYTES - offset)
+ 205:simpleserial-ml-kem-1024.c ****         memcpy(buf, ct + offset, num_bytes);
+ 206:simpleserial-ml-kem-1024.c ****         return 0;
+ 207:simpleserial-ml-kem-1024.c ****     }
+ 208:simpleserial-ml-kem-1024.c ****     else if (scmd == 0x10) {
+ 209:simpleserial-ml-kem-1024.c ****         /* Load pk chunk for encapsulation */
+ 210:simpleserial-ml-kem-1024.c ****         if (len < 1) return SS_ERR_LEN;
+ 211:simpleserial-ml-kem-1024.c ****         chunk = buf[0];
+ 212:simpleserial-ml-kem-1024.c ****         offset = chunk * CHUNK_SIZE;
+ 213:simpleserial-ml-kem-1024.c ****         
+ 214:simpleserial-ml-kem-1024.c ****         if (offset >= MLKEM_PKBYTES) {
+ 215:simpleserial-ml-kem-1024.c ****             return SS_ERR_LEN;
+ 216:simpleserial-ml-kem-1024.c ****         }
+ 217:simpleserial-ml-kem-1024.c ****         
+ 218:simpleserial-ml-kem-1024.c ****         num_bytes = len - 1;
+ 219:simpleserial-ml-kem-1024.c ****         if (num_bytes + offset > MLKEM_PKBYTES) {
+ 220:simpleserial-ml-kem-1024.c ****             num_bytes = MLKEM_PKBYTES - offset;
+ 221:simpleserial-ml-kem-1024.c ****         }
+ 222:simpleserial-ml-kem-1024.c ****         memcpy(pk + offset, buf + 1, num_bytes);
+ 223:simpleserial-ml-kem-1024.c ****         
+ 224:simpleserial-ml-kem-1024.c ****         if (offset + num_bytes >= MLKEM_PKBYTES) {
+ 225:simpleserial-ml-kem-1024.c ****             pk_loaded = 1;
+ 226:simpleserial-ml-kem-1024.c ****         }
+ 227:simpleserial-ml-kem-1024.c ****         return 0;
+ 228:simpleserial-ml-kem-1024.c ****     }
+ 229:simpleserial-ml-kem-1024.c ****     
+ 230:simpleserial-ml-kem-1024.c ****     return SS_ERR_CMD;
+ 231:simpleserial-ml-kem-1024.c **** }
+ 232:simpleserial-ml-kem-1024.c **** 
+ 233:simpleserial-ml-kem-1024.c **** /* Command 0x03: Decapsulation */
+ 234:simpleserial-ml-kem-1024.c **** uint8_t mlkem_decaps(uint8_t cmd, uint8_t scmd, uint8_t len, uint8_t *buf)
+ 235:simpleserial-ml-kem-1024.c **** {
+ 236:simpleserial-ml-kem-1024.c ****     uint8_t chunk;
+ 237:simpleserial-ml-kem-1024.c ****     uint16_t offset;
+ 238:simpleserial-ml-kem-1024.c ****     uint8_t num_bytes;
+ 239:simpleserial-ml-kem-1024.c ****     
+ 240:simpleserial-ml-kem-1024.c ****     if (!sk_loaded) {
+ 241:simpleserial-ml-kem-1024.c ****         /* No sk loaded, cannot decapsulate */
+ 242:simpleserial-ml-kem-1024.c ****         return SS_ERR_CMD;
+ 243:simpleserial-ml-kem-1024.c ****     }
+ 244:simpleserial-ml-kem-1024.c ****     
+ 245:simpleserial-ml-kem-1024.c ****     if (scmd == 0x01) {
+ 246:simpleserial-ml-kem-1024.c ****         /* Need ct loaded */
+ 247:simpleserial-ml-kem-1024.c ****         if (!ct_loaded) {
+ 248:simpleserial-ml-kem-1024.c ****             return SS_ERR_CMD;
+ 249:simpleserial-ml-kem-1024.c ****         }
+ 250:simpleserial-ml-kem-1024.c ****         
+ 251:simpleserial-ml-kem-1024.c ****         /* Perform decapsulation */
+ 252:simpleserial-ml-kem-1024.c ****         trigger_high();
+ 253:simpleserial-ml-kem-1024.c ****         crypto_kem_dec(ss, ct, sk);
+ 254:simpleserial-ml-kem-1024.c ****         trigger_low();
+ 255:simpleserial-ml-kem-1024.c ****         
+ 256:simpleserial-ml-kem-1024.c ****         /* Return shared secret (32 bytes) */
+ 257:simpleserial-ml-kem-1024.c ****         memcpy(buf, ss, MLKEM_SSBYTES);
+ 258:simpleserial-ml-kem-1024.c ****         return 0;
+ 259:simpleserial-ml-kem-1024.c ****     }
+ 260:simpleserial-ml-kem-1024.c ****     else if (scmd == 0x10) {
+ 261:simpleserial-ml-kem-1024.c ****         /* Load ct chunk for decapsulation */
+ 262:simpleserial-ml-kem-1024.c ****         if (len < 1) return SS_ERR_LEN;
+ 263:simpleserial-ml-kem-1024.c ****         chunk = buf[0];
+ 264:simpleserial-ml-kem-1024.c ****         offset = chunk * CHUNK_SIZE;
+ 265:simpleserial-ml-kem-1024.c ****         
+ 266:simpleserial-ml-kem-1024.c ****         if (offset >= MLKEM_CTBYTES) {
+ 267:simpleserial-ml-kem-1024.c ****             return SS_ERR_LEN;
+ 268:simpleserial-ml-kem-1024.c ****         }
+ 269:simpleserial-ml-kem-1024.c ****         
+ 270:simpleserial-ml-kem-1024.c ****         num_bytes = len - 1;
+ 271:simpleserial-ml-kem-1024.c ****         if (num_bytes + offset > MLKEM_CTBYTES) {
+ 272:simpleserial-ml-kem-1024.c ****             num_bytes = MLKEM_CTBYTES - offset;
+ 273:simpleserial-ml-kem-1024.c ****         }
+ 274:simpleserial-ml-kem-1024.c ****         memcpy(ct + offset, buf + 1, num_bytes);
+ 275:simpleserial-ml-kem-1024.c ****         
+ 276:simpleserial-ml-kem-1024.c ****         if (offset + num_bytes >= MLKEM_CTBYTES) {
+ 277:simpleserial-ml-kem-1024.c ****             ct_loaded = 1;
+ 278:simpleserial-ml-kem-1024.c ****         }
+ 279:simpleserial-ml-kem-1024.c ****         return 0;
+ 280:simpleserial-ml-kem-1024.c ****     }
+ 281:simpleserial-ml-kem-1024.c ****     
+ 282:simpleserial-ml-kem-1024.c ****     return SS_ERR_CMD;
+ 283:simpleserial-ml-kem-1024.c **** }
+ 284:simpleserial-ml-kem-1024.c **** 
+ 285:simpleserial-ml-kem-1024.c **** /* Reset command for SS 2.1 */
+ 286:simpleserial-ml-kem-1024.c **** uint8_t mlkem_reset(uint8_t cmd, uint8_t scmd, uint8_t len, uint8_t *buf)
+ 287:simpleserial-ml-kem-1024.c **** {
+  28              	 .loc 1 287 1 view-0
+  29              	 .cfi_startproc
+  30              	 
+  31              	 
+  32              	 
+ 288:simpleserial-ml-kem-1024.c ****     pk_loaded = 0;
+  33              	 .loc 1 288 5 view .LVU1
+  34              	 .loc 1 288 15 is_stmt 0 view .LVU2
+  35 0000 034B     	 ldr r3,.L2
+  36              	.LVL1:
+  37              	 .loc 1 288 15 view .LVU3
+  38 0002 0020     	 movs r0,#0
+  39              	.LVL2:
+  40              	 .loc 1 288 15 view .LVU4
+  41 0004 1860     	 str r0,[r3]
+ 289:simpleserial-ml-kem-1024.c ****     sk_loaded = 0;
+  42              	 .loc 1 289 5 is_stmt 1 view .LVU5
+  43              	 .loc 1 289 15 is_stmt 0 view .LVU6
+  44 0006 034B     	 ldr r3,.L2+4
+  45 0008 1860     	 str r0,[r3]
+ 290:simpleserial-ml-kem-1024.c ****     ct_loaded = 0;
+  46              	 .loc 1 290 5 is_stmt 1 view .LVU7
+  47              	 .loc 1 290 15 is_stmt 0 view .LVU8
+  48 000a 034B     	 ldr r3,.L2+8
+  49 000c 1860     	 str r0,[r3]
+ 291:simpleserial-ml-kem-1024.c ****     return 0;
+  50              	 .loc 1 291 5 is_stmt 1 view .LVU9
+ 292:simpleserial-ml-kem-1024.c **** }
+  51              	 .loc 1 292 1 is_stmt 0 view .LVU10
+  52 000e 7047     	 bx lr
+  53              	.L3:
+  54              	 .align 2
+  55              	.L2:
+  56 0010 00000000 	 .word pk_loaded
+  57 0014 00000000 	 .word sk_loaded
+  58 0018 00000000 	 .word ct_loaded
+  59              	 .cfi_endproc
+  60              	.LFE3:
+  62              	 .section .text.mlkem_keygen,"ax",%progbits
+  63              	 .align 1
+  64              	 .global mlkem_keygen
+  65              	 .syntax unified
+  66              	 .thumb
+  67              	 .thumb_func
+  69              	mlkem_keygen:
+  70              	.LVL3:
+  71              	.LFB0:
+  72:simpleserial-ml-kem-1024.c ****     uint8_t chunk;
+  72              	 .loc 1 72 1 is_stmt 1 view-0
+  73              	 .cfi_startproc
+  74              	 
+  75              	 
+  73:simpleserial-ml-kem-1024.c ****     uint16_t offset;
+  76              	 .loc 1 73 5 view .LVU12
+  74:simpleserial-ml-kem-1024.c ****     uint8_t num_bytes;
+  77              	 .loc 1 74 5 view .LVU13
+  75:simpleserial-ml-kem-1024.c ****     
+  78              	 .loc 1 75 5 view .LVU14
+  77:simpleserial-ml-kem-1024.c ****         /* Generate keypair */
+  79              	 .loc 1 77 5 view .LVU15
+  80 0000 0429     	 cmp r1,#4
+  72:simpleserial-ml-kem-1024.c ****     uint8_t chunk;
+  81              	 .loc 1 72 1 is_stmt 0 view .LVU16
+  82 0002 F8B5     	 push {r3,r4,r5,r6,r7,lr}
+  83              	.LCFI0:
+  84              	 .cfi_def_cfa_offset 24
+  85              	 .cfi_offset 3,-24
+  86              	 .cfi_offset 4,-20
+  87              	 .cfi_offset 5,-16
+  88              	 .cfi_offset 6,-12
+  89              	 .cfi_offset 7,-8
+  90              	 .cfi_offset 14,-4
+  72:simpleserial-ml-kem-1024.c ****     uint8_t chunk;
+  91              	 .loc 1 72 1 view .LVU17
+  92 0004 0C46     	 mov r4,r1
+  93 0006 1E46     	 mov r6,r3
+  94 0008 52D0     	 beq .L5
+  95 000a 06D8     	 bhi .L6
+  96 000c 0129     	 cmp r1,#1
+  97 000e 29D0     	 beq .L7
+  98 0010 0229     	 cmp r1,#2
+  99 0012 39D0     	 beq .L8
+ 100              	.L28:
+  93:simpleserial-ml-kem-1024.c ****         chunk = buf[0];
+ 101              	 .loc 1 93 29 discriminator 1 view .LVU18
+ 102 0014 0124     	 movs r4,#1
+ 103              	.LVL4:
+ 104              	.L9:
+ 167:simpleserial-ml-kem-1024.c **** 
+ 105              	 .loc 1 167 1 view .LVU19
+ 106 0016 2046     	 mov r0,r4
+ 107 0018 F8BD     	 pop {r3,r4,r5,r6,r7,pc}
+ 108              	.LVL5:
+ 109              	.L6:
+ 167:simpleserial-ml-kem-1024.c **** 
+ 110              	 .loc 1 167 1 view .LVU20
+ 111 001a 1029     	 cmp r1,#16
+ 112 001c 59D0     	 beq .L10
+ 113 001e 2029     	 cmp r1,#32
+ 114 0020 F8D1     	 bne .L28
+ 145:simpleserial-ml-kem-1024.c ****         chunk = buf[0];
+ 115              	 .loc 1 145 9 is_stmt 1 view .LVU21
+ 145:simpleserial-ml-kem-1024.c ****         chunk = buf[0];
+ 116              	 .loc 1 145 12 is_stmt 0 view .LVU22
+ 117 0022 002A     	 cmp r2,#0
+ 118 0024 77D0     	 beq .L21
+ 146:simpleserial-ml-kem-1024.c ****         offset = chunk * CHUNK_SIZE;
+ 119              	 .loc 1 146 9 is_stmt 1 view .LVU23
+ 120              	.LVL6:
+ 147:simpleserial-ml-kem-1024.c ****         
+ 121              	 .loc 1 147 9 view .LVU24
+ 147:simpleserial-ml-kem-1024.c ****         
+ 122              	 .loc 1 147 16 is_stmt 0 view .LVU25
+ 123 0026 1D78     	 ldrb r5,[r3]
+ 124 0028 C5EB0515 	 rsb r5,r5,r5,lsl#4
+ 125 002c 2D01     	 lsls r5,r5,#4
+ 126 002e ADB2     	 uxth r5,r5
+ 127              	.LVL7:
+ 149:simpleserial-ml-kem-1024.c ****             return SS_ERR_LEN;
+ 128              	 .loc 1 149 9 is_stmt 1 view .LVU26
+ 149:simpleserial-ml-kem-1024.c ****             return SS_ERR_LEN;
+ 129              	 .loc 1 149 12 is_stmt 0 view .LVU27
+ 130 0030 B5F5466F 	 cmp r5,#3168
+ 131 0034 6FD2     	 bcs .L21
+ 153:simpleserial-ml-kem-1024.c ****         if (num_bytes + offset > MLKEM_SKBYTES) {
+ 132              	 .loc 1 153 9 is_stmt 1 view .LVU28
+ 153:simpleserial-ml-kem-1024.c ****         if (num_bytes + offset > MLKEM_SKBYTES) {
+ 133              	 .loc 1 153 19 is_stmt 0 view .LVU29
+ 134 0036 541E     	 subs r4,r2,#1
+ 135 0038 E7B2     	 uxtb r7,r4
+ 136              	.LVL8:
+ 154:simpleserial-ml-kem-1024.c ****             num_bytes = MLKEM_SKBYTES - offset;
+ 137              	 .loc 1 154 9 is_stmt 1 view .LVU30
+ 154:simpleserial-ml-kem-1024.c ****             num_bytes = MLKEM_SKBYTES - offset;
+ 138              	 .loc 1 154 23 is_stmt 0 view .LVU31
+ 139 003a 55FA84F4 	 uxtab r4,r5,r4
+ 154:simpleserial-ml-kem-1024.c ****             num_bytes = MLKEM_SKBYTES - offset;
+ 140              	 .loc 1 154 12 view .LVU32
+ 141 003e B4F5466F 	 cmp r4,#3168
+ 155:simpleserial-ml-kem-1024.c ****         }
+ 142              	 .loc 1 155 13 is_stmt 1 view .LVU33
+ 155:simpleserial-ml-kem-1024.c ****         }
+ 143              	 .loc 1 155 23 is_stmt 0 view .LVU34
+ 144 0042 C8BF     	 it gt
+ 145 0044 C5F16007 	 rsbgt r7,r5,#96
+ 146              	.LVL9:
+ 157:simpleserial-ml-kem-1024.c ****         
+ 147              	 .loc 1 157 9 view .LVU35
+ 148 0048 3448     	 ldr r0,.L29
+ 149              	.LVL10:
+ 155:simpleserial-ml-kem-1024.c ****         }
+ 150              	 .loc 1 155 23 view .LVU36
+ 151 004a C8BF     	 it gt
+ 152 004c FFB2     	 uxtbgt r7,r7
+ 153              	.LVL11:
+ 157:simpleserial-ml-kem-1024.c ****         
+ 154              	 .loc 1 157 9 is_stmt 1 view .LVU37
+ 155 004e 3A46     	 mov r2,r7
+ 156              	.LVL12:
+ 157:simpleserial-ml-kem-1024.c ****         
+ 157              	 .loc 1 157 9 is_stmt 0 view .LVU38
+ 158 0050 591C     	 adds r1,r3,#1
+ 159              	.LVL13:
+ 157:simpleserial-ml-kem-1024.c ****         
+ 160              	 .loc 1 157 9 view .LVU39
+ 161 0052 2844     	 add r0,r0,r5
+ 162 0054 324B     	 ldr r3,.L29+4
+ 163              	.LVL14:
+ 160:simpleserial-ml-kem-1024.c ****             sk_loaded = 1;
+ 164              	 .loc 1 160 20 view .LVU40
+ 165 0056 2F44     	 add r7,r7,r5
+ 166              	.LVL15:
+ 157:simpleserial-ml-kem-1024.c ****         
+ 167              	 .loc 1 157 9 view .LVU41
+ 168 0058 9847     	 blx r3
+ 169              	.LVL16:
+ 160:simpleserial-ml-kem-1024.c ****             sk_loaded = 1;
+ 170              	 .loc 1 160 9 is_stmt 1 view .LVU42
+ 160:simpleserial-ml-kem-1024.c ****             sk_loaded = 1;
+ 171              	 .loc 1 160 12 is_stmt 0 view .LVU43
+ 172 005a B7F5466F 	 cmp r7,#3168
+ 173 005e 1DDB     	 blt .L12
+ 161:simpleserial-ml-kem-1024.c ****         }
+ 174              	 .loc 1 161 13 is_stmt 1 view .LVU44
+ 161:simpleserial-ml-kem-1024.c ****         }
+ 175              	 .loc 1 161 23 is_stmt 0 view .LVU45
+ 176 0060 304B     	 ldr r3,.L29+8
+ 177 0062 55E0     	 b .L26
+ 178              	.LVL17:
+ 179              	.L7:
+  79:simpleserial-ml-kem-1024.c ****         crypto_kem_keypair(pk, sk);
+ 180              	 .loc 1 79 9 is_stmt 1 view .LVU46
+ 181 0064 304B     	 ldr r3,.L29+12
+ 182              	.LVL18:
+  79:simpleserial-ml-kem-1024.c ****         crypto_kem_keypair(pk, sk);
+ 183              	 .loc 1 79 9 is_stmt 0 view .LVU47
+ 184 0066 9847     	 blx r3
+ 185              	.LVL19:
+  80:simpleserial-ml-kem-1024.c ****         trigger_low();
+ 186              	 .loc 1 80 9 is_stmt 1 view .LVU48
+ 187 0068 2C49     	 ldr r1,.L29
+ 188 006a 304B     	 ldr r3,.L29+16
+ 189 006c 3048     	 ldr r0,.L29+20
+ 190 006e 9847     	 blx r3
+ 191              	.LVL20:
+  81:simpleserial-ml-kem-1024.c ****         
+ 192              	 .loc 1 81 9 view .LVU49
+ 193 0070 304B     	 ldr r3,.L29+24
+ 194 0072 9847     	 blx r3
+ 195              	.LVL21:
+  83:simpleserial-ml-kem-1024.c ****         sk_loaded = 1;
+ 196              	 .loc 1 83 9 view .LVU50
+  83:simpleserial-ml-kem-1024.c ****         sk_loaded = 1;
+ 197              	 .loc 1 83 19 is_stmt 0 view .LVU51
+ 198 0074 304B     	 ldr r3,.L29+28
+  88:simpleserial-ml-kem-1024.c ****         return 0;
+ 199              	 .loc 1 88 9 view .LVU52
+ 200 0076 2E49     	 ldr r1,.L29+20
+  83:simpleserial-ml-kem-1024.c ****         sk_loaded = 1;
+ 201              	 .loc 1 83 19 view .LVU53
+ 202 0078 1C60     	 str r4,[r3]
+  84:simpleserial-ml-kem-1024.c ****         
+ 203              	 .loc 1 84 9 is_stmt 1 view .LVU54
+  84:simpleserial-ml-kem-1024.c ****         
+ 204              	 .loc 1 84 19 is_stmt 0 view .LVU55
+ 205 007a 2A4B     	 ldr r3,.L29+8
+  88:simpleserial-ml-kem-1024.c ****         return 0;
+ 206              	 .loc 1 88 9 view .LVU56
+ 207 007c F022     	 movs r2,#240
+  84:simpleserial-ml-kem-1024.c ****         
+ 208              	 .loc 1 84 19 view .LVU57
+ 209 007e 1C60     	 str r4,[r3]
+  87:simpleserial-ml-kem-1024.c ****         memcpy(buf, pk, num_bytes);
+ 210              	 .loc 1 87 9 is_stmt 1 view .LVU58
+ 211              	.LVL22:
+  88:simpleserial-ml-kem-1024.c ****         return 0;
+ 212              	 .loc 1 88 9 view .LVU59
+ 213              	.L25:
+ 117:simpleserial-ml-kem-1024.c ****         return 0;
+ 214              	 .loc 1 117 9 is_stmt 0 view .LVU60
+ 215 0080 274B     	 ldr r3,.L29+4
+ 216 0082 3046     	 mov r0,r6
+ 217 0084 9847     	 blx r3
+ 218              	.LVL23:
+ 118:simpleserial-ml-kem-1024.c ****     }
+ 219              	 .loc 1 118 9 is_stmt 1 view .LVU61
+ 118:simpleserial-ml-kem-1024.c ****     }
+ 220              	 .loc 1 118 16 is_stmt 0 view .LVU62
+ 221 0086 09E0     	 b .L12
+ 222              	.LVL24:
+ 223              	.L8:
+  93:simpleserial-ml-kem-1024.c ****         chunk = buf[0];
+ 224              	 .loc 1 93 9 is_stmt 1 view .LVU63
+  93:simpleserial-ml-kem-1024.c ****         chunk = buf[0];
+ 225              	 .loc 1 93 12 is_stmt 0 view .LVU64
+ 226 0088 002A     	 cmp r2,#0
+ 227 008a 44D0     	 beq .L21
+  94:simpleserial-ml-kem-1024.c ****         offset = chunk * CHUNK_SIZE;
+ 228              	 .loc 1 94 9 is_stmt 1 view .LVU65
+ 229              	.LVL25:
+  95:simpleserial-ml-kem-1024.c ****         
+ 230              	 .loc 1 95 9 view .LVU66
+  95:simpleserial-ml-kem-1024.c ****         
+ 231              	 .loc 1 95 16 is_stmt 0 view .LVU67
+ 232 008c 1B78     	 ldrb r3,[r3]
+ 233              	.LVL26:
+  95:simpleserial-ml-kem-1024.c ****         
+ 234              	 .loc 1 95 16 view .LVU68
+ 235 008e C3EB0313 	 rsb r3,r3,r3,lsl#4
+ 236 0092 1B01     	 lsls r3,r3,#4
+ 237 0094 9BB2     	 uxth r3,r3
+ 238              	.LVL27:
+  97:simpleserial-ml-kem-1024.c ****             /* Return empty if beyond data */
+ 239              	 .loc 1 97 9 is_stmt 1 view .LVU69
+  97:simpleserial-ml-kem-1024.c ****             /* Return empty if beyond data */
+ 240              	 .loc 1 97 12 is_stmt 0 view .LVU70
+ 241 0096 B3F5C46F 	 cmp r3,#1568
+ 242 009a 01D3     	 bcc .L13
+ 243              	.LVL28:
+ 244              	.L12:
+  89:simpleserial-ml-kem-1024.c ****     }
+ 245              	 .loc 1 89 16 view .LVU71
+ 246 009c 0024     	 movs r4,#0
+ 247 009e BAE7     	 b .L9
+ 248              	.LVL29:
+ 249              	.L13:
+ 102:simpleserial-ml-kem-1024.c ****         memcpy(buf, pk + offset, num_bytes);
+ 250              	 .loc 1 102 9 is_stmt 1 view .LVU72
+ 103:simpleserial-ml-kem-1024.c ****         return 0;
+ 251              	 .loc 1 103 9 view .LVU73
+ 102:simpleserial-ml-kem-1024.c ****         memcpy(buf, pk + offset, num_bytes);
+ 252              	 .loc 1 102 37 is_stmt 0 view .LVU74
+ 253 00a0 C3F5C462 	 rsb r2,r3,#1568
+ 254              	.LVL30:
+ 103:simpleserial-ml-kem-1024.c ****         return 0;
+ 255              	 .loc 1 103 9 view .LVU75
+ 256 00a4 F02A     	 cmp r2,#240
+ 257 00a6 2249     	 ldr r1,.L29+20
+ 258              	.LVL31:
+ 103:simpleserial-ml-kem-1024.c ****         return 0;
+ 259              	 .loc 1 103 9 view .LVU76
+ 260 00a8 A8BF     	 it ge
+ 261 00aa F022     	 movge r2,#240
+ 262              	.LVL32:
+ 263              	.L27:
+ 117:simpleserial-ml-kem-1024.c ****         return 0;
+ 264              	 .loc 1 117 9 view .LVU77
+ 265 00ac 1944     	 add r1,r1,r3
+ 266 00ae E7E7     	 b .L25
+ 267              	.LVL33:
+ 268              	.L5:
+ 108:simpleserial-ml-kem-1024.c ****         chunk = buf[0];
+ 269              	 .loc 1 108 9 is_stmt 1 view .LVU78
+ 108:simpleserial-ml-kem-1024.c ****         chunk = buf[0];
+ 270              	 .loc 1 108 12 is_stmt 0 view .LVU79
+ 271 00b0 002A     	 cmp r2,#0
+ 272 00b2 B0D0     	 beq .L9
+ 109:simpleserial-ml-kem-1024.c ****         offset = chunk * CHUNK_SIZE;
+ 273              	 .loc 1 109 9 is_stmt 1 view .LVU80
+ 274              	.LVL34:
+ 110:simpleserial-ml-kem-1024.c ****         
+ 275              	 .loc 1 110 9 view .LVU81
+ 110:simpleserial-ml-kem-1024.c ****         
+ 276              	 .loc 1 110 16 is_stmt 0 view .LVU82
+ 277 00b4 1B78     	 ldrb r3,[r3]
+ 278              	.LVL35:
+ 110:simpleserial-ml-kem-1024.c ****         
+ 279              	 .loc 1 110 16 view .LVU83
+ 280 00b6 C3EB0313 	 rsb r3,r3,r3,lsl#4
+ 281 00ba 1B01     	 lsls r3,r3,#4
+ 282 00bc 9BB2     	 uxth r3,r3
+ 283              	.LVL36:
+ 112:simpleserial-ml-kem-1024.c ****             return 0;
+ 284              	 .loc 1 112 9 is_stmt 1 view .LVU84
+ 112:simpleserial-ml-kem-1024.c ****             return 0;
+ 285              	 .loc 1 112 12 is_stmt 0 view .LVU85
+ 286 00be B3F5466F 	 cmp r3,#3168
+ 287 00c2 EBD2     	 bcs .L12
+ 116:simpleserial-ml-kem-1024.c ****         memcpy(buf, sk + offset, num_bytes);
+ 288              	 .loc 1 116 9 is_stmt 1 view .LVU86
+ 289              	.LVL37:
+ 117:simpleserial-ml-kem-1024.c ****         return 0;
+ 290              	 .loc 1 117 9 view .LVU87
+ 116:simpleserial-ml-kem-1024.c ****         memcpy(buf, sk + offset, num_bytes);
+ 291              	 .loc 1 116 37 is_stmt 0 view .LVU88
+ 292 00c4 C3F54662 	 rsb r2,r3,#3168
+ 293              	.LVL38:
+ 117:simpleserial-ml-kem-1024.c ****         return 0;
+ 294              	 .loc 1 117 9 view .LVU89
+ 295 00c8 F02A     	 cmp r2,#240
+ 296 00ca 1449     	 ldr r1,.L29
+ 297              	.LVL39:
+ 117:simpleserial-ml-kem-1024.c ****         return 0;
+ 298              	 .loc 1 117 9 view .LVU90
+ 299 00cc A8BF     	 it ge
+ 300 00ce F022     	 movge r2,#240
+ 301 00d0 ECE7     	 b .L27
+ 302              	.LVL40:
+ 303              	.L10:
+ 122:simpleserial-ml-kem-1024.c ****         chunk = buf[0];
+ 304              	 .loc 1 122 9 is_stmt 1 view .LVU91
+ 122:simpleserial-ml-kem-1024.c ****         chunk = buf[0];
+ 305              	 .loc 1 122 12 is_stmt 0 view .LVU92
+ 306 00d2 02B3     	 cbz r2,.L21
+ 123:simpleserial-ml-kem-1024.c ****         offset = chunk * CHUNK_SIZE;
+ 307              	 .loc 1 123 9 is_stmt 1 view .LVU93
+ 308              	.LVL41:
+ 124:simpleserial-ml-kem-1024.c ****         
+ 309              	 .loc 1 124 9 view .LVU94
+ 124:simpleserial-ml-kem-1024.c ****         
+ 310              	 .loc 1 124 16 is_stmt 0 view .LVU95
+ 311 00d4 1D78     	 ldrb r5,[r3]
+ 312 00d6 C5EB0515 	 rsb r5,r5,r5,lsl#4
+ 313 00da 2D01     	 lsls r5,r5,#4
+ 314 00dc ADB2     	 uxth r5,r5
+ 315              	.LVL42:
+ 126:simpleserial-ml-kem-1024.c ****             return SS_ERR_LEN;
+ 316              	 .loc 1 126 9 is_stmt 1 view .LVU96
+ 126:simpleserial-ml-kem-1024.c ****             return SS_ERR_LEN;
+ 317              	 .loc 1 126 12 is_stmt 0 view .LVU97
+ 318 00de B5F5C46F 	 cmp r5,#1568
+ 319 00e2 18D2     	 bcs .L21
+ 131:simpleserial-ml-kem-1024.c ****         if (num_bytes + offset > MLKEM_PKBYTES) {
+ 320              	 .loc 1 131 9 is_stmt 1 view .LVU98
+ 131:simpleserial-ml-kem-1024.c ****         if (num_bytes + offset > MLKEM_PKBYTES) {
+ 321              	 .loc 1 131 19 is_stmt 0 view .LVU99
+ 322 00e4 541E     	 subs r4,r2,#1
+ 323 00e6 E7B2     	 uxtb r7,r4
+ 324              	.LVL43:
+ 132:simpleserial-ml-kem-1024.c ****             num_bytes = MLKEM_PKBYTES - offset;
+ 325              	 .loc 1 132 9 is_stmt 1 view .LVU100
+ 132:simpleserial-ml-kem-1024.c ****             num_bytes = MLKEM_PKBYTES - offset;
+ 326              	 .loc 1 132 23 is_stmt 0 view .LVU101
+ 327 00e8 55FA84F4 	 uxtab r4,r5,r4
+ 132:simpleserial-ml-kem-1024.c ****             num_bytes = MLKEM_PKBYTES - offset;
+ 328              	 .loc 1 132 12 view .LVU102
+ 329 00ec B4F5C46F 	 cmp r4,#1568
+ 133:simpleserial-ml-kem-1024.c ****         }
+ 330              	 .loc 1 133 13 is_stmt 1 view .LVU103
+ 133:simpleserial-ml-kem-1024.c ****         }
+ 331              	 .loc 1 133 23 is_stmt 0 view .LVU104
+ 332 00f0 C8BF     	 it gt
+ 333 00f2 C5F12007 	 rsbgt r7,r5,#32
+ 334              	.LVL44:
+ 135:simpleserial-ml-kem-1024.c ****         
+ 335              	 .loc 1 135 9 view .LVU105
+ 336 00f6 0E48     	 ldr r0,.L29+20
+ 337              	.LVL45:
+ 133:simpleserial-ml-kem-1024.c ****         }
+ 338              	 .loc 1 133 23 view .LVU106
+ 339 00f8 C8BF     	 it gt
+ 340 00fa FFB2     	 uxtbgt r7,r7
+ 341              	.LVL46:
+ 135:simpleserial-ml-kem-1024.c ****         
+ 342              	 .loc 1 135 9 is_stmt 1 view .LVU107
+ 343 00fc 3A46     	 mov r2,r7
+ 344              	.LVL47:
+ 135:simpleserial-ml-kem-1024.c ****         
+ 345              	 .loc 1 135 9 is_stmt 0 view .LVU108
+ 346 00fe 591C     	 adds r1,r3,#1
+ 347              	.LVL48:
+ 135:simpleserial-ml-kem-1024.c ****         
+ 348              	 .loc 1 135 9 view .LVU109
+ 349 0100 2844     	 add r0,r0,r5
+ 350 0102 074B     	 ldr r3,.L29+4
+ 351              	.LVL49:
+ 138:simpleserial-ml-kem-1024.c ****             pk_loaded = 1;
+ 352              	 .loc 1 138 20 view .LVU110
+ 353 0104 2F44     	 add r7,r7,r5
+ 354              	.LVL50:
+ 135:simpleserial-ml-kem-1024.c ****         
+ 355              	 .loc 1 135 9 view .LVU111
+ 356 0106 9847     	 blx r3
+ 357              	.LVL51:
+ 138:simpleserial-ml-kem-1024.c ****             pk_loaded = 1;
+ 358              	 .loc 1 138 9 is_stmt 1 view .LVU112
+ 138:simpleserial-ml-kem-1024.c ****             pk_loaded = 1;
+ 359              	 .loc 1 138 12 is_stmt 0 view .LVU113
+ 360 0108 B7F5C46F 	 cmp r7,#1568
+ 361 010c C6DB     	 blt .L12
+ 139:simpleserial-ml-kem-1024.c ****         }
+ 362              	 .loc 1 139 13 is_stmt 1 view .LVU114
+ 139:simpleserial-ml-kem-1024.c ****         }
+ 363              	 .loc 1 139 23 is_stmt 0 view .LVU115
+ 364 010e 0A4B     	 ldr r3,.L29+28
+ 365              	.LVL52:
+ 366              	.L26:
+ 161:simpleserial-ml-kem-1024.c ****         }
+ 367              	 .loc 1 161 23 view .LVU116
+ 368 0110 0122     	 movs r2,#1
+ 369 0112 1A60     	 str r2,[r3]
+ 370 0114 C2E7     	 b .L12
+ 371              	.LVL53:
+ 372              	.L21:
+  93:simpleserial-ml-kem-1024.c ****         chunk = buf[0];
+ 373              	 .loc 1 93 29 discriminator 1 view .LVU117
+ 374 0116 0424     	 movs r4,#4
+ 375 0118 7DE7     	 b .L9
+ 376              	.L30:
+ 377 011a 00BF     	 .align 2
+ 378              	.L29:
+ 379 011c 00000000 	 .word sk
+ 380 0120 00000000 	 .word memcpy
+ 381 0124 00000000 	 .word sk_loaded
+ 382 0128 00000000 	 .word trigger_high
+ 383 012c 00000000 	 .word crypto_kem_keypair
+ 384 0130 00000000 	 .word pk
+ 385 0134 00000000 	 .word trigger_low
+ 386 0138 00000000 	 .word pk_loaded
+ 387              	 .cfi_endproc
+ 388              	.LFE0:
+ 390              	 .section .text.mlkem_encaps,"ax",%progbits
+ 391              	 .align 1
+ 392              	 .global mlkem_encaps
+ 393              	 .syntax unified
+ 394              	 .thumb
+ 395              	 .thumb_func
+ 397              	mlkem_encaps:
+ 398              	.LVL54:
+ 399              	.LFB1:
+ 171:simpleserial-ml-kem-1024.c ****     uint8_t chunk;
+ 400              	 .loc 1 171 1 is_stmt 1 view-0
+ 401              	 .cfi_startproc
+ 402              	 
+ 403              	 
+ 172:simpleserial-ml-kem-1024.c ****     uint16_t offset;
+ 404              	 .loc 1 172 5 view .LVU119
+ 173:simpleserial-ml-kem-1024.c ****     uint8_t num_bytes;
+ 405              	 .loc 1 173 5 view .LVU120
+ 174:simpleserial-ml-kem-1024.c ****     
+ 406              	 .loc 1 174 5 view .LVU121
+ 176:simpleserial-ml-kem-1024.c ****         /* No pk loaded, cannot encapsulate */
+ 407              	 .loc 1 176 5 view .LVU122
+ 171:simpleserial-ml-kem-1024.c ****     uint8_t chunk;
+ 408              	 .loc 1 171 1 is_stmt 0 view .LVU123
+ 409 0000 2DE9F041 	 push {r4,r5,r6,r7,r8,lr}
+ 410              	.LCFI1:
+ 411              	 .cfi_def_cfa_offset 24
+ 412              	 .cfi_offset 4,-24
+ 413              	 .cfi_offset 5,-20
+ 414              	 .cfi_offset 6,-16
+ 415              	 .cfi_offset 7,-12
+ 416              	 .cfi_offset 8,-8
+ 417              	 .cfi_offset 14,-4
+ 176:simpleserial-ml-kem-1024.c ****         /* No pk loaded, cannot encapsulate */
+ 418              	 .loc 1 176 9 view .LVU124
+ 419 0004 DFF8B080 	 ldr r8,.L45
+ 171:simpleserial-ml-kem-1024.c ****     uint8_t chunk;
+ 420              	 .loc 1 171 1 view .LVU125
+ 421 0008 1E46     	 mov r6,r3
+ 176:simpleserial-ml-kem-1024.c ****         /* No pk loaded, cannot encapsulate */
+ 422              	 .loc 1 176 8 view .LVU126
+ 423 000a D8F80030 	 ldr r3,[r8]
+ 424              	.LVL55:
+ 171:simpleserial-ml-kem-1024.c ****     uint8_t chunk;
+ 425              	 .loc 1 171 1 view .LVU127
+ 426 000e 0C46     	 mov r4,r1
+ 176:simpleserial-ml-kem-1024.c ****         /* No pk loaded, cannot encapsulate */
+ 427              	 .loc 1 176 8 view .LVU128
+ 428 0010 002B     	 cmp r3,#0
+ 429 0012 4DD0     	 beq .L41
+ 430              	.LVL56:
+ 431              	.LBB4:
+ 432              	.LBI4:
+ 170:simpleserial-ml-kem-1024.c **** {
+ 433              	 .loc 1 170 9 is_stmt 1 view .LVU129
+ 434              	.LBB5:
+ 181:simpleserial-ml-kem-1024.c ****         /* Perform encapsulation */
+ 435              	 .loc 1 181 5 view .LVU130
+ 181:simpleserial-ml-kem-1024.c ****         /* Perform encapsulation */
+ 436              	 .loc 1 181 8 is_stmt 0 view .LVU131
+ 437 0014 0129     	 cmp r1,#1
+ 438 0016 10D1     	 bne .L33
+ 183:simpleserial-ml-kem-1024.c ****         crypto_kem_enc(ct, ss, pk);
+ 439              	 .loc 1 183 9 is_stmt 1 view .LVU132
+ 440 0018 284B     	 ldr r3,.L45+4
+ 441 001a 9847     	 blx r3
+ 442              	.LVL57:
+ 184:simpleserial-ml-kem-1024.c ****         trigger_low();
+ 443              	 .loc 1 184 9 view .LVU133
+ 444 001c 284A     	 ldr r2,.L45+8
+ 445 001e 2949     	 ldr r1,.L45+12
+ 446 0020 294B     	 ldr r3,.L45+16
+ 447 0022 2A48     	 ldr r0,.L45+20
+ 448 0024 9847     	 blx r3
+ 449              	.LVL58:
+ 185:simpleserial-ml-kem-1024.c ****         
+ 450              	 .loc 1 185 9 view .LVU134
+ 451 0026 2A4B     	 ldr r3,.L45+24
+ 452 0028 9847     	 blx r3
+ 453              	.LVL59:
+ 187:simpleserial-ml-kem-1024.c ****         
+ 454              	 .loc 1 187 9 view .LVU135
+ 187:simpleserial-ml-kem-1024.c ****         
+ 455              	 .loc 1 187 19 is_stmt 0 view .LVU136
+ 456 002a 2A4B     	 ldr r3,.L45+28
+ 191:simpleserial-ml-kem-1024.c ****         return 0;
+ 457              	 .loc 1 191 9 view .LVU137
+ 458 002c 2749     	 ldr r1,.L45+20
+ 187:simpleserial-ml-kem-1024.c ****         
+ 459              	 .loc 1 187 19 view .LVU138
+ 460 002e 1C60     	 str r4,[r3]
+ 190:simpleserial-ml-kem-1024.c ****         memcpy(buf, ct, num_bytes);
+ 461              	 .loc 1 190 9 is_stmt 1 view .LVU139
+ 462              	.LVL60:
+ 191:simpleserial-ml-kem-1024.c ****         return 0;
+ 463              	 .loc 1 191 9 view .LVU140
+ 464 0030 F022     	 movs r2,#240
+ 465              	.LVL61:
+ 466              	.L44:
+ 205:simpleserial-ml-kem-1024.c ****         return 0;
+ 467              	 .loc 1 205 9 is_stmt 0 view .LVU141
+ 468 0032 294B     	 ldr r3,.L45+32
+ 469 0034 3046     	 mov r0,r6
+ 470 0036 9847     	 blx r3
+ 471              	.LVL62:
+ 206:simpleserial-ml-kem-1024.c ****     }
+ 472              	 .loc 1 206 9 is_stmt 1 view .LVU142
+ 206:simpleserial-ml-kem-1024.c ****     }
+ 473              	 .loc 1 206 16 is_stmt 0 view .LVU143
+ 474 0038 0BE0     	 b .L34
+ 475              	.LVL63:
+ 476              	.L33:
+ 194:simpleserial-ml-kem-1024.c ****         /* Get ct chunk */
+ 477              	 .loc 1 194 10 is_stmt 1 view .LVU144
+ 194:simpleserial-ml-kem-1024.c ****         /* Get ct chunk */
+ 478              	 .loc 1 194 13 is_stmt 0 view .LVU145
+ 479 003a 0229     	 cmp r1,#2
+ 480 003c 14D1     	 bne .L35
+ 196:simpleserial-ml-kem-1024.c ****         chunk = buf[0];
+ 481              	 .loc 1 196 9 is_stmt 1 view .LVU146
+ 196:simpleserial-ml-kem-1024.c ****         chunk = buf[0];
+ 482              	 .loc 1 196 12 is_stmt 0 view .LVU147
+ 483 003e 002A     	 cmp r2,#0
+ 484 0040 38D0     	 beq .L43
+ 197:simpleserial-ml-kem-1024.c ****         offset = chunk * CHUNK_SIZE;
+ 485              	 .loc 1 197 9 is_stmt 1 view .LVU148
+ 486              	.LVL64:
+ 198:simpleserial-ml-kem-1024.c ****         
+ 487              	 .loc 1 198 9 view .LVU149
+ 198:simpleserial-ml-kem-1024.c ****         
+ 488              	 .loc 1 198 16 is_stmt 0 view .LVU150
+ 489 0042 3478     	 ldrb r4,[r6]
+ 490 0044 C4EB0414 	 rsb r4,r4,r4,lsl#4
+ 491 0048 2401     	 lsls r4,r4,#4
+ 492 004a A4B2     	 uxth r4,r4
+ 493              	.LVL65:
+ 200:simpleserial-ml-kem-1024.c ****             return 0;
+ 494              	 .loc 1 200 9 is_stmt 1 view .LVU151
+ 200:simpleserial-ml-kem-1024.c ****             return 0;
+ 495              	 .loc 1 200 12 is_stmt 0 view .LVU152
+ 496 004c B4F5C46F 	 cmp r4,#1568
+ 497 0050 02D3     	 bcc .L36
+ 498              	.LVL66:
+ 499              	.L34:
+ 192:simpleserial-ml-kem-1024.c ****     }
+ 500              	 .loc 1 192 16 view .LVU153
+ 501 0052 0020     	 movs r0,#0
+ 502              	.LVL67:
+ 503              	.L32:
+ 192:simpleserial-ml-kem-1024.c ****     }
+ 504              	 .loc 1 192 16 view .LVU154
+ 505              	.LBE5:
+ 506              	.LBE4:
+ 231:simpleserial-ml-kem-1024.c **** 
+ 507              	 .loc 1 231 1 view .LVU155
+ 508 0054 BDE8F081 	 pop {r4,r5,r6,r7,r8,pc}
+ 509              	.LVL68:
+ 510              	.L36:
+ 511              	.LBB8:
+ 512              	.LBB6:
+ 204:simpleserial-ml-kem-1024.c ****         memcpy(buf, ct + offset, num_bytes);
+ 513              	 .loc 1 204 9 is_stmt 1 view .LVU156
+ 205:simpleserial-ml-kem-1024.c ****         return 0;
+ 514              	 .loc 1 205 9 view .LVU157
+ 204:simpleserial-ml-kem-1024.c ****         memcpy(buf, ct + offset, num_bytes);
+ 515              	 .loc 1 204 37 is_stmt 0 view .LVU158
+ 516 0058 C4F5C462 	 rsb r2,r4,#1568
+ 517              	.LVL69:
+ 205:simpleserial-ml-kem-1024.c ****         return 0;
+ 518              	 .loc 1 205 9 view .LVU159
+ 519 005c 1B49     	 ldr r1,.L45+20
+ 520              	.LVL70:
+ 205:simpleserial-ml-kem-1024.c ****         return 0;
+ 521              	 .loc 1 205 9 view .LVU160
+ 522 005e F02A     	 cmp r2,#240
+ 523 0060 A8BF     	 it ge
+ 524 0062 F022     	 movge r2,#240
+ 525 0064 2144     	 add r1,r1,r4
+ 526 0066 E4E7     	 b .L44
+ 527              	.LVL71:
+ 528              	.L35:
+ 208:simpleserial-ml-kem-1024.c ****         /* Load pk chunk for encapsulation */
+ 529              	 .loc 1 208 10 is_stmt 1 view .LVU161
+ 208:simpleserial-ml-kem-1024.c ****         /* Load pk chunk for encapsulation */
+ 530              	 .loc 1 208 13 is_stmt 0 view .LVU162
+ 531 0068 1029     	 cmp r1,#16
+ 532 006a 21D1     	 bne .L41
+ 210:simpleserial-ml-kem-1024.c ****         chunk = buf[0];
+ 533              	 .loc 1 210 9 is_stmt 1 view .LVU163
+ 210:simpleserial-ml-kem-1024.c ****         chunk = buf[0];
+ 534              	 .loc 1 210 12 is_stmt 0 view .LVU164
+ 535 006c 12B3     	 cbz r2,.L43
+ 211:simpleserial-ml-kem-1024.c ****         offset = chunk * CHUNK_SIZE;
+ 536              	 .loc 1 211 9 is_stmt 1 view .LVU165
+ 537              	.LVL72:
+ 212:simpleserial-ml-kem-1024.c ****         
+ 538              	 .loc 1 212 9 view .LVU166
+ 212:simpleserial-ml-kem-1024.c ****         
+ 539              	 .loc 1 212 16 is_stmt 0 view .LVU167
+ 540 006e 3478     	 ldrb r4,[r6]
+ 541 0070 C4EB0414 	 rsb r4,r4,r4,lsl#4
+ 542 0074 2401     	 lsls r4,r4,#4
+ 543 0076 A4B2     	 uxth r4,r4
+ 544              	.LVL73:
+ 214:simpleserial-ml-kem-1024.c ****             return SS_ERR_LEN;
+ 545              	 .loc 1 214 9 is_stmt 1 view .LVU168
+ 214:simpleserial-ml-kem-1024.c ****             return SS_ERR_LEN;
+ 546              	 .loc 1 214 12 is_stmt 0 view .LVU169
+ 547 0078 B4F5C46F 	 cmp r4,#1568
+ 548 007c 1AD2     	 bcs .L43
+ 218:simpleserial-ml-kem-1024.c ****         if (num_bytes + offset > MLKEM_PKBYTES) {
+ 549              	 .loc 1 218 9 is_stmt 1 view .LVU170
+ 218:simpleserial-ml-kem-1024.c ****         if (num_bytes + offset > MLKEM_PKBYTES) {
+ 550              	 .loc 1 218 19 is_stmt 0 view .LVU171
+ 551 007e 551E     	 subs r5,r2,#1
+ 552 0080 EFB2     	 uxtb r7,r5
+ 553              	.LVL74:
+ 219:simpleserial-ml-kem-1024.c ****             num_bytes = MLKEM_PKBYTES - offset;
+ 554              	 .loc 1 219 9 is_stmt 1 view .LVU172
+ 219:simpleserial-ml-kem-1024.c ****             num_bytes = MLKEM_PKBYTES - offset;
+ 555              	 .loc 1 219 23 is_stmt 0 view .LVU173
+ 556 0082 54FA85F5 	 uxtab r5,r4,r5
+ 219:simpleserial-ml-kem-1024.c ****             num_bytes = MLKEM_PKBYTES - offset;
+ 557              	 .loc 1 219 12 view .LVU174
+ 558 0086 B5F5C46F 	 cmp r5,#1568
+ 220:simpleserial-ml-kem-1024.c ****         }
+ 559              	 .loc 1 220 13 is_stmt 1 view .LVU175
+ 220:simpleserial-ml-kem-1024.c ****         }
+ 560              	 .loc 1 220 23 is_stmt 0 view .LVU176
+ 561 008a C8BF     	 it gt
+ 562 008c C4F12007 	 rsbgt r7,r4,#32
+ 563              	.LVL75:
+ 222:simpleserial-ml-kem-1024.c ****         
+ 564              	 .loc 1 222 9 view .LVU177
+ 565 0090 0B48     	 ldr r0,.L45+8
+ 566              	.LVL76:
+ 222:simpleserial-ml-kem-1024.c ****         
+ 567              	 .loc 1 222 9 view .LVU178
+ 568 0092 114B     	 ldr r3,.L45+32
+ 220:simpleserial-ml-kem-1024.c ****         }
+ 569              	 .loc 1 220 23 view .LVU179
+ 570 0094 C8BF     	 it gt
+ 571 0096 FFB2     	 uxtbgt r7,r7
+ 572              	.LVL77:
+ 222:simpleserial-ml-kem-1024.c ****         
+ 573              	 .loc 1 222 9 is_stmt 1 view .LVU180
+ 574 0098 3A46     	 mov r2,r7
+ 575              	.LVL78:
+ 222:simpleserial-ml-kem-1024.c ****         
+ 576              	 .loc 1 222 9 is_stmt 0 view .LVU181
+ 577 009a 711C     	 adds r1,r6,#1
+ 578              	.LVL79:
+ 222:simpleserial-ml-kem-1024.c ****         
+ 579              	 .loc 1 222 9 view .LVU182
+ 580 009c 2044     	 add r0,r0,r4
+ 224:simpleserial-ml-kem-1024.c ****             pk_loaded = 1;
+ 581              	 .loc 1 224 20 view .LVU183
+ 582 009e 2744     	 add r7,r7,r4
+ 583              	.LVL80:
+ 222:simpleserial-ml-kem-1024.c ****         
+ 584              	 .loc 1 222 9 view .LVU184
+ 585 00a0 9847     	 blx r3
+ 586              	.LVL81:
+ 224:simpleserial-ml-kem-1024.c ****             pk_loaded = 1;
+ 587              	 .loc 1 224 9 is_stmt 1 view .LVU185
+ 224:simpleserial-ml-kem-1024.c ****             pk_loaded = 1;
+ 588              	 .loc 1 224 12 is_stmt 0 view .LVU186
+ 589 00a2 B7F5C46F 	 cmp r7,#1568
+ 590 00a6 D4DB     	 blt .L34
+ 225:simpleserial-ml-kem-1024.c ****         }
+ 591              	 .loc 1 225 13 is_stmt 1 view .LVU187
+ 225:simpleserial-ml-kem-1024.c ****         }
+ 592              	 .loc 1 225 23 is_stmt 0 view .LVU188
+ 593 00a8 0123     	 movs r3,#1
+ 594 00aa C8F80030 	 str r3,[r8]
+ 595 00ae D0E7     	 b .L34
+ 596              	.LVL82:
+ 597              	.L41:
+ 225:simpleserial-ml-kem-1024.c ****         }
+ 598              	 .loc 1 225 23 view .LVU189
+ 599              	.LBE6:
+ 600              	.LBE8:
+ 178:simpleserial-ml-kem-1024.c ****     }
+ 601              	 .loc 1 178 16 view .LVU190
+ 602 00b0 0120     	 movs r0,#1
+ 603              	.LVL83:
+ 178:simpleserial-ml-kem-1024.c ****     }
+ 604              	 .loc 1 178 16 view .LVU191
+ 605 00b2 CFE7     	 b .L32
+ 606              	.LVL84:
+ 607              	.L43:
+ 608              	.LBB9:
+ 609              	.LBB7:
+ 196:simpleserial-ml-kem-1024.c ****         chunk = buf[0];
+ 610              	 .loc 1 196 29 discriminator 1 view .LVU192
+ 611 00b4 0420     	 movs r0,#4
+ 612              	.LVL85:
+ 196:simpleserial-ml-kem-1024.c ****         chunk = buf[0];
+ 613              	 .loc 1 196 29 discriminator 1 view .LVU193
+ 614 00b6 CDE7     	 b .L32
+ 615              	.L46:
+ 616              	 .align 2
+ 617              	.L45:
+ 618 00b8 00000000 	 .word pk_loaded
+ 619 00bc 00000000 	 .word trigger_high
+ 620 00c0 00000000 	 .word pk
+ 621 00c4 00000000 	 .word ss
+ 622 00c8 00000000 	 .word crypto_kem_enc
+ 623 00cc 00000000 	 .word ct
+ 624 00d0 00000000 	 .word trigger_low
+ 625 00d4 00000000 	 .word ct_loaded
+ 626 00d8 00000000 	 .word memcpy
+ 627              	.LBE7:
+ 628              	.LBE9:
+ 629              	 .cfi_endproc
+ 630              	.LFE1:
+ 632              	 .section .text.mlkem_decaps,"ax",%progbits
+ 633              	 .align 1
+ 634              	 .global mlkem_decaps
+ 635              	 .syntax unified
+ 636              	 .thumb
+ 637              	 .thumb_func
+ 639              	mlkem_decaps:
+ 640              	.LVL86:
+ 641              	.LFB2:
+ 235:simpleserial-ml-kem-1024.c ****     uint8_t chunk;
+ 642              	 .loc 1 235 1 is_stmt 1 view-0
+ 643              	 .cfi_startproc
+ 644              	 
+ 645              	 
+ 236:simpleserial-ml-kem-1024.c ****     uint16_t offset;
+ 646              	 .loc 1 236 5 view .LVU195
+ 237:simpleserial-ml-kem-1024.c ****     uint8_t num_bytes;
+ 647              	 .loc 1 237 5 view .LVU196
+ 238:simpleserial-ml-kem-1024.c ****     
+ 648              	 .loc 1 238 5 view .LVU197
+ 240:simpleserial-ml-kem-1024.c ****         /* No sk loaded, cannot decapsulate */
+ 649              	 .loc 1 240 5 view .LVU198
+ 235:simpleserial-ml-kem-1024.c ****     uint8_t chunk;
+ 650              	 .loc 1 235 1 is_stmt 0 view .LVU199
+ 651 0000 70B5     	 push {r4,r5,r6,lr}
+ 652              	.LCFI2:
+ 653              	 .cfi_def_cfa_offset 16
+ 654              	 .cfi_offset 4,-16
+ 655              	 .cfi_offset 5,-12
+ 656              	 .cfi_offset 6,-8
+ 657              	 .cfi_offset 14,-4
+ 235:simpleserial-ml-kem-1024.c ****     uint8_t chunk;
+ 658              	 .loc 1 235 1 view .LVU200
+ 659 0002 1D46     	 mov r5,r3
+ 240:simpleserial-ml-kem-1024.c ****         /* No sk loaded, cannot decapsulate */
+ 660              	 .loc 1 240 9 view .LVU201
+ 661 0004 224B     	 ldr r3,.L61
+ 662              	.LVL87:
+ 240:simpleserial-ml-kem-1024.c ****         /* No sk loaded, cannot decapsulate */
+ 663              	 .loc 1 240 8 view .LVU202
+ 664 0006 1B68     	 ldr r3,[r3]
+ 235:simpleserial-ml-kem-1024.c ****     uint8_t chunk;
+ 665              	 .loc 1 235 1 view .LVU203
+ 666 0008 0846     	 mov r0,r1
+ 667              	.LVL88:
+ 240:simpleserial-ml-kem-1024.c ****         /* No sk loaded, cannot decapsulate */
+ 668              	 .loc 1 240 8 view .LVU204
+ 669 000a 002B     	 cmp r3,#0
+ 670 000c 3CD0     	 beq .L54
+ 671              	.LVL89:
+ 672              	.LBB12:
+ 673              	.LBI12:
+ 234:simpleserial-ml-kem-1024.c **** {
+ 674              	 .loc 1 234 9 is_stmt 1 view .LVU205
+ 675              	.LBB13:
+ 245:simpleserial-ml-kem-1024.c ****         /* Need ct loaded */
+ 676              	 .loc 1 245 5 view .LVU206
+ 245:simpleserial-ml-kem-1024.c ****         /* Need ct loaded */
+ 677              	 .loc 1 245 8 is_stmt 0 view .LVU207
+ 678 000e 0129     	 cmp r1,#1
+ 679 0010 16D1     	 bne .L49
+ 247:simpleserial-ml-kem-1024.c ****             return SS_ERR_CMD;
+ 680              	 .loc 1 247 9 is_stmt 1 view .LVU208
+ 247:simpleserial-ml-kem-1024.c ****             return SS_ERR_CMD;
+ 681              	 .loc 1 247 13 is_stmt 0 view .LVU209
+ 682 0012 204B     	 ldr r3,.L61+4
+ 247:simpleserial-ml-kem-1024.c ****             return SS_ERR_CMD;
+ 683              	 .loc 1 247 12 view .LVU210
+ 684 0014 1B68     	 ldr r3,[r3]
+ 685 0016 93B1     	 cbz r3,.L48
+ 252:simpleserial-ml-kem-1024.c ****         crypto_kem_dec(ss, ct, sk);
+ 686              	 .loc 1 252 9 is_stmt 1 view .LVU211
+ 687 0018 1F4B     	 ldr r3,.L61+8
+ 688 001a 9847     	 blx r3
+ 689              	.LVL90:
+ 253:simpleserial-ml-kem-1024.c ****         trigger_low();
+ 690              	 .loc 1 253 9 view .LVU212
+ 691 001c 1F4A     	 ldr r2,.L61+12
+ 692 001e 2049     	 ldr r1,.L61+16
+ 693 0020 204B     	 ldr r3,.L61+20
+ 694 0022 2148     	 ldr r0,.L61+24
+ 695 0024 9847     	 blx r3
+ 696              	.LVL91:
+ 254:simpleserial-ml-kem-1024.c ****         
+ 697              	 .loc 1 254 9 view .LVU213
+ 698 0026 214B     	 ldr r3,.L61+28
+ 699 0028 9847     	 blx r3
+ 700              	.LVL92:
+ 257:simpleserial-ml-kem-1024.c ****         return 0;
+ 701              	 .loc 1 257 9 view .LVU214
+ 702 002a 1F4B     	 ldr r3,.L61+24
+ 703 002c 03F12002 	 add r2,r3,#32
+ 704              	.LVL93:
+ 705              	.L50:
+ 257:simpleserial-ml-kem-1024.c ****         return 0;
+ 706              	 .loc 1 257 9 is_stmt 0 view .LVU215
+ 707 0030 53F8041B 	 ldr r1,[r3],#4
+ 708 0034 45F8041B 	 str r1,[r5],#4
+ 709 0038 9342     	 cmp r3,r2
+ 710 003a F9D1     	 bne .L50
+ 711              	.L51:
+ 258:simpleserial-ml-kem-1024.c ****     }
+ 712              	 .loc 1 258 16 view .LVU216
+ 713 003c 0020     	 movs r0,#0
+ 714              	.LVL94:
+ 715              	.L48:
+ 258:simpleserial-ml-kem-1024.c ****     }
+ 716              	 .loc 1 258 16 view .LVU217
+ 717              	.LBE13:
+ 718              	.LBE12:
+ 283:simpleserial-ml-kem-1024.c **** 
+ 719              	 .loc 1 283 1 view .LVU218
+ 720 003e 70BD     	 pop {r4,r5,r6,pc}
+ 721              	.LVL95:
+ 722              	.L49:
+ 723              	.LBB16:
+ 724              	.LBB14:
+ 260:simpleserial-ml-kem-1024.c ****         /* Load ct chunk for decapsulation */
+ 725              	 .loc 1 260 10 is_stmt 1 view .LVU219
+ 260:simpleserial-ml-kem-1024.c ****         /* Load ct chunk for decapsulation */
+ 726              	 .loc 1 260 13 is_stmt 0 view .LVU220
+ 727 0040 1029     	 cmp r1,#16
+ 728 0042 21D1     	 bne .L54
+ 262:simpleserial-ml-kem-1024.c ****         chunk = buf[0];
+ 729              	 .loc 1 262 9 is_stmt 1 view .LVU221
+ 262:simpleserial-ml-kem-1024.c ****         chunk = buf[0];
+ 730              	 .loc 1 262 12 is_stmt 0 view .LVU222
+ 731 0044 12B3     	 cbz r2,.L56
+ 263:simpleserial-ml-kem-1024.c ****         offset = chunk * CHUNK_SIZE;
+ 732              	 .loc 1 263 9 is_stmt 1 view .LVU223
+ 733              	.LVL96:
+ 264:simpleserial-ml-kem-1024.c ****         
+ 734              	 .loc 1 264 9 view .LVU224
+ 264:simpleserial-ml-kem-1024.c ****         
+ 735              	 .loc 1 264 16 is_stmt 0 view .LVU225
+ 736 0046 2C78     	 ldrb r4,[r5]
+ 737 0048 C4EB0414 	 rsb r4,r4,r4,lsl#4
+ 738 004c 2401     	 lsls r4,r4,#4
+ 739 004e A4B2     	 uxth r4,r4
+ 740              	.LVL97:
+ 266:simpleserial-ml-kem-1024.c ****             return SS_ERR_LEN;
+ 741              	 .loc 1 266 9 is_stmt 1 view .LVU226
+ 266:simpleserial-ml-kem-1024.c ****             return SS_ERR_LEN;
+ 742              	 .loc 1 266 12 is_stmt 0 view .LVU227
+ 743 0050 B4F5C46F 	 cmp r4,#1568
+ 744 0054 1AD2     	 bcs .L56
+ 270:simpleserial-ml-kem-1024.c ****         if (num_bytes + offset > MLKEM_CTBYTES) {
+ 745              	 .loc 1 270 9 is_stmt 1 view .LVU228
+ 270:simpleserial-ml-kem-1024.c ****         if (num_bytes + offset > MLKEM_CTBYTES) {
+ 746              	 .loc 1 270 19 is_stmt 0 view .LVU229
+ 747 0056 501E     	 subs r0,r2,#1
+ 748 0058 C6B2     	 uxtb r6,r0
+ 749              	.LVL98:
+ 271:simpleserial-ml-kem-1024.c ****             num_bytes = MLKEM_CTBYTES - offset;
+ 750              	 .loc 1 271 9 is_stmt 1 view .LVU230
+ 271:simpleserial-ml-kem-1024.c ****             num_bytes = MLKEM_CTBYTES - offset;
+ 751              	 .loc 1 271 23 is_stmt 0 view .LVU231
+ 752 005a 54FA80F0 	 uxtab r0,r4,r0
+ 271:simpleserial-ml-kem-1024.c ****             num_bytes = MLKEM_CTBYTES - offset;
+ 753              	 .loc 1 271 12 view .LVU232
+ 754 005e B0F5C46F 	 cmp r0,#1568
+ 272:simpleserial-ml-kem-1024.c ****         }
+ 755              	 .loc 1 272 13 is_stmt 1 view .LVU233
+ 272:simpleserial-ml-kem-1024.c ****         }
+ 756              	 .loc 1 272 23 is_stmt 0 view .LVU234
+ 757 0062 C8BF     	 it gt
+ 758 0064 C4F12006 	 rsbgt r6,r4,#32
+ 759              	.LVL99:
+ 274:simpleserial-ml-kem-1024.c ****         
+ 760              	 .loc 1 274 9 view .LVU235
+ 761 0068 0D48     	 ldr r0,.L61+16
+ 762 006a 114B     	 ldr r3,.L61+32
+ 272:simpleserial-ml-kem-1024.c ****         }
+ 763              	 .loc 1 272 23 view .LVU236
+ 764 006c C8BF     	 it gt
+ 765 006e F6B2     	 uxtbgt r6,r6
+ 766              	.LVL100:
+ 274:simpleserial-ml-kem-1024.c ****         
+ 767              	 .loc 1 274 9 is_stmt 1 view .LVU237
+ 768 0070 3246     	 mov r2,r6
+ 769              	.LVL101:
+ 274:simpleserial-ml-kem-1024.c ****         
+ 770              	 .loc 1 274 9 is_stmt 0 view .LVU238
+ 771 0072 691C     	 adds r1,r5,#1
+ 772              	.LVL102:
+ 274:simpleserial-ml-kem-1024.c ****         
+ 773              	 .loc 1 274 9 view .LVU239
+ 774 0074 2044     	 add r0,r0,r4
+ 276:simpleserial-ml-kem-1024.c ****             ct_loaded = 1;
+ 775              	 .loc 1 276 20 view .LVU240
+ 776 0076 2644     	 add r6,r6,r4
+ 777              	.LVL103:
+ 274:simpleserial-ml-kem-1024.c ****         
+ 778              	 .loc 1 274 9 view .LVU241
+ 779 0078 9847     	 blx r3
+ 780              	.LVL104:
+ 276:simpleserial-ml-kem-1024.c ****             ct_loaded = 1;
+ 781              	 .loc 1 276 9 is_stmt 1 view .LVU242
+ 276:simpleserial-ml-kem-1024.c ****             ct_loaded = 1;
+ 782              	 .loc 1 276 12 is_stmt 0 view .LVU243
+ 783 007a B6F5C46F 	 cmp r6,#1568
+ 277:simpleserial-ml-kem-1024.c ****         }
+ 784              	 .loc 1 277 13 is_stmt 1 view .LVU244
+ 277:simpleserial-ml-kem-1024.c ****         }
+ 785              	 .loc 1 277 23 is_stmt 0 view .LVU245
+ 786 007e A2BF     	 ittt ge
+ 787 0080 044B     	 ldrge r3,.L61+4
+ 788 0082 0122     	 movge r2,#1
+ 789 0084 1A60     	 strge r2,[r3]
+ 790 0086 D9E7     	 b .L51
+ 791              	.LVL105:
+ 792              	.L54:
+ 277:simpleserial-ml-kem-1024.c ****         }
+ 793              	 .loc 1 277 23 view .LVU246
+ 794              	.LBE14:
+ 795              	.LBE16:
+ 242:simpleserial-ml-kem-1024.c ****     }
+ 796              	 .loc 1 242 16 view .LVU247
+ 797 0088 0120     	 movs r0,#1
+ 798 008a D8E7     	 b .L48
+ 799              	.LVL106:
+ 800              	.L56:
+ 801              	.LBB17:
+ 802              	.LBB15:
+ 262:simpleserial-ml-kem-1024.c ****         chunk = buf[0];
+ 803              	 .loc 1 262 29 discriminator 1 view .LVU248
+ 804 008c 0420     	 movs r0,#4
+ 805 008e D6E7     	 b .L48
+ 806              	.L62:
+ 807              	 .align 2
+ 808              	.L61:
+ 809 0090 00000000 	 .word sk_loaded
+ 810 0094 00000000 	 .word ct_loaded
+ 811 0098 00000000 	 .word trigger_high
+ 812 009c 00000000 	 .word sk
+ 813 00a0 00000000 	 .word ct
+ 814 00a4 00000000 	 .word crypto_kem_dec
+ 815 00a8 00000000 	 .word ss
+ 816 00ac 00000000 	 .word trigger_low
+ 817 00b0 00000000 	 .word memcpy
+ 818              	.LBE15:
+ 819              	.LBE17:
+ 820              	 .cfi_endproc
+ 821              	.LFE2:
+ 823              	 .section .text.startup.main,"ax",%progbits
+ 824              	 .align 1
+ 825              	 .global main
+ 826              	 .syntax unified
+ 827              	 .thumb
+ 828              	 .thumb_func
+ 830              	main:
+ 831              	.LFB4:
+ 293:simpleserial-ml-kem-1024.c **** 
+ 294:simpleserial-ml-kem-1024.c **** #endif /* SS_VER_2_1 */
+ 295:simpleserial-ml-kem-1024.c **** 
+ 296:simpleserial-ml-kem-1024.c **** /*******************************************/
+ 297:simpleserial-ml-kem-1024.c **** /* SimpleSerial v1.x Command Handlers      */
+ 298:simpleserial-ml-kem-1024.c **** /*******************************************/
+ 299:simpleserial-ml-kem-1024.c **** 
+ 300:simpleserial-ml-kem-1024.c **** #ifndef SS_VER_2_1
+ 301:simpleserial-ml-kem-1024.c **** 
+ 302:simpleserial-ml-kem-1024.c **** /* Generate keypair - 'k' command */
+ 303:simpleserial-ml-kem-1024.c **** uint8_t get_key(uint8_t* k, uint8_t len)
+ 304:simpleserial-ml-kem-1024.c **** {
+ 305:simpleserial-ml-kem-1024.c ****     trigger_high();
+ 306:simpleserial-ml-kem-1024.c ****     crypto_kem_keypair(pk, sk);
+ 307:simpleserial-ml-kem-1024.c ****     trigger_low();
+ 308:simpleserial-ml-kem-1024.c ****     
+ 309:simpleserial-ml-kem-1024.c ****     pk_loaded = 1;
+ 310:simpleserial-ml-kem-1024.c ****     sk_loaded = 1;
+ 311:simpleserial-ml-kem-1024.c ****     
+ 312:simpleserial-ml-kem-1024.c ****     /* Return public key */
+ 313:simpleserial-ml-kem-1024.c ****     simpleserial_put('p', MLKEM_PKBYTES, pk);
+ 314:simpleserial-ml-kem-1024.c ****     return 0;
+ 315:simpleserial-ml-kem-1024.c **** }
+ 316:simpleserial-ml-kem-1024.c **** 
+ 317:simpleserial-ml-kem-1024.c **** /* Get public key - 'p' command */
+ 318:simpleserial-ml-kem-1024.c **** uint8_t get_pk(uint8_t* p, uint8_t len)
+ 319:simpleserial-ml-kem-1024.c **** {
+ 320:simpleserial-ml-kem-1024.c ****     if (!pk_loaded) {
+ 321:simpleserial-ml-kem-1024.c ****         return 0x01; /* Error: no pk loaded */
+ 322:simpleserial-ml-kem-1024.c ****     }
+ 323:simpleserial-ml-kem-1024.c ****     simpleserial_put('p', MLKEM_PKBYTES, pk);
+ 324:simpleserial-ml-kem-1024.c ****     return 0;
+ 325:simpleserial-ml-kem-1024.c **** }
+ 326:simpleserial-ml-kem-1024.c **** 
+ 327:simpleserial-ml-kem-1024.c **** /* Get secret key - 's' command */
+ 328:simpleserial-ml-kem-1024.c **** uint8_t get_sk(uint8_t* s, uint8_t len)
+ 329:simpleserial-ml-kem-1024.c **** {
+ 330:simpleserial-ml-kem-1024.c ****     if (!sk_loaded) {
+ 331:simpleserial-ml-kem-1024.c ****         return 0x01; /* Error: no sk loaded */
+ 332:simpleserial-ml-kem-1024.c ****     }
+ 333:simpleserial-ml-kem-1024.c ****     simpleserial_put('s', MLKEM_SKBYTES, sk);
+ 334:simpleserial-ml-kem-1024.c ****     return 0;
+ 335:simpleserial-ml-kem-1024.c **** }
+ 336:simpleserial-ml-kem-1024.c **** 
+ 337:simpleserial-ml-kem-1024.c **** /* Load public key - 'l' command (variable length) */
+ 338:simpleserial-ml-kem-1024.c **** uint8_t load_pk(uint8_t* data, uint8_t len)
+ 339:simpleserial-ml-kem-1024.c **** {
+ 340:simpleserial-ml-kem-1024.c ****     uint16_t i;
+ 341:simpleserial-ml-kem-1024.c ****     uint8_t chunk;
+ 342:simpleserial-ml-kem-1024.c ****     
+ 343:simpleserial-ml-kem-1024.c ****     if (len < 2) return 0x01;
+ 344:simpleserial-ml-kem-1024.c ****     
+ 345:simpleserial-ml-kem-1024.c ****     chunk = data[0];
+ 346:simpleserial-ml-kem-1024.c ****     
+ 347:simpleserial-ml-kem-1024.c ****     /* Offset = chunk * 240, but limit to actual data size */
+ 348:simpleserial-ml-kem-1024.c ****     uint16_t offset = chunk * 240;
+ 349:simpleserial-ml-kem-1024.c ****     if (offset >= MLKEM_PKBYTES) {
+ 350:simpleserial-ml-kem-1024.c ****         return 0x02; /* Error: offset too large */
+ 351:simpleserial-ml-kem-1024.c ****     }
+ 352:simpleserial-ml-kem-1024.c ****     
+ 353:simpleserial-ml-kem-1024.c ****     /* Copy data (remaining bytes after chunk number) */
+ 354:simpleserial-ml-kem-1024.c ****     for (i = 1; i < len && (offset + i - 1) < MLKEM_PKBYTES; i++) {
+ 355:simpleserial-ml-kem-1024.c ****         pk[offset + i - 1] = data[i];
+ 356:simpleserial-ml-kem-1024.c ****     }
+ 357:simpleserial-ml-kem-1024.c ****     
+ 358:simpleserial-ml-kem-1024.c ****     /* Check if complete */
+ 359:simpleserial-ml-kem-1024.c ****     if (offset + len - 1 >= MLKEM_PKBYTES) {
+ 360:simpleserial-ml-kem-1024.c ****         pk_loaded = 1;
+ 361:simpleserial-ml-kem-1024.c ****     }
+ 362:simpleserial-ml-kem-1024.c ****     
+ 363:simpleserial-ml-kem-1024.c ****     return 0;
+ 364:simpleserial-ml-kem-1024.c **** }
+ 365:simpleserial-ml-kem-1024.c **** 
+ 366:simpleserial-ml-kem-1024.c **** /* Load secret key - 'm' command (variable length) */
+ 367:simpleserial-ml-kem-1024.c **** uint8_t load_sk(uint8_t* data, uint8_t len)
+ 368:simpleserial-ml-kem-1024.c **** {
+ 369:simpleserial-ml-kem-1024.c ****     uint16_t i;
+ 370:simpleserial-ml-kem-1024.c ****     uint8_t chunk;
+ 371:simpleserial-ml-kem-1024.c ****     
+ 372:simpleserial-ml-kem-1024.c ****     if (len < 2) return 0x01;
+ 373:simpleserial-ml-kem-1024.c ****     
+ 374:simpleserial-ml-kem-1024.c ****     chunk = data[0];
+ 375:simpleserial-ml-kem-1024.c ****     
+ 376:simpleserial-ml-kem-1024.c ****     uint16_t offset = chunk * 240;
+ 377:simpleserial-ml-kem-1024.c ****     if (offset >= MLKEM_SKBYTES) {
+ 378:simpleserial-ml-kem-1024.c ****         return 0x02;
+ 379:simpleserial-ml-kem-1024.c ****     }
+ 380:simpleserial-ml-kem-1024.c ****     
+ 381:simpleserial-ml-kem-1024.c ****     for (i = 1; i < len && (offset + i - 1) < MLKEM_SKBYTES; i++) {
+ 382:simpleserial-ml-kem-1024.c ****         sk[offset + i - 1] = data[i];
+ 383:simpleserial-ml-kem-1024.c ****     }
+ 384:simpleserial-ml-kem-1024.c ****     
+ 385:simpleserial-ml-kem-1024.c ****     if (offset + len - 1 >= MLKEM_SKBYTES) {
+ 386:simpleserial-ml-kem-1024.c ****         sk_loaded = 1;
+ 387:simpleserial-ml-kem-1024.c ****     }
+ 388:simpleserial-ml-kem-1024.c ****     
+ 389:simpleserial-ml-kem-1024.c ****     return 0;
+ 390:simpleserial-ml-kem-1024.c **** }
+ 391:simpleserial-ml-kem-1024.c **** 
+ 392:simpleserial-ml-kem-1024.c **** /* Encapsulate - 'e' command */
+ 393:simpleserial-ml-kem-1024.c **** uint8_t encaps(uint8_t* ct_in, uint8_t len)
+ 394:simpleserial-ml-kem-1024.c **** {
+ 395:simpleserial-ml-kem-1024.c ****     uint16_t i;
+ 396:simpleserial-ml-kem-1024.c ****     uint8_t chunk;
+ 397:simpleserial-ml-kem-1024.c ****     
+ 398:simpleserial-ml-kem-1024.c ****     if (!pk_loaded) {
+ 399:simpleserial-ml-kem-1024.c ****         return 0x01; /* Error: no pk loaded */
+ 400:simpleserial-ml-kem-1024.c ****     }
+ 401:simpleserial-ml-kem-1024.c ****     
+ 402:simpleserial-ml-kem-1024.c ****     /* If data provided, treat as pk to load */
+ 403:simpleserial-ml-kem-1024.c ****     if (len > 0) {
+ 404:simpleserial-ml-kem-1024.c ****         chunk = ct_in[0];
+ 405:simpleserial-ml-kem-1024.c ****         uint16_t offset = chunk * 240;
+ 406:simpleserial-ml-kem-1024.c ****         
+ 407:simpleserial-ml-kem-1024.c ****         if (offset < MLKEM_PKBYTES) {
+ 408:simpleserial-ml-kem-1024.c ****             for (i = 1; i < len && (offset + i - 1) < MLKEM_PKBYTES; i++) {
+ 409:simpleserial-ml-kem-1024.c ****                 pk[offset + i - 1] = ct_in[i];
+ 410:simpleserial-ml-kem-1024.c ****             }
+ 411:simpleserial-ml-kem-1024.c ****             if (offset + len - 1 >= MLKEM_PKBYTES) {
+ 412:simpleserial-ml-kem-1024.c ****                 pk_loaded = 1;
+ 413:simpleserial-ml-kem-1024.c ****             }
+ 414:simpleserial-ml-kem-1024.c ****             return 0x00;
+ 415:simpleserial-ml-kem-1024.c ****         }
+ 416:simpleserial-ml-kem-1024.c ****     }
+ 417:simpleserial-ml-kem-1024.c ****     
+ 418:simpleserial-ml-kem-1024.c ****     /* Perform encapsulation */
+ 419:simpleserial-ml-kem-1024.c ****     trigger_high();
+ 420:simpleserial-ml-kem-1024.c ****     crypto_kem_enc(ct, ss, pk);
+ 421:simpleserial-ml-kem-1024.c ****     trigger_low();
+ 422:simpleserial-ml-kem-1024.c ****     
+ 423:simpleserial-ml-kem-1024.c ****     ct_loaded = 1;
+ 424:simpleserial-ml-kem-1024.c ****     
+ 425:simpleserial-ml-kem-1024.c ****     /* Return ciphertext */
+ 426:simpleserial-ml-kem-1024.c ****     simpleserial_put('c', MLKEM_CTBYTES, ct);
+ 427:simpleserial-ml-kem-1024.c ****     return 0;
+ 428:simpleserial-ml-kem-1024.c **** }
+ 429:simpleserial-ml-kem-1024.c **** 
+ 430:simpleserial-ml-kem-1024.c **** /* Load ciphertext for decapsulation - 'c' command (variable length) */
+ 431:simpleserial-ml-kem-1024.c **** uint8_t load_ct(uint8_t* data, uint8_t len)
+ 432:simpleserial-ml-kem-1024.c **** {
+ 433:simpleserial-ml-kem-1024.c ****     uint16_t i;
+ 434:simpleserial-ml-kem-1024.c ****     uint8_t chunk;
+ 435:simpleserial-ml-kem-1024.c ****     
+ 436:simpleserial-ml-kem-1024.c ****     if (len < 2) return 0x01;
+ 437:simpleserial-ml-kem-1024.c ****     
+ 438:simpleserial-ml-kem-1024.c ****     chunk = data[0];
+ 439:simpleserial-ml-kem-1024.c ****     
+ 440:simpleserial-ml-kem-1024.c ****     uint16_t offset = chunk * 240;
+ 441:simpleserial-ml-kem-1024.c ****     if (offset >= MLKEM_CTBYTES) {
+ 442:simpleserial-ml-kem-1024.c ****         return 0x02;
+ 443:simpleserial-ml-kem-1024.c ****     }
+ 444:simpleserial-ml-kem-1024.c ****     
+ 445:simpleserial-ml-kem-1024.c ****     for (i = 1; i < len && (offset + i - 1) < MLKEM_CTBYTES; i++) {
+ 446:simpleserial-ml-kem-1024.c ****         ct[offset + i - 1] = data[i];
+ 447:simpleserial-ml-kem-1024.c ****     }
+ 448:simpleserial-ml-kem-1024.c ****     
+ 449:simpleserial-ml-kem-1024.c ****     if (offset + len - 1 >= MLKEM_CTBYTES) {
+ 450:simpleserial-ml-kem-1024.c ****         ct_loaded = 1;
+ 451:simpleserial-ml-kem-1024.c ****     }
+ 452:simpleserial-ml-kem-1024.c ****     
+ 453:simpleserial-ml-kem-1024.c ****     return 0;
+ 454:simpleserial-ml-kem-1024.c **** }
+ 455:simpleserial-ml-kem-1024.c **** 
+ 456:simpleserial-ml-kem-1024.c **** /* Decapsulate - 'd' command */
+ 457:simpleserial-ml-kem-1024.c **** uint8_t decaps(uint8_t* data, uint8_t len)
+ 458:simpleserial-ml-kem-1024.c **** {
+ 459:simpleserial-ml-kem-1024.c ****     uint16_t i;
+ 460:simpleserial-ml-kem-1024.c ****     uint8_t chunk;
+ 461:simpleserial-ml-kem-1024.c ****     
+ 462:simpleserial-ml-kem-1024.c ****     if (!sk_loaded) {
+ 463:simpleserial-ml-kem-1024.c ****         return 0x01; /* Error: no sk loaded */
+ 464:simpleserial-ml-kem-1024.c ****     }
+ 465:simpleserial-ml-kem-1024.c ****     
+ 466:simpleserial-ml-kem-1024.c ****     /* If data provided, treat as ct to load */
+ 467:simpleserial-ml-kem-1024.c ****     if (len > 0) {
+ 468:simpleserial-ml-kem-1024.c ****         chunk = data[0];
+ 469:simpleserial-ml-kem-1024.c ****         uint16_t offset = chunk * 240;
+ 470:simpleserial-ml-kem-1024.c ****         
+ 471:simpleserial-ml-kem-1024.c ****         if (offset < MLKEM_CTBYTES) {
+ 472:simpleserial-ml-kem-1024.c ****             for (i = 1; i < len && (offset + i - 1) < MLKEM_CTBYTES; i++) {
+ 473:simpleserial-ml-kem-1024.c ****                 ct[offset + i - 1] = data[i];
+ 474:simpleserial-ml-kem-1024.c ****             }
+ 475:simpleserial-ml-kem-1024.c ****             if (offset + len - 1 >= MLKEM_CTBYTES) {
+ 476:simpleserial-ml-kem-1024.c ****                 ct_loaded = 1;
+ 477:simpleserial-ml-kem-1024.c ****             }
+ 478:simpleserial-ml-kem-1024.c ****             
+ 479:simpleserial-ml-kem-1024.c ****             if (!ct_loaded) {
+ 480:simpleserial-ml-kem-1024.c ****                 return 0x00; /* ct not complete yet */
+ 481:simpleserial-ml-kem-1024.c ****             }
+ 482:simpleserial-ml-kem-1024.c ****         }
+ 483:simpleserial-ml-kem-1024.c ****     }
+ 484:simpleserial-ml-kem-1024.c ****     
+ 485:simpleserial-ml-kem-1024.c ****     if (!ct_loaded) {
+ 486:simpleserial-ml-kem-1024.c ****         return 0x02; /* Error: no ct loaded */
+ 487:simpleserial-ml-kem-1024.c ****     }
+ 488:simpleserial-ml-kem-1024.c ****     
+ 489:simpleserial-ml-kem-1024.c ****     /* Perform decapsulation */
+ 490:simpleserial-ml-kem-1024.c ****     trigger_high();
+ 491:simpleserial-ml-kem-1024.c ****     crypto_kem_dec(ss, ct, sk);
+ 492:simpleserial-ml-kem-1024.c ****     trigger_low();
+ 493:simpleserial-ml-kem-1024.c ****     
+ 494:simpleserial-ml-kem-1024.c ****     /* Return shared secret */
+ 495:simpleserial-ml-kem-1024.c ****     simpleserial_put('s', MLKEM_SSBYTES, ss);
+ 496:simpleserial-ml-kem-1024.c ****     return 0;
+ 497:simpleserial-ml-kem-1024.c **** }
+ 498:simpleserial-ml-kem-1024.c **** 
+ 499:simpleserial-ml-kem-1024.c **** /* Reset - 'x' command */
+ 500:simpleserial-ml-kem-1024.c **** uint8_t reset(uint8_t* x, uint8_t len)
+ 501:simpleserial-ml-kem-1024.c **** {
+ 502:simpleserial-ml-kem-1024.c ****     pk_loaded = 0;
+ 503:simpleserial-ml-kem-1024.c ****     sk_loaded = 0;
+ 504:simpleserial-ml-kem-1024.c ****     ct_loaded = 0;
+ 505:simpleserial-ml-kem-1024.c ****     return 0;
+ 506:simpleserial-ml-kem-1024.c **** }
+ 507:simpleserial-ml-kem-1024.c **** 
+ 508:simpleserial-ml-kem-1024.c **** #endif /* !SS_VER_2_1 */
+ 509:simpleserial-ml-kem-1024.c **** 
+ 510:simpleserial-ml-kem-1024.c **** /*******************************************/
+ 511:simpleserial-ml-kem-1024.c **** /* Main Function                           */
+ 512:simpleserial-ml-kem-1024.c **** /*******************************************/
+ 513:simpleserial-ml-kem-1024.c **** 
+ 514:simpleserial-ml-kem-1024.c **** int main(void)
+ 515:simpleserial-ml-kem-1024.c **** {
+ 832              	 .loc 1 515 1 is_stmt 1 view-0
+ 833              	 .cfi_startproc
+ 834              	 
+ 835              	 
+ 836              	 
+ 516:simpleserial-ml-kem-1024.c ****     platform_init();
+ 837              	 .loc 1 516 5 view .LVU250
+ 515:simpleserial-ml-kem-1024.c ****     platform_init();
+ 838              	 .loc 1 515 1 is_stmt 0 view .LVU251
+ 839 0000 08B5     	 push {r3,lr}
+ 840              	.LCFI3:
+ 841              	 .cfi_def_cfa_offset 8
+ 842              	 .cfi_offset 3,-8
+ 843              	 .cfi_offset 14,-4
+ 844              	 .loc 1 516 5 view .LVU252
+ 845 0002 0E4B     	 ldr r3,.L65
+ 517:simpleserial-ml-kem-1024.c ****     init_uart();
+ 518:simpleserial-ml-kem-1024.c ****     trigger_setup();
+ 519:simpleserial-ml-kem-1024.c ****     
+ 520:simpleserial-ml-kem-1024.c ****     simpleserial_init();
+ 521:simpleserial-ml-kem-1024.c ****     
+ 522:simpleserial-ml-kem-1024.c **** #if SS_VER == SS_VER_2_1
+ 523:simpleserial-ml-kem-1024.c ****     /* Register commands for SimpleSerial 2.1 */
+ 524:simpleserial-ml-kem-1024.c ****     /* 0x01 = keygen */
+ 525:simpleserial-ml-kem-1024.c ****     simpleserial_addcmd(0x01, CHUNK_SIZE, mlkem_keygen);
+ 846              	 .loc 1 525 5 view .LVU253
+ 847 0004 0E4C     	 ldr r4,.L65+4
+ 516:simpleserial-ml-kem-1024.c ****     init_uart();
+ 848              	 .loc 1 516 5 view .LVU254
+ 849 0006 9847     	 blx r3
+ 850              	.LVL107:
+ 517:simpleserial-ml-kem-1024.c ****     init_uart();
+ 851              	 .loc 1 517 5 is_stmt 1 view .LVU255
+ 852 0008 0E4B     	 ldr r3,.L65+8
+ 853 000a 9847     	 blx r3
+ 854              	.LVL108:
+ 518:simpleserial-ml-kem-1024.c ****     
+ 855              	 .loc 1 518 5 view .LVU256
+ 856 000c 0E4B     	 ldr r3,.L65+12
+ 857 000e 9847     	 blx r3
+ 858              	.LVL109:
+ 520:simpleserial-ml-kem-1024.c ****     
+ 859              	 .loc 1 520 5 view .LVU257
+ 860 0010 0E4B     	 ldr r3,.L65+16
+ 861 0012 9847     	 blx r3
+ 862              	.LVL110:
+ 863              	 .loc 1 525 5 view .LVU258
+ 864 0014 0E4A     	 ldr r2,.L65+20
+ 865 0016 F021     	 movs r1,#240
+ 866 0018 0120     	 movs r0,#1
+ 867 001a A047     	 blx r4
+ 868              	.LVL111:
+ 526:simpleserial-ml-kem-1024.c ****     /* 0x02 = encapsulate */
+ 527:simpleserial-ml-kem-1024.c ****     simpleserial_addcmd(0x02, CHUNK_SIZE, mlkem_encaps);
+ 869              	 .loc 1 527 5 view .LVU259
+ 870 001c 0D4A     	 ldr r2,.L65+24
+ 871 001e F021     	 movs r1,#240
+ 872 0020 0220     	 movs r0,#2
+ 873 0022 A047     	 blx r4
+ 874              	.LVL112:
+ 528:simpleserial-ml-kem-1024.c ****     /* 0x03 = decapsulate */
+ 529:simpleserial-ml-kem-1024.c ****     simpleserial_addcmd(0x03, CHUNK_SIZE, mlkem_decaps);
+ 875              	 .loc 1 529 5 view .LVU260
+ 876 0024 0C4A     	 ldr r2,.L65+28
+ 877 0026 F021     	 movs r1,#240
+ 878 0028 0320     	 movs r0,#3
+ 879 002a A047     	 blx r4
+ 880              	.LVL113:
+ 530:simpleserial-ml-kem-1024.c ****     /* 0x00 = reset */
+ 531:simpleserial-ml-kem-1024.c ****     simpleserial_addcmd(0x00, 0, mlkem_reset);
+ 881              	 .loc 1 531 5 view .LVU261
+ 882 002c 0021     	 movs r1,#0
+ 883 002e 0B4A     	 ldr r2,.L65+32
+ 884 0030 0846     	 mov r0,r1
+ 885 0032 A047     	 blx r4
+ 886              	.LVL114:
+ 532:simpleserial-ml-kem-1024.c **** #else
+ 533:simpleserial-ml-kem-1024.c ****     /* Register commands for SimpleSerial 1.x */
+ 534:simpleserial-ml-kem-1024.c ****     /* 'k' = generate keypair */
+ 535:simpleserial-ml-kem-1024.c ****     simpleserial_addcmd('k', 0, get_key);
+ 536:simpleserial-ml-kem-1024.c ****     /* 'p' = get public key */
+ 537:simpleserial-ml-kem-1024.c ****     simpleserial_addcmd('p', 0, get_pk);
+ 538:simpleserial-ml-kem-1024.c ****     /* 's' = get secret key */
+ 539:simpleserial-ml-kem-1024.c ****     simpleserial_addcmd('s', 0, get_sk);
+ 540:simpleserial-ml-kem-1024.c ****     /* 'l' = load public key (variable length) */
+ 541:simpleserial-ml-kem-1024.c ****     simpleserial_addcmd_flags('l', 241, load_pk, CMD_FLAG_LEN);
+ 542:simpleserial-ml-kem-1024.c ****     /* 'm' = load secret key (variable length) */
+ 543:simpleserial-ml-kem-1024.c ****     simpleserial_addcmd_flags('m', 241, load_sk, CMD_FLAG_LEN);
+ 544:simpleserial-ml-kem-1024.c ****     /* 'e' = encapsulate */
+ 545:simpleserial-ml-kem-1024.c ****     simpleserial_addcmd_flags('e', 241, encaps, CMD_FLAG_LEN);
+ 546:simpleserial-ml-kem-1024.c ****     /* 'c' = load ciphertext (variable length) */
+ 547:simpleserial-ml-kem-1024.c ****     simpleserial_addcmd_flags('c', 241, load_ct, CMD_FLAG_LEN);
+ 548:simpleserial-ml-kem-1024.c ****     /* 'd' = decapsulate */
+ 549:simpleserial-ml-kem-1024.c ****     simpleserial_addcmd_flags('d', 241, decaps, CMD_FLAG_LEN);
+ 550:simpleserial-ml-kem-1024.c ****     /* 'x' = reset */
+ 551:simpleserial-ml-kem-1024.c ****     simpleserial_addcmd('x', 0, reset);
+ 552:simpleserial-ml-kem-1024.c **** #endif
+ 553:simpleserial-ml-kem-1024.c ****     
+ 554:simpleserial-ml-kem-1024.c ****     while(1)
+ 555:simpleserial-ml-kem-1024.c ****         simpleserial_get();
+ 887              	 .loc 1 555 9 is_stmt 0 discriminator 1 view .LVU262
+ 888 0034 0A4C     	 ldr r4,.L65+36
+ 889              	.L64:
+ 554:simpleserial-ml-kem-1024.c ****         simpleserial_get();
+ 890              	 .loc 1 554 5 is_stmt 1 view .LVU263
+ 891              	 .loc 1 555 9 discriminator 1 view .LVU264
+ 892 0036 A047     	 blx r4
+ 893              	.LVL115:
+ 554:simpleserial-ml-kem-1024.c ****         simpleserial_get();
+ 894              	 .loc 1 554 10 view .LVU265
+ 895 0038 FDE7     	 b .L64
+ 896              	.L66:
+ 897 003a 00BF     	 .align 2
+ 898              	.L65:
+ 899 003c 00000000 	 .word platform_init
+ 900 0040 00000000 	 .word simpleserial_addcmd
+ 901 0044 00000000 	 .word init_uart
+ 902 0048 00000000 	 .word trigger_setup
+ 903 004c 00000000 	 .word simpleserial_init
+ 904 0050 00000000 	 .word mlkem_keygen
+ 905 0054 00000000 	 .word mlkem_encaps
+ 906 0058 00000000 	 .word mlkem_decaps
+ 907 005c 00000000 	 .word mlkem_reset
+ 908 0060 00000000 	 .word simpleserial_get
+ 909              	 .cfi_endproc
+ 910              	.LFE4:
+ 912              	 .section .bss.ct_loaded,"aw",%nobits
+ 913              	 .align 2
+ 916              	ct_loaded:
+ 917 0000 00000000 	 .space 4
+ 918              	 .section .bss.sk_loaded,"aw",%nobits
+ 919              	 .align 2
+ 922              	sk_loaded:
+ 923 0000 00000000 	 .space 4
+ 924              	 .section .bss.pk_loaded,"aw",%nobits
+ 925              	 .align 2
+ 928              	pk_loaded:
+ 929 0000 00000000 	 .space 4
+ 930              	 .section .bss.ss,"aw",%nobits
+ 933              	ss:
+ 934 0000 00000000 	 .space 32
+ 934      00000000 
+ 934      00000000 
+ 934      00000000 
+ 934      00000000 
+ 935              	 .section .bss.ct,"aw",%nobits
+ 938              	ct:
+ 939 0000 00000000 	 .space 1568
+ 939      00000000 
+ 939      00000000 
+ 939      00000000 
+ 939      00000000 
+ 940              	 .section .bss.sk,"aw",%nobits
+ 943              	sk:
+ 944 0000 00000000 	 .space 3168
+ 944      00000000 
+ 944      00000000 
+ 944      00000000 
+ 944      00000000 
+ 945              	 .section .bss.pk,"aw",%nobits
+ 948              	pk:
+ 949 0000 00000000 	 .space 1568
+ 949      00000000 
+ 949      00000000 
+ 949      00000000 
+ 949      00000000 
+ 950              	 .text
+ 951              	.Letext0:
+ 952              	 .file 2 "/usr/lib/gcc/arm-none-eabi/14.2.1/include/stdint.h"
+ 953              	 .file 3 ".././simpleserial/simpleserial.h"
+ 954              	 .file 4 ".././hal/sam4s/sam4s_hal.h"
+ 955              	 .file 5 ".././hal/hal.h"
+ 956              	 .file 6 "api.h"
+ 957              	 .file 7 "/usr/include/newlib/string.h"
+ 958              	 .file 8 "<built-in>"
+DEFINED SYMBOLS
+                            *ABS*:00000000 simpleserial-ml-kem-1024.c
+    {standard input}:19     .text.mlkem_reset:00000000 $t
+    {standard input}:25     .text.mlkem_reset:00000000 mlkem_reset
+    {standard input}:56     .text.mlkem_reset:00000010 $d
+    {standard input}:928    .bss.pk_loaded:00000000 pk_loaded
+    {standard input}:922    .bss.sk_loaded:00000000 sk_loaded
+    {standard input}:916    .bss.ct_loaded:00000000 ct_loaded
+    {standard input}:63     .text.mlkem_keygen:00000000 $t
+    {standard input}:69     .text.mlkem_keygen:00000000 mlkem_keygen
+    {standard input}:379    .text.mlkem_keygen:0000011c $d
+    {standard input}:943    .bss.sk:00000000 sk
+    {standard input}:948    .bss.pk:00000000 pk
+    {standard input}:391    .text.mlkem_encaps:00000000 $t
+    {standard input}:397    .text.mlkem_encaps:00000000 mlkem_encaps
+    {standard input}:618    .text.mlkem_encaps:000000b8 $d
+    {standard input}:933    .bss.ss:00000000 ss
+    {standard input}:938    .bss.ct:00000000 ct
+    {standard input}:633    .text.mlkem_decaps:00000000 $t
+    {standard input}:639    .text.mlkem_decaps:00000000 mlkem_decaps
+    {standard input}:809    .text.mlkem_decaps:00000090 $d
+    {standard input}:824    .text.startup.main:00000000 $t
+    {standard input}:830    .text.startup.main:00000000 main
+    {standard input}:899    .text.startup.main:0000003c $d
+    {standard input}:913    .bss.ct_loaded:00000000 $d
+    {standard input}:919    .bss.sk_loaded:00000000 $d
+    {standard input}:925    .bss.pk_loaded:00000000 $d
+    {standard input}:934    .bss.ss:00000000 $d
+    {standard input}:939    .bss.ct:00000000 $d
+    {standard input}:944    .bss.sk:00000000 $d
+    {standard input}:949    .bss.pk:00000000 $d
+                           .group:00000000 wm4.0.9f3a4c6b5812d20634d55e39ed31011a
+                           .group:00000000 wm4.stdint.h.29.6d480f4ba0f60596e88234283d42444f
+                           .group:00000000 wm4.hal.h.27.7074d56fee637e30bfe28f5452443c14
+                           .group:00000000 wm4.simpleserial.h.5.c96c6e95969d4c6e0b7b683e18b3c16d
+                           .group:00000000 wm4.params.h.2.424e8b69daf74be3d402b39ff8b011f8
+                           .group:00000000 wm4.api.h.3.556df4e95fc395ccfae2a6a5aad36a64
+                           .group:00000000 wm4._newlib_version.h.4.0eb654b64686e2bd29646258853f6c22
+                           .group:00000000 wm4.newlib.h.27.07bf1b8b16da454ae07478107717878b
+                           .group:00000000 wm4.ieeefp.h.77.b6f5ce903562917fbd9193ee87d4fa47
+                           .group:00000000 wm4.features.h.22.03467e2205ec9ffbc20524d97cdbdf6a
+                           .group:00000000 wm4.config.h.224.10ee1ad185d877c6e334e6581faab44d
+                           .group:00000000 wm4._ansi.h.31.de524f58584151836e90d8620a16f8e8
+                           .group:00000000 wm4.stddef.h.39.38eb7ec030421799c657b13be5aa21c7
+                           .group:00000000 wm4._default_types.h.6.959254cf5f09734ea7516c89e8bb21bd
+                           .group:00000000 wm4.cdefs.h.49.bafb023044e47a1dcdd854e4d6521f7d
+                           .group:00000000 wm4._types.h.20.dd0d04dca3800a0d2a6129b87f3adbb2
+                           .group:00000000 wm4.stddef.h.158.6f8e08a347b1cff664332fa350bfceb3
+                           .group:00000000 wm4._types.h.127.3bdfe3ff8ea2d0985b03d9cbe93480e3
+                           .group:00000000 wm4.reent.h.18.25503cdc8b7e55dd0d6ea7b3e5af7a03
+                           .group:00000000 wm4.lock.h.2.c0958401bd0ce484d507ee19aacab817
+                           .group:00000000 wm4.reent.h.78.6b87466b04591b1f1cb88c14fdf2ba9e
+                           .group:00000000 wm4.string.h.15.dab3980bf35408a4c507182805e2de3a
+                           .group:00000000 wm4.stddef.h.158.eec8bf00b5213f43d095cb984c5f22e3
+
+UNDEFINED SYMBOLS
+memcpy
+trigger_high
+crypto_kem_keypair
+trigger_low
+crypto_kem_enc
+crypto_kem_dec
+platform_init
+simpleserial_addcmd
+init_uart
+trigger_setup
+simpleserial_init
+simpleserial_get

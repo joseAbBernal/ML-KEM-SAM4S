@@ -216,11 +216,12 @@
   91 0020 116A     	 ldr r1,[r2,#32]
   92              	 .loc 1 127 28 view .LVU17
   93 0022 01F07001 	 and r1,r1,#112
-  94 0026 1029     	 cmp r1,#16
-  95 0028 3ED0     	 beq .L15
-  96 002a 2029     	 cmp r1,#32
-  97 002c 3FD0     	 beq .L16
-  98              	.L14:
+  94              	 .loc 1 127 5 view .LVU18
+  95 0026 1029     	 cmp r1,#16
+  96 0028 3ED0     	 beq .L15
+  97 002a 2029     	 cmp r1,#32
+  98 002c 3FD0     	 beq .L16
+  99              	.L14:
  128:.././hal//sam4s/system_sam4s.c **** 				case CKGR_MOR_MOSCRCF_4_MHz:
  129:.././hal//sam4s/system_sam4s.c **** 					SystemCoreClock = CHIP_FREQ_MAINCK_RC_4MHZ;
  130:.././hal//sam4s/system_sam4s.c **** 					break;
@@ -239,116 +240,118 @@
  143:.././hal//sam4s/system_sam4s.c **** 			}
  144:.././hal//sam4s/system_sam4s.c **** 			
  145:.././hal//sam4s/system_sam4s.c **** 			if ( (uint32_t)(PMC->PMC_MCKR & (uint32_t) PMC_MCKR_CSS_Msk) ==
-  99              	 .loc 1 145 4 is_stmt 1 view .LVU18
- 100              	 .loc 1 145 23 is_stmt 0 view .LVU19
- 101 002e 106B     	 ldr r0,[r2,#48]
+ 100              	 .loc 1 145 4 is_stmt 1 view .LVU19
+ 101              	 .loc 1 145 23 is_stmt 0 view .LVU20
+ 102 002e 106B     	 ldr r0,[r2,#48]
  146:.././hal//sam4s/system_sam4s.c **** 					PMC_MCKR_CSS_PLLA_CLK ) {
  147:.././hal//sam4s/system_sam4s.c **** 				SystemCoreClock *= ((((PMC->CKGR_PLLAR) & CKGR_PLLAR_MULA_Msk)
- 102              	 .loc 1 147 21 view .LVU20
- 103 0030 1968     	 ldr r1,[r3]
+ 103              	 .loc 1 147 21 view .LVU21
+ 104 0030 1968     	 ldr r1,[r3]
  145:.././hal//sam4s/system_sam4s.c **** 					PMC_MCKR_CSS_PLLA_CLK ) {
- 104              	 .loc 1 145 9 view .LVU21
- 105 0032 00F00300 	 and r0,r0,#3
+ 105              	 .loc 1 145 9 view .LVU22
+ 106 0032 00F00300 	 and r0,r0,#3
  145:.././hal//sam4s/system_sam4s.c **** 					PMC_MCKR_CSS_PLLA_CLK ) {
- 106              	 .loc 1 145 7 view .LVU22
- 107 0036 0228     	 cmp r0,#2
- 108              	 .loc 1 147 5 is_stmt 1 view .LVU23
- 109              	 .loc 1 147 31 is_stmt 0 view .LVU24
- 110 0038 0BBF     	 itete eq
- 111 003a 946A     	 ldreq r4,[r2,#40]
+ 107              	 .loc 1 145 7 view .LVU23
+ 108 0036 0228     	 cmp r0,#2
+ 109              	 .loc 1 147 5 is_stmt 1 view .LVU24
+ 110              	 .loc 1 147 31 is_stmt 0 view .LVU25
+ 111 0038 0BBF     	 itete eq
+ 112 003a 946A     	 ldreq r4,[r2,#40]
  148:.././hal//sam4s/system_sam4s.c **** 						>> CKGR_PLLAR_MULA_Pos) + 1U);
  149:.././hal//sam4s/system_sam4s.c **** 				SystemCoreClock /= ((((PMC->CKGR_PLLAR) & CKGR_PLLAR_DIVA_Msk)
- 112              	 .loc 1 149 5 is_stmt 1 view .LVU25
+ 113              	 .loc 1 149 5 is_stmt 1 view .LVU26
  150:.././hal//sam4s/system_sam4s.c **** 						>> CKGR_PLLAR_DIVA_Pos));
  151:.././hal//sam4s/system_sam4s.c **** 			} else {
  152:.././hal//sam4s/system_sam4s.c **** 				SystemCoreClock *= ((((PMC->CKGR_PLLBR) & CKGR_PLLBR_MULB_Msk)
- 113              	 .loc 1 152 31 is_stmt 0 view .LVU26
- 114 003c D46A     	 ldrne r4,[r2,#44]
+ 114              	 .loc 1 152 31 is_stmt 0 view .LVU27
+ 115 003c D46A     	 ldrne r4,[r2,#44]
  149:.././hal//sam4s/system_sam4s.c **** 						>> CKGR_PLLAR_DIVA_Pos));
- 115              	 .loc 1 149 31 view .LVU27
- 116 003e 906A     	 ldreq r0,[r2,#40]
- 117              	 .loc 1 152 5 is_stmt 1 view .LVU28
+ 116              	 .loc 1 149 31 view .LVU28
+ 117 003e 906A     	 ldreq r0,[r2,#40]
+ 118              	 .loc 1 152 5 is_stmt 1 view .LVU29
  153:.././hal//sam4s/system_sam4s.c **** 						>> CKGR_PLLBR_MULB_Pos) + 1U);
  154:.././hal//sam4s/system_sam4s.c **** 				SystemCoreClock /= ((((PMC->CKGR_PLLBR) & CKGR_PLLBR_DIVB_Msk)
- 118              	 .loc 1 154 5 view .LVU29
- 119              	 .loc 1 154 31 is_stmt 0 view .LVU30
- 120 0040 D06A     	 ldrne r0,[r2,#44]
+ 119              	 .loc 1 154 5 view .LVU30
+ 120              	 .loc 1 154 31 is_stmt 0 view .LVU31
+ 121 0040 D06A     	 ldrne r0,[r2,#44]
  153:.././hal//sam4s/system_sam4s.c **** 						>> CKGR_PLLBR_MULB_Pos) + 1U);
- 121              	 .loc 1 153 7 view .LVU31
- 122 0042 C4F30A44 	 ubfx r4,r4,#16,#11
+ 122              	 .loc 1 153 7 view .LVU32
+ 123 0042 C4F30A44 	 ubfx r4,r4,#16,#11
  152:.././hal//sam4s/system_sam4s.c **** 						>> CKGR_PLLBR_MULB_Pos) + 1U);
- 123              	 .loc 1 152 21 view .LVU32
- 124 0046 04FB0111 	 mla r1,r4,r1,r1
+ 124              	 .loc 1 152 21 view .LVU33
+ 125 0046 04FB0111 	 mla r1,r4,r1,r1
  155:.././hal//sam4s/system_sam4s.c **** 						>> CKGR_PLLBR_DIVB_Pos));
- 125              	 .loc 1 155 7 view .LVU33
- 126 004a C0B2     	 uxtb r0,r0
+ 126              	 .loc 1 155 7 view .LVU34
+ 127 004a C0B2     	 uxtb r0,r0
  154:.././hal//sam4s/system_sam4s.c **** 						>> CKGR_PLLBR_DIVB_Pos));
- 127              	 .loc 1 154 21 view .LVU34
- 128 004c B1FBF0F1 	 udiv r1,r1,r0
- 129 0050 07E0     	 b .L22
- 130              	.L6:
+ 128              	 .loc 1 154 21 view .LVU35
+ 129 004c B1FBF0F1 	 udiv r1,r1,r0
+ 130 0050 07E0     	 b .L22
+ 131              	.L6:
   88:.././hal//sam4s/system_sam4s.c **** 				SystemCoreClock = CHIP_FREQ_XTAL_32K;
- 131              	 .loc 1 88 4 is_stmt 1 view .LVU35
+ 132              	 .loc 1 88 4 is_stmt 1 view .LVU36
   88:.././hal//sam4s/system_sam4s.c **** 				SystemCoreClock = CHIP_FREQ_XTAL_32K;
- 132              	 .loc 1 88 13 is_stmt 0 view .LVU36
- 133 0052 1B49     	 ldr r1,.L24+12
- 134 0054 496A     	 ldr r1,[r1,#36]
+ 133              	 .loc 1 88 13 is_stmt 0 view .LVU37
+ 134 0052 1B49     	 ldr r1,.L24+12
+ 135 0054 496A     	 ldr r1,[r1,#36]
   88:.././hal//sam4s/system_sam4s.c **** 				SystemCoreClock = CHIP_FREQ_XTAL_32K;
- 135              	 .loc 1 88 7 view .LVU37
- 136 0056 0806     	 lsls r0,r1,#24
+ 136              	 .loc 1 88 7 view .LVU38
+ 137 0056 0806     	 lsls r0,r1,#24
   89:.././hal//sam4s/system_sam4s.c **** 			} else {
- 137              	 .loc 1 89 5 is_stmt 1 view .LVU38
+ 138              	 .loc 1 89 5 is_stmt 1 view .LVU39
   89:.././hal//sam4s/system_sam4s.c **** 			} else {
- 138              	 .loc 1 89 21 is_stmt 0 view .LVU39
- 139 0058 4CBF     	 ite mi
- 140 005a 4FF40041 	 movmi r1,#32768
+ 139              	 .loc 1 89 21 is_stmt 0 view .LVU40
+ 140 0058 4CBF     	 ite mi
+ 141 005a 4FF40041 	 movmi r1,#32768
   91:.././hal//sam4s/system_sam4s.c **** 			}
- 141              	 .loc 1 91 5 is_stmt 1 view .LVU40
+ 142              	 .loc 1 91 5 is_stmt 1 view .LVU41
   91:.././hal//sam4s/system_sam4s.c **** 			}
- 142              	 .loc 1 91 21 is_stmt 0 view .LVU41
- 143 005e 4FF4FA41 	 movpl r1,#32000
- 144              	.L22:
+ 143              	 .loc 1 91 21 is_stmt 0 view .LVU42
+ 144 005e 4FF4FA41 	 movpl r1,#32000
+ 145              	.L22:
  154:.././hal//sam4s/system_sam4s.c **** 						>> CKGR_PLLBR_DIVB_Pos));
- 145              	 .loc 1 154 21 view .LVU42
- 146 0062 1960     	 str r1,[r3]
- 147 0064 0DE0     	 b .L10
- 148              	.L5:
+ 146              	 .loc 1 154 21 view .LVU43
+ 147 0062 1960     	 str r1,[r3]
+ 148 0064 0DE0     	 b .L10
+ 149              	.L5:
   96:.././hal//sam4s/system_sam4s.c **** 			SystemCoreClock = CHIP_FREQ_XTAL;
- 149              	 .loc 1 96 3 is_stmt 1 view .LVU43
+ 150              	 .loc 1 96 3 is_stmt 1 view .LVU44
   96:.././hal//sam4s/system_sam4s.c **** 			SystemCoreClock = CHIP_FREQ_XTAL;
- 150              	 .loc 1 96 11 is_stmt 0 view .LVU44
- 151 0066 116A     	 ldr r1,[r2,#32]
+ 151              	 .loc 1 96 11 is_stmt 0 view .LVU45
+ 152 0066 116A     	 ldr r1,[r2,#32]
   96:.././hal//sam4s/system_sam4s.c **** 			SystemCoreClock = CHIP_FREQ_XTAL;
- 152              	 .loc 1 96 6 view .LVU45
- 153 0068 C901     	 lsls r1,r1,#7
- 154 006a 01D5     	 bpl .L11
- 155              	.L13:
+ 153              	 .loc 1 96 6 view .LVU46
+ 154 0068 C901     	 lsls r1,r1,#7
+ 155 006a 01D5     	 bpl .L11
+ 156              	.L13:
  111:.././hal//sam4s/system_sam4s.c **** 			break;
- 156              	 .loc 1 111 5 is_stmt 1 view .LVU46
+ 157              	 .loc 1 111 5 is_stmt 1 view .LVU47
  111:.././hal//sam4s/system_sam4s.c **** 			break;
- 157              	 .loc 1 111 21 is_stmt 0 view .LVU47
- 158 006c 1549     	 ldr r1,.L24+16
- 159 006e F8E7     	 b .L22
- 160              	.L11:
+ 158              	 .loc 1 111 21 is_stmt 0 view .LVU48
+ 159 006c 1549     	 ldr r1,.L24+16
+ 160 006e F8E7     	 b .L22
+ 161              	.L11:
   99:.././hal//sam4s/system_sam4s.c **** 			
- 161              	 .loc 1 99 4 is_stmt 1 view .LVU48
+ 162              	 .loc 1 99 4 is_stmt 1 view .LVU49
   99:.././hal//sam4s/system_sam4s.c **** 			
- 162              	 .loc 1 99 20 is_stmt 0 view .LVU49
- 163 0070 1249     	 ldr r1,.L24+8
- 164 0072 1960     	 str r1,[r3]
+ 163              	 .loc 1 99 20 is_stmt 0 view .LVU50
+ 164 0070 1249     	 ldr r1,.L24+8
+ 165 0072 1960     	 str r1,[r3]
  101:.././hal//sam4s/system_sam4s.c **** 			case CKGR_MOR_MOSCRCF_4_MHz:
- 165              	 .loc 1 101 4 is_stmt 1 view .LVU50
+ 166              	 .loc 1 101 4 is_stmt 1 view .LVU51
  101:.././hal//sam4s/system_sam4s.c **** 			case CKGR_MOR_MOSCRCF_4_MHz:
- 166              	 .loc 1 101 16 is_stmt 0 view .LVU51
- 167 0074 116A     	 ldr r1,[r2,#32]
+ 167              	 .loc 1 101 16 is_stmt 0 view .LVU52
+ 168 0074 116A     	 ldr r1,[r2,#32]
  101:.././hal//sam4s/system_sam4s.c **** 			case CKGR_MOR_MOSCRCF_4_MHz:
- 168              	 .loc 1 101 27 view .LVU52
- 169 0076 01F07001 	 and r1,r1,#112
- 170 007a 1029     	 cmp r1,#16
- 171 007c 12D0     	 beq .L12
- 172 007e 2029     	 cmp r1,#32
- 173 0080 F4D0     	 beq .L13
- 174              	.L10:
+ 169              	 .loc 1 101 27 view .LVU53
+ 170 0076 01F07001 	 and r1,r1,#112
+ 101:.././hal//sam4s/system_sam4s.c **** 			case CKGR_MOR_MOSCRCF_4_MHz:
+ 171              	 .loc 1 101 4 view .LVU54
+ 172 007a 1029     	 cmp r1,#16
+ 173 007c 12D0     	 beq .L12
+ 174 007e 2029     	 cmp r1,#32
+ 175 0080 F4D0     	 beq .L13
+ 176              	.L10:
  156:.././hal//sam4s/system_sam4s.c **** 			}
  157:.././hal//sam4s/system_sam4s.c **** 		break;
  158:.././hal//sam4s/system_sam4s.c **** 		
@@ -357,91 +360,91 @@
  161:.././hal//sam4s/system_sam4s.c **** 	}
  162:.././hal//sam4s/system_sam4s.c **** 
  163:.././hal//sam4s/system_sam4s.c **** 	if ( (PMC->PMC_MCKR & PMC_MCKR_PRES_Msk) == PMC_MCKR_PRES_CLK_3 ) {
- 175              	 .loc 1 163 2 is_stmt 1 view .LVU53
- 176              	 .loc 1 163 11 is_stmt 0 view .LVU54
- 177 0082 106B     	 ldr r0,[r2,#48]
+ 177              	 .loc 1 163 2 is_stmt 1 view .LVU55
+ 178              	 .loc 1 163 11 is_stmt 0 view .LVU56
+ 179 0082 106B     	 ldr r0,[r2,#48]
  164:.././hal//sam4s/system_sam4s.c **** 		SystemCoreClock /= 3U;
- 178              	 .loc 1 164 19 view .LVU55
- 179 0084 1968     	 ldr r1,[r3]
+ 180              	 .loc 1 164 19 view .LVU57
+ 181 0084 1968     	 ldr r1,[r3]
  163:.././hal//sam4s/system_sam4s.c **** 		SystemCoreClock /= 3U;
- 180              	 .loc 1 163 22 view .LVU56
- 181 0086 00F07000 	 and r0,r0,#112
+ 182              	 .loc 1 163 22 view .LVU58
+ 183 0086 00F07000 	 and r0,r0,#112
  163:.././hal//sam4s/system_sam4s.c **** 		SystemCoreClock /= 3U;
- 182              	 .loc 1 163 5 view .LVU57
- 183 008a 7028     	 cmp r0,#112
- 184              	 .loc 1 164 3 is_stmt 1 view .LVU58
+ 184              	 .loc 1 163 5 view .LVU59
+ 185 008a 7028     	 cmp r0,#112
+ 186              	 .loc 1 164 3 is_stmt 1 view .LVU60
  165:.././hal//sam4s/system_sam4s.c **** 	} else {
  166:.././hal//sam4s/system_sam4s.c **** 		SystemCoreClock >>=
  167:.././hal//sam4s/system_sam4s.c **** 			((PMC->PMC_MCKR & PMC_MCKR_PRES_Msk) >> PMC_MCKR_PRES_Pos);
- 185              	 .loc 1 167 9 is_stmt 0 view .LVU59
- 186 008c 1BBF     	 ittet ne
- 187 008e 126B     	 ldrne r2,[r2,#48]
- 188              	 .loc 1 167 41 view .LVU60
- 189 0090 C2F30212 	 ubfxne r2,r2,#4,#3
+ 187              	 .loc 1 167 9 is_stmt 0 view .LVU61
+ 188 008c 1BBF     	 ittet ne
+ 189 008e 126B     	 ldrne r2,[r2,#48]
+ 190              	 .loc 1 167 41 view .LVU62
+ 191 0090 C2F30212 	 ubfxne r2,r2,#4,#3
  164:.././hal//sam4s/system_sam4s.c **** 	} else {
- 190              	 .loc 1 164 19 view .LVU61
- 191 0094 0322     	 moveq r2,#3
+ 192              	 .loc 1 164 19 view .LVU63
+ 193 0094 0322     	 moveq r2,#3
  166:.././hal//sam4s/system_sam4s.c **** 			((PMC->PMC_MCKR & PMC_MCKR_PRES_Msk) >> PMC_MCKR_PRES_Pos);
- 192              	 .loc 1 166 19 view .LVU62
- 193 0096 21FA02F2 	 lsrne r2,r1,r2
+ 194              	 .loc 1 166 19 view .LVU64
+ 195 0096 21FA02F2 	 lsrne r2,r1,r2
  164:.././hal//sam4s/system_sam4s.c **** 	} else {
- 194              	 .loc 1 164 19 view .LVU63
- 195 009a 08BF     	 it eq
- 196 009c B1FBF2F2 	 udiveq r2,r1,r2
+ 196              	 .loc 1 164 19 view .LVU65
+ 197 009a 08BF     	 it eq
+ 198 009c B1FBF2F2 	 udiveq r2,r1,r2
  166:.././hal//sam4s/system_sam4s.c **** 			((PMC->PMC_MCKR & PMC_MCKR_PRES_Msk) >> PMC_MCKR_PRES_Pos);
- 197              	 .loc 1 166 3 is_stmt 1 view .LVU64
- 198 00a0 1A60     	 str r2,[r3]
+ 199              	 .loc 1 166 3 is_stmt 1 view .LVU66
+ 200 00a0 1A60     	 str r2,[r3]
  168:.././hal//sam4s/system_sam4s.c **** 	}
  169:.././hal//sam4s/system_sam4s.c **** }
- 199              	 .loc 1 169 1 is_stmt 0 view .LVU65
- 200 00a2 10BD     	 pop {r4,pc}
- 201              	.L12:
+ 201              	 .loc 1 169 1 is_stmt 0 view .LVU67
+ 202 00a2 10BD     	 pop {r4,pc}
+ 203              	.L12:
  107:.././hal//sam4s/system_sam4s.c **** 			break;
- 202              	 .loc 1 107 5 is_stmt 1 view .LVU66
+ 204              	 .loc 1 107 5 is_stmt 1 view .LVU68
  107:.././hal//sam4s/system_sam4s.c **** 			break;
- 203              	 .loc 1 107 21 is_stmt 0 view .LVU67
- 204 00a4 0849     	 ldr r1,.L24+20
- 205 00a6 DCE7     	 b .L22
- 206              	.L15:
+ 205              	 .loc 1 107 21 is_stmt 0 view .LVU69
+ 206 00a4 0849     	 ldr r1,.L24+20
+ 207 00a6 DCE7     	 b .L22
+ 208              	.L15:
  133:.././hal//sam4s/system_sam4s.c **** 					break;
- 207              	 .loc 1 133 6 is_stmt 1 view .LVU68
+ 209              	 .loc 1 133 6 is_stmt 1 view .LVU70
  133:.././hal//sam4s/system_sam4s.c **** 					break;
- 208              	 .loc 1 133 22 is_stmt 0 view .LVU69
- 209 00a8 0749     	 ldr r1,.L24+20
- 210              	.L21:
+ 210              	 .loc 1 133 22 is_stmt 0 view .LVU71
+ 211 00a8 0749     	 ldr r1,.L24+20
+ 212              	.L21:
  137:.././hal//sam4s/system_sam4s.c **** 					break;
- 211              	 .loc 1 137 22 view .LVU70
- 212 00aa 1960     	 str r1,[r3]
+ 213              	 .loc 1 137 22 view .LVU72
+ 214 00aa 1960     	 str r1,[r3]
  138:.././hal//sam4s/system_sam4s.c **** 				
- 213              	 .loc 1 138 6 is_stmt 1 view .LVU71
- 214 00ac BFE7     	 b .L14
- 215              	.L16:
+ 215              	 .loc 1 138 6 is_stmt 1 view .LVU73
+ 216 00ac BFE7     	 b .L14
+ 217              	.L16:
  137:.././hal//sam4s/system_sam4s.c **** 					break;
- 216              	 .loc 1 137 6 view .LVU72
+ 218              	 .loc 1 137 6 view .LVU74
  137:.././hal//sam4s/system_sam4s.c **** 					break;
- 217              	 .loc 1 137 22 is_stmt 0 view .LVU73
- 218 00ae 0549     	 ldr r1,.L24+16
- 219 00b0 FBE7     	 b .L21
- 220              	.L25:
- 221 00b2 00BF     	 .align 2
- 222              	.L24:
- 223 00b4 00040E40 	 .word 1074660352
- 224 00b8 00000000 	 .word SystemCoreClock
- 225 00bc 00093D00 	 .word 4000000
- 226 00c0 00140E40 	 .word 1074664448
- 227 00c4 001BB700 	 .word 12000000
- 228 00c8 00127A00 	 .word 8000000
- 229              	 .cfi_endproc
- 230              	.LFE124:
- 232              	 .section .text.system_init_flash,"ax",%progbits
- 233              	 .align 1
- 234              	 .global system_init_flash
- 235              	 .syntax unified
- 236              	 .thumb
- 237              	 .thumb_func
- 239              	system_init_flash:
- 240              	.LVL0:
- 241              	.LFB125:
+ 219              	 .loc 1 137 22 is_stmt 0 view .LVU75
+ 220 00ae 0549     	 ldr r1,.L24+16
+ 221 00b0 FBE7     	 b .L21
+ 222              	.L25:
+ 223 00b2 00BF     	 .align 2
+ 224              	.L24:
+ 225 00b4 00040E40 	 .word 1074660352
+ 226 00b8 00000000 	 .word SystemCoreClock
+ 227 00bc 00093D00 	 .word 4000000
+ 228 00c0 00140E40 	 .word 1074664448
+ 229 00c4 001BB700 	 .word 12000000
+ 230 00c8 00127A00 	 .word 8000000
+ 231              	 .cfi_endproc
+ 232              	.LFE124:
+ 234              	 .section .text.system_init_flash,"ax",%progbits
+ 235              	 .align 1
+ 236              	 .global system_init_flash
+ 237              	 .syntax unified
+ 238              	 .thumb
+ 239              	 .thumb_func
+ 241              	system_init_flash:
+ 242              	.LVL0:
+ 243              	.LFB125:
  170:.././hal//sam4s/system_sam4s.c **** 
  171:.././hal//sam4s/system_sam4s.c **** /**
  172:.././hal//sam4s/system_sam4s.c ****  * \brief Initialize flash wait state according to operating frequency.
@@ -450,25 +453,25 @@
  175:.././hal//sam4s/system_sam4s.c ****  */
  176:.././hal//sam4s/system_sam4s.c **** void system_init_flash( uint32_t ul_clk )
  177:.././hal//sam4s/system_sam4s.c **** {
- 242              	 .loc 1 177 1 is_stmt 1 view-0
- 243              	 .cfi_startproc
- 244              	 
- 245              	 
+ 244              	 .loc 1 177 1 is_stmt 1 view-0
+ 245              	 .cfi_startproc
  246              	 
+ 247              	 
+ 248              	 
  178:.././hal//sam4s/system_sam4s.c ****   /* Set FWS for embedded Flash access according to operating frequency */
  179:.././hal//sam4s/system_sam4s.c **** #if !defined(ID_EFC1)
  180:.././hal//sam4s/system_sam4s.c **** 	if ( ul_clk < CHIP_FREQ_FWS_0 ) {
- 247              	 .loc 1 180 2 view .LVU75
- 248              	 .loc 1 180 5 is_stmt 0 view .LVU76
- 249 0000 0E4B     	 ldr r3,.L34
- 250 0002 9842     	 cmp r0,r3
- 251 0004 0E4B     	 ldr r3,.L34+4
- 252 0006 03D8     	 bhi .L27
+ 249              	 .loc 1 180 2 view .LVU77
+ 250              	 .loc 1 180 5 is_stmt 0 view .LVU78
+ 251 0000 0E4B     	 ldr r3,.L34
+ 252 0002 9842     	 cmp r0,r3
+ 253 0004 0E4B     	 ldr r3,.L34+4
+ 254 0006 03D8     	 bhi .L27
  181:.././hal//sam4s/system_sam4s.c **** 		EFC0->EEFC_FMR = EEFC_FMR_FWS(0)|EEFC_FMR_CLOE;
- 253              	 .loc 1 181 3 is_stmt 1 view .LVU77
- 254              	 .loc 1 181 18 is_stmt 0 view .LVU78
- 255 0008 4FF08062 	 mov r2,#67108864
- 256              	.L33:
+ 255              	 .loc 1 181 3 is_stmt 1 view .LVU79
+ 256              	 .loc 1 181 18 is_stmt 0 view .LVU80
+ 257 0008 4FF08062 	 mov r2,#67108864
+ 258              	.L33:
  182:.././hal//sam4s/system_sam4s.c **** 	} else {
  183:.././hal//sam4s/system_sam4s.c **** 		if ( ul_clk < CHIP_FREQ_FWS_1 ) {
  184:.././hal//sam4s/system_sam4s.c **** 			EFC0->EEFC_FMR = EEFC_FMR_FWS(1)|EEFC_FMR_CLOE;
@@ -483,8 +486,8 @@
  193:.././hal//sam4s/system_sam4s.c **** 					EFC0->EEFC_FMR = EEFC_FMR_FWS(4)|EEFC_FMR_CLOE;
  194:.././hal//sam4s/system_sam4s.c **** 					} else {
  195:.././hal//sam4s/system_sam4s.c **** 					EFC0->EEFC_FMR = EEFC_FMR_FWS(5)|EEFC_FMR_CLOE;
- 257              	 .loc 1 195 21 view .LVU79
- 258 000c 1A60     	 str r2,[r3]
+ 259              	 .loc 1 195 21 view .LVU81
+ 260 000c 1A60     	 str r2,[r3]
  196:.././hal//sam4s/system_sam4s.c **** 					}
  197:.././hal//sam4s/system_sam4s.c **** 				}
  198:.././hal//sam4s/system_sam4s.c **** 			}
@@ -520,96 +523,96 @@
  228:.././hal//sam4s/system_sam4s.c **** 	}
  229:.././hal//sam4s/system_sam4s.c **** #endif
  230:.././hal//sam4s/system_sam4s.c **** }
- 259              	 .loc 1 230 1 view .LVU80
- 260 000e 7047     	 bx lr
- 261              	.L27:
+ 261              	 .loc 1 230 1 view .LVU82
+ 262 000e 7047     	 bx lr
+ 263              	.L27:
  183:.././hal//sam4s/system_sam4s.c **** 			EFC0->EEFC_FMR = EEFC_FMR_FWS(1)|EEFC_FMR_CLOE;
- 262              	 .loc 1 183 3 is_stmt 1 view .LVU81
+ 264              	 .loc 1 183 3 is_stmt 1 view .LVU83
  183:.././hal//sam4s/system_sam4s.c **** 			EFC0->EEFC_FMR = EEFC_FMR_FWS(1)|EEFC_FMR_CLOE;
- 263              	 .loc 1 183 6 is_stmt 0 view .LVU82
- 264 0010 0C4A     	 ldr r2,.L34+8
- 265 0012 9042     	 cmp r0,r2
- 266 0014 01D2     	 bcs .L29
+ 265              	 .loc 1 183 6 is_stmt 0 view .LVU84
+ 266 0010 0C4A     	 ldr r2,.L34+8
+ 267 0012 9042     	 cmp r0,r2
+ 268 0014 01D2     	 bcs .L29
  184:.././hal//sam4s/system_sam4s.c **** 		} else {
- 267              	 .loc 1 184 4 is_stmt 1 view .LVU83
+ 269              	 .loc 1 184 4 is_stmt 1 view .LVU85
  184:.././hal//sam4s/system_sam4s.c **** 		} else {
- 268              	 .loc 1 184 19 is_stmt 0 view .LVU84
- 269 0016 0C4A     	 ldr r2,.L34+12
- 270 0018 F8E7     	 b .L33
- 271              	.L29:
+ 270              	 .loc 1 184 19 is_stmt 0 view .LVU86
+ 271 0016 0C4A     	 ldr r2,.L34+12
+ 272 0018 F8E7     	 b .L33
+ 273              	.L29:
  186:.././hal//sam4s/system_sam4s.c **** 				EFC0->EEFC_FMR = EEFC_FMR_FWS(2)|EEFC_FMR_CLOE;
- 272              	 .loc 1 186 4 is_stmt 1 view .LVU85
+ 274              	 .loc 1 186 4 is_stmt 1 view .LVU87
  186:.././hal//sam4s/system_sam4s.c **** 				EFC0->EEFC_FMR = EEFC_FMR_FWS(2)|EEFC_FMR_CLOE;
- 273              	 .loc 1 186 7 is_stmt 0 view .LVU86
- 274 001a 0C4A     	 ldr r2,.L34+16
- 275 001c 9042     	 cmp r0,r2
- 276 001e 01D2     	 bcs .L30
+ 275              	 .loc 1 186 7 is_stmt 0 view .LVU88
+ 276 001a 0C4A     	 ldr r2,.L34+16
+ 277 001c 9042     	 cmp r0,r2
+ 278 001e 01D2     	 bcs .L30
  187:.././hal//sam4s/system_sam4s.c **** 			} else {
- 277              	 .loc 1 187 5 is_stmt 1 view .LVU87
+ 279              	 .loc 1 187 5 is_stmt 1 view .LVU89
  187:.././hal//sam4s/system_sam4s.c **** 			} else {
- 278              	 .loc 1 187 20 is_stmt 0 view .LVU88
- 279 0020 0B4A     	 ldr r2,.L34+20
- 280 0022 F3E7     	 b .L33
- 281              	.L30:
+ 280              	 .loc 1 187 20 is_stmt 0 view .LVU90
+ 281 0020 0B4A     	 ldr r2,.L34+20
+ 282 0022 F3E7     	 b .L33
+ 283              	.L30:
  189:.././hal//sam4s/system_sam4s.c **** 					EFC0->EEFC_FMR = EEFC_FMR_FWS(3)|EEFC_FMR_CLOE;
- 282              	 .loc 1 189 5 is_stmt 1 view .LVU89
+ 284              	 .loc 1 189 5 is_stmt 1 view .LVU91
  189:.././hal//sam4s/system_sam4s.c **** 					EFC0->EEFC_FMR = EEFC_FMR_FWS(3)|EEFC_FMR_CLOE;
- 283              	 .loc 1 189 8 is_stmt 0 view .LVU90
- 284 0024 0B4A     	 ldr r2,.L34+24
- 285 0026 9042     	 cmp r0,r2
- 286 0028 01D8     	 bhi .L31
+ 285              	 .loc 1 189 8 is_stmt 0 view .LVU92
+ 286 0024 0B4A     	 ldr r2,.L34+24
+ 287 0026 9042     	 cmp r0,r2
+ 288 0028 01D8     	 bhi .L31
  190:.././hal//sam4s/system_sam4s.c **** 				} else {
- 287              	 .loc 1 190 6 is_stmt 1 view .LVU91
+ 289              	 .loc 1 190 6 is_stmt 1 view .LVU93
  190:.././hal//sam4s/system_sam4s.c **** 				} else {
- 288              	 .loc 1 190 21 is_stmt 0 view .LVU92
- 289 002a 0B4A     	 ldr r2,.L34+28
- 290 002c EEE7     	 b .L33
- 291              	.L31:
+ 290              	 .loc 1 190 21 is_stmt 0 view .LVU94
+ 291 002a 0B4A     	 ldr r2,.L34+28
+ 292 002c EEE7     	 b .L33
+ 293              	.L31:
  192:.././hal//sam4s/system_sam4s.c **** 					EFC0->EEFC_FMR = EEFC_FMR_FWS(4)|EEFC_FMR_CLOE;
- 292              	 .loc 1 192 6 is_stmt 1 view .LVU93
+ 294              	 .loc 1 192 6 is_stmt 1 view .LVU95
  192:.././hal//sam4s/system_sam4s.c **** 					EFC0->EEFC_FMR = EEFC_FMR_FWS(4)|EEFC_FMR_CLOE;
- 293              	 .loc 1 192 9 is_stmt 0 view .LVU94
- 294 002e 0B4A     	 ldr r2,.L34+32
- 295 0030 9042     	 cmp r0,r2
+ 295              	 .loc 1 192 9 is_stmt 0 view .LVU96
+ 296 002e 0B4A     	 ldr r2,.L34+32
+ 297 0030 9042     	 cmp r0,r2
  193:.././hal//sam4s/system_sam4s.c **** 					} else {
- 296              	 .loc 1 193 6 is_stmt 1 view .LVU95
+ 298              	 .loc 1 193 6 is_stmt 1 view .LVU97
  195:.././hal//sam4s/system_sam4s.c **** 					}
- 297              	 .loc 1 195 21 is_stmt 0 view .LVU96
- 298 0032 8CBF     	 ite hi
- 299 0034 0A4A     	 ldrhi r2,.L34+36
+ 299              	 .loc 1 195 21 is_stmt 0 view .LVU98
+ 300 0032 8CBF     	 ite hi
+ 301 0034 0A4A     	 ldrhi r2,.L34+36
  193:.././hal//sam4s/system_sam4s.c **** 					} else {
- 300              	 .loc 1 193 21 view .LVU97
- 301 0036 4FF00422 	 movls r2,#67109888
+ 302              	 .loc 1 193 21 view .LVU99
+ 303 0036 4FF00422 	 movls r2,#67109888
  195:.././hal//sam4s/system_sam4s.c **** 					}
- 302              	 .loc 1 195 6 is_stmt 1 view .LVU98
- 303 003a E7E7     	 b .L33
- 304              	.L35:
- 305              	 .align 2
- 306              	.L34:
- 307 003c FF2C3101 	 .word 19999999
- 308 0040 000A0E40 	 .word 1074661888
- 309 0044 005A6202 	 .word 40000000
- 310 0048 00010004 	 .word 67109120
- 311 004c 00879303 	 .word 60000000
- 312 0050 00020004 	 .word 67109376
- 313 0054 FFB3C404 	 .word 79999999
- 314 0058 00030004 	 .word 67109632
- 315 005c FFE0F505 	 .word 99999999
- 316 0060 00050004 	 .word 67110144
- 317              	 .cfi_endproc
- 318              	.LFE125:
- 320              	 .global SystemCoreClock
- 321              	 .section .data.SystemCoreClock,"aw"
- 322              	 .align 2
- 325              	SystemCoreClock:
- 326 0000 00093D00 	 .word 4000000
- 327              	 .text
- 328              	.Letext0:
- 329              	 .file 2 ".././hal//sam4s/inc/component/component_efc.h"
- 330              	 .file 3 ".././hal//sam4s/inc/component/component_pmc.h"
- 331              	 .file 4 ".././hal//sam4s/inc/component/component_supc.h"
- 332              	 .file 5 "/usr/lib/gcc/arm-none-eabi/13.2.1/include/stdint.h"
- 333              	 .file 6 ".././hal//sam4s/inc/system_sam4s.h"
+ 304              	 .loc 1 195 6 is_stmt 1 view .LVU100
+ 305 003a E7E7     	 b .L33
+ 306              	.L35:
+ 307              	 .align 2
+ 308              	.L34:
+ 309 003c FF2C3101 	 .word 19999999
+ 310 0040 000A0E40 	 .word 1074661888
+ 311 0044 005A6202 	 .word 40000000
+ 312 0048 00010004 	 .word 67109120
+ 313 004c 00879303 	 .word 60000000
+ 314 0050 00020004 	 .word 67109376
+ 315 0054 FFB3C404 	 .word 79999999
+ 316 0058 00030004 	 .word 67109632
+ 317 005c FFE0F505 	 .word 99999999
+ 318 0060 00050004 	 .word 67110144
+ 319              	 .cfi_endproc
+ 320              	.LFE125:
+ 322              	 .global SystemCoreClock
+ 323              	 .section .data.SystemCoreClock,"aw"
+ 324              	 .align 2
+ 327              	SystemCoreClock:
+ 328 0000 00093D00 	 .word 4000000
+ 329              	 .text
+ 330              	.Letext0:
+ 331              	 .file 2 ".././hal//sam4s/inc/component/component_efc.h"
+ 332              	 .file 3 ".././hal//sam4s/inc/component/component_pmc.h"
+ 333              	 .file 4 ".././hal//sam4s/inc/component/component_supc.h"
+ 334              	 .file 5 "/usr/lib/gcc/arm-none-eabi/14.2.1/include/stdint.h"
+ 335              	 .file 6 ".././hal//sam4s/inc/system_sam4s.h"
 DEFINED SYMBOLS
                             *ABS*:00000000 system_sam4s.c
     {standard input}:19     .text.SystemInit:00000000 $t
@@ -617,13 +620,13 @@ DEFINED SYMBOLS
     {standard input}:42     .text.SystemInit:00000008 $d
     {standard input}:48     .text.SystemCoreClockUpdate:00000000 $t
     {standard input}:54     .text.SystemCoreClockUpdate:00000000 SystemCoreClockUpdate
-    {standard input}:223    .text.SystemCoreClockUpdate:000000b4 $d
-    {standard input}:325    .data.SystemCoreClock:00000000 SystemCoreClock
-    {standard input}:233    .text.system_init_flash:00000000 $t
-    {standard input}:239    .text.system_init_flash:00000000 system_init_flash
-    {standard input}:307    .text.system_init_flash:0000003c $d
-    {standard input}:322    .data.SystemCoreClock:00000000 $d
-                           .group:00000000 wm4.0.ade4f9eb57a3e60dd8a456a9e838da1f
+    {standard input}:225    .text.SystemCoreClockUpdate:000000b4 $d
+    {standard input}:327    .data.SystemCoreClock:00000000 SystemCoreClock
+    {standard input}:235    .text.system_init_flash:00000000 $t
+    {standard input}:241    .text.system_init_flash:00000000 system_init_flash
+    {standard input}:309    .text.system_init_flash:0000003c $d
+    {standard input}:324    .data.SystemCoreClock:00000000 $d
+                           .group:00000000 wm4.0.534b8d408cafabed4abbc6a1c4e55e02
                            .group:00000000 wm4.stdint.h.29.6d480f4ba0f60596e88234283d42444f
                            .group:00000000 wm4.sam4s2b.h.221.db99b1f5dbb5d4301dbbbaff13b63e70
                            .group:00000000 wm4.core_cm4.h.43.9593ac0dcec24a3a6f1d638d754e90b2

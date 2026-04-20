@@ -1,0 +1,23 @@
+   1              	# 0 "cmov_int16.S"
+   2              	# 0 "<built-in>"
+   3              	# 0 "<command-line>"
+   4              	# 1 "cmov_int16.S"
+   1              	.syntax unified
+   2              	.cpu cortex-m4
+   3              	.thumb
+   4              	
+   5              	// void cmov_int16(int16_t *r, int16_t v, uint16_t b)
+   6              	.global cmov_int16
+   8              	.align 2
+   9              	cmov_int16:
+  10:cmov_int16.S  ****     cmp.w r2, #0
+  11:cmov_int16.S  ****     ldrsh.w r3, [r0]
+  12:cmov_int16.S  ****     it ne
+  13:cmov_int16.S  ****     movne.w r3, r1
+  14:cmov_int16.S  ****     strh.w r3, [r0]
+  15:cmov_int16.S  ****     bx lr...
+DEFINED SYMBOLS
+        cmov_int16.S:9      .text:00000000 cmov_int16
+        cmov_int16.S:8      .text:00000000 $t
+
+NO UNDEFINED SYMBOLS

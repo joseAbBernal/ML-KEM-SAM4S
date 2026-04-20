@@ -1,0 +1,358 @@
+   1              	 .cpu cortex-m4
+   2              	 .arch armv7e-m
+   3              	 .fpu softvfp
+   4              	 .eabi_attribute 20,1
+   5              	 .eabi_attribute 21,1
+   6              	 .eabi_attribute 23,3
+   7              	 .eabi_attribute 24,1
+   8              	 .eabi_attribute 25,1
+   9              	 .eabi_attribute 26,1
+  10              	 .eabi_attribute 30,4
+  11              	 .eabi_attribute 34,1
+  12              	 .eabi_attribute 18,4
+  13              	 .file "verify.c"
+  14              	 .text
+  15              	.Ltext0:
+  16              	 .cfi_sections .debug_frame
+  17              	 .file 1 "verify.c"
+  18              	 .section .text.PQCLEAN_MLKEM1024_CLEAN_verify,"ax",%progbits
+  19              	 .align 1
+  20              	 .global PQCLEAN_MLKEM1024_CLEAN_verify
+  21              	 .syntax unified
+  22              	 .thumb
+  23              	 .thumb_func
+  25              	PQCLEAN_MLKEM1024_CLEAN_verify:
+  26              	.LVL0:
+  27              	.LFB0:
+   1:verify.c      **** #include "compat.h"
+   2:verify.c      **** #include "verify.h"
+   3:verify.c      **** #include "hal.h"
+   4:verify.c      **** #include <stddef.h>
+   5:verify.c      **** #include <stdint.h>
+   6:verify.c      **** 
+   7:verify.c      **** /*************************************************
+   8:verify.c      **** * Name:        PQCLEAN_MLKEM1024_CLEAN_verify
+   9:verify.c      **** *
+  10:verify.c      **** * Description: Compare two arrays for equality in constant time.
+  11:verify.c      **** *
+  12:verify.c      **** * Arguments:   const uint8_t *a: pointer to first byte array
+  13:verify.c      **** *              const uint8_t *b: pointer to second byte array
+  14:verify.c      **** *              size_t len:       length of the byte arrays
+  15:verify.c      **** *
+  16:verify.c      **** * Returns 0 if the byte arrays are equal, 1 otherwise
+  17:verify.c      **** **************************************************/
+  18:verify.c      **** int PQCLEAN_MLKEM1024_CLEAN_verify(const uint8_t *a, const uint8_t *b, size_t len) {
+  28              	 .loc 1 18 84 view-0
+  29              	 .cfi_startproc
+  30              	 
+  31              	 
+  19:verify.c      ****     size_t i;
+  32              	 .loc 1 19 5 view .LVU1
+  20:verify.c      ****     uint8_t r = 0;
+  33              	 .loc 1 20 5 view .LVU2
+  21:verify.c      **** 
+  22:verify.c      ****     for (i = 0; i < len; i++) {
+  34              	 .loc 1 22 5 view .LVU3
+  20:verify.c      ****     uint8_t r = 0;
+  35              	 .loc 1 20 13 is_stmt 0 view .LVU4
+  36 0000 0023     	 movs r3,#0
+  18:verify.c      ****     size_t i;
+  37              	 .loc 1 18 84 view .LVU5
+  38 0002 70B5     	 push {r4,r5,r6,lr}
+  39              	.LCFI0:
+  40              	 .cfi_def_cfa_offset 16
+  41              	 .cfi_offset 4,-16
+  42              	 .cfi_offset 5,-12
+  43              	 .cfi_offset 6,-8
+  44              	 .cfi_offset 14,-4
+  45              	 .loc 1 22 12 view .LVU6
+  46 0004 1C46     	 mov r4,r3
+  47              	.LVL1:
+  48              	.L2:
+  49              	 .loc 1 22 19 is_stmt 1 discriminator 1 view .LVU7
+  50 0006 9442     	 cmp r4,r2
+  51 0008 04D1     	 bne .L3
+  23:verify.c      ****         r |= a[i] ^ b[i];
+  24:verify.c      ****     }
+  25:verify.c      **** 
+  26:verify.c      ****     return (-(uint64_t)r) >> 63;
+  52              	 .loc 1 26 5 view .LVU8
+  53              	 .loc 1 26 13 is_stmt 0 view .LVU9
+  54 000a 5B42     	 negs r3,r3
+  55              	.LVL2:
+  56              	 .loc 1 26 13 view .LVU10
+  57 000c 60EB0000 	 sbc r0,r0,r0
+  58              	.LVL3:
+  27:verify.c      **** }
+  59              	 .loc 1 27 1 view .LVU11
+  60 0010 C00F     	 lsrs r0,r0,#31
+  61 0012 70BD     	 pop {r4,r5,r6,pc}
+  62              	.LVL4:
+  63              	.L3:
+  23:verify.c      ****         r |= a[i] ^ b[i];
+  64              	 .loc 1 23 9 is_stmt 1 view .LVU12
+  23:verify.c      ****         r |= a[i] ^ b[i];
+  65              	 .loc 1 23 11 is_stmt 0 view .LVU13
+  66 0014 055D     	 ldrb r5,[r0,r4]
+  67 0016 0E5D     	 ldrb r6,[r1,r4]
+  68 0018 7540     	 eors r5,r5,r6
+  69 001a 2B43     	 orrs r3,r3,r5
+  70              	.LVL5:
+  22:verify.c      ****         r |= a[i] ^ b[i];
+  71              	 .loc 1 22 27 is_stmt 1 discriminator 3 view .LVU14
+  72 001c 0134     	 adds r4,r4,#1
+  73              	.LVL6:
+  22:verify.c      ****         r |= a[i] ^ b[i];
+  74              	 .loc 1 22 27 is_stmt 0 discriminator 3 view .LVU15
+  75 001e F2E7     	 b .L2
+  76              	 .cfi_endproc
+  77              	.LFE0:
+  79              	 .section .text.PQCLEAN_MLKEM1024_CLEAN_cmov,"ax",%progbits
+  80              	 .align 1
+  81              	 .global PQCLEAN_MLKEM1024_CLEAN_cmov
+  82              	 .syntax unified
+  83              	 .thumb
+  84              	 .thumb_func
+  86              	PQCLEAN_MLKEM1024_CLEAN_cmov:
+  87              	.LVL7:
+  88              	.LFB1:
+  28:verify.c      **** 
+  29:verify.c      **** /*************************************************
+  30:verify.c      **** * Name:        PQCLEAN_MLKEM1024_CLEAN_cmov
+  31:verify.c      **** *
+  32:verify.c      **** * Description: Copy len bytes from x to r if b is 1;
+  33:verify.c      **** *              don't modify x if b is 0. Requires b to be in {0,1};
+  34:verify.c      **** *              assumes two's complement representation of negative integers.
+  35:verify.c      **** *              Runs in constant time.
+  36:verify.c      **** *
+  37:verify.c      **** * Arguments:   uint8_t *r:       pointer to output byte array
+  38:verify.c      **** *              const uint8_t *x: pointer to input byte array
+  39:verify.c      **** *              size_t len:       Amount of bytes to be copied
+  40:verify.c      **** *              uint8_t b:        Condition bit; has to be in {0,1}
+  41:verify.c      **** **************************************************/
+  42:verify.c      **** void PQCLEAN_MLKEM1024_CLEAN_cmov(uint8_t *r, const uint8_t *x, size_t len, uint8_t b) {
+  89              	 .loc 1 42 88 is_stmt 1 view-0
+  90              	 .cfi_startproc
+  91              	 
+  92              	 
+  43:verify.c      ****     size_t i;
+  93              	 .loc 1 43 5 view .LVU17
+  44:verify.c      **** 
+  45:verify.c      ****     PQCLEAN_PREVENT_BRANCH_HACK(b);
+  94              	 .loc 1 45 5 view .LVU18
+  42:verify.c      ****     size_t i;
+  95              	 .loc 1 42 88 is_stmt 0 view .LVU19
+  96 0000 2DE9F041 	 push {r4,r5,r6,r7,r8,lr}
+  97              	.LCFI1:
+  98              	 .cfi_def_cfa_offset 24
+  99              	 .cfi_offset 4,-24
+ 100              	 .cfi_offset 5,-20
+ 101              	 .cfi_offset 6,-16
+ 102              	 .cfi_offset 7,-12
+ 103              	 .cfi_offset 8,-8
+ 104              	 .cfi_offset 14,-4
+  42:verify.c      ****     size_t i;
+ 105              	 .loc 1 42 88 view .LVU20
+ 106 0004 0546     	 mov r5,r0
+ 107 0006 0E46     	 mov r6,r1
+ 108 0008 1746     	 mov r7,r2
+ 109              	 .loc 1 45 5 view .LVU21
+ 110 000a 1C46     	 mov r4,r3
+  46:verify.c      **** 
+  47:verify.c      ****     trigger_high();
+ 111              	 .loc 1 47 5 view .LVU22
+ 112 000c 0A4B     	 ldr r3,.L7
+ 113              	.LVL8:
+  45:verify.c      **** 
+ 114              	 .loc 1 45 5 view .LVU23
+ 115              	.LVL9:
+  45:verify.c      **** 
+ 116              	 .loc 1 45 35 is_stmt 1 view .LVU24
+ 117              	 .loc 1 47 5 view .LVU25
+  48:verify.c      ****     b = -b;
+ 118              	 .loc 1 48 7 is_stmt 0 view .LVU26
+ 119 000e 6442     	 rsbs r4,r4,#0
+ 120              	.LVL10:
+  47:verify.c      ****     b = -b;
+ 121              	 .loc 1 47 5 view .LVU27
+ 122 0010 9847     	 blx r3
+ 123              	.LVL11:
+ 124              	 .loc 1 48 5 is_stmt 1 view .LVU28
+ 125              	 .loc 1 48 7 is_stmt 0 view .LVU29
+ 126 0012 E4B2     	 uxtb r4,r4
+ 127              	.LVL12:
+  49:verify.c      ****     for (i = 0; i < len; i++) {
+ 128              	 .loc 1 49 5 is_stmt 1 view .LVU30
+ 129              	 .loc 1 49 5 is_stmt 0 view .LVU31
+ 130 0014 2846     	 mov r0,r5
+ 131 0016 711E     	 subs r1,r6,#1
+ 132 0018 2F44     	 add r7,r7,r5
+ 133              	.LVL13:
+ 134              	.L5:
+ 135              	 .loc 1 49 19 is_stmt 1 discriminator 1 view .LVU32
+ 136 001a B842     	 cmp r0,r7
+ 137 001c 03D1     	 bne .L6
+  50:verify.c      ****         r[i] ^= b & (r[i] ^ x[i]);
+  51:verify.c      ****     }
+  52:verify.c      ****     trigger_low();
+ 138              	 .loc 1 52 5 view .LVU33
+  53:verify.c      **** }
+ 139              	 .loc 1 53 1 is_stmt 0 view .LVU34
+ 140 001e BDE8F041 	 pop {r4,r5,r6,r7,r8,lr}
+ 141              	.LCFI2:
+ 142              	 .cfi_remember_state
+ 143              	 .cfi_restore 14
+ 144              	 .cfi_restore 8
+ 145              	 .cfi_restore 7
+ 146              	 .cfi_restore 6
+ 147              	 .cfi_restore 5
+ 148              	 .cfi_restore 4
+ 149              	 .cfi_def_cfa_offset 0
+ 150              	.LVL14:
+  52:verify.c      **** }
+ 151              	 .loc 1 52 5 view .LVU35
+ 152 0022 064B     	 ldr r3,.L7+4
+ 153 0024 1847     	 bx r3
+ 154              	.LVL15:
+ 155              	.L6:
+ 156              	.LCFI3:
+ 157              	 .cfi_restore_state
+  50:verify.c      ****         r[i] ^= b & (r[i] ^ x[i]);
+ 158              	 .loc 1 50 9 is_stmt 1 view .LVU36
+  50:verify.c      ****         r[i] ^= b & (r[i] ^ x[i]);
+ 159              	 .loc 1 50 10 is_stmt 0 view .LVU37
+ 160 0026 0278     	 ldrb r2,[r0]
+  50:verify.c      ****         r[i] ^= b & (r[i] ^ x[i]);
+ 161              	 .loc 1 50 14 view .LVU38
+ 162 0028 11F8013F 	 ldrb r3,[r1,#1]!
+ 163 002c 5340     	 eors r3,r3,r2
+ 164 002e 2340     	 ands r3,r3,r4
+ 165 0030 5A40     	 eors r2,r2,r3
+ 166 0032 00F8012B 	 strb r2,[r0],#1
+ 167              	.LVL16:
+  49:verify.c      ****         r[i] ^= b & (r[i] ^ x[i]);
+ 168              	 .loc 1 49 27 is_stmt 1 discriminator 3 view .LVU39
+ 169 0036 F0E7     	 b .L5
+ 170              	.L8:
+ 171              	 .align 2
+ 172              	.L7:
+ 173 0038 00000000 	 .word trigger_high
+ 174 003c 00000000 	 .word trigger_low
+ 175              	 .cfi_endproc
+ 176              	.LFE1:
+ 178              	 .section .text.PQCLEAN_MLKEM1024_CLEAN_cmov_int16,"ax",%progbits
+ 179              	 .align 1
+ 180              	 .global PQCLEAN_MLKEM1024_CLEAN_cmov_int16
+ 181              	 .syntax unified
+ 182              	 .thumb
+ 183              	 .thumb_func
+ 185              	PQCLEAN_MLKEM1024_CLEAN_cmov_int16:
+ 186              	.LVL17:
+ 187              	.LFB2:
+  54:verify.c      **** 
+  55:verify.c      **** 
+  56:verify.c      **** /*************************************************
+  57:verify.c      **** * Name:        PQCLEAN_MLKEM1024_CLEAN_cmov_int16
+  58:verify.c      **** *
+  59:verify.c      **** * Description: Copy input v to *r if b is 1, don't modify *r if b is 0.
+  60:verify.c      **** *              Requires b to be in {0,1};
+  61:verify.c      **** *              Runs in constant time.
+  62:verify.c      **** *
+  63:verify.c      **** * Arguments:   int16_t *r:       pointer to output int16_t
+  64:verify.c      **** *              int16_t v:        input int16_t
+  65:verify.c      **** *              uint8_t b:        Condition bit; has to be in {0,1}
+  66:verify.c      **** **************************************************/
+  67:verify.c      **** void PQCLEAN_MLKEM1024_CLEAN_cmov_int16(int16_t *r, int16_t v, uint16_t b) {
+ 188              	 .loc 1 67 76 view-0
+ 189              	 .cfi_startproc
+ 190              	 
+ 191              	 
+  68:verify.c      ****     trigger_high();
+ 192              	 .loc 1 68 5 view .LVU41
+  67:verify.c      ****     trigger_high();
+ 193              	 .loc 1 67 76 is_stmt 0 view .LVU42
+ 194 0000 70B5     	 push {r4,r5,r6,lr}
+ 195              	.LCFI4:
+ 196              	 .cfi_def_cfa_offset 16
+ 197              	 .cfi_offset 4,-16
+ 198              	 .cfi_offset 5,-12
+ 199              	 .cfi_offset 6,-8
+ 200              	 .cfi_offset 14,-4
+  67:verify.c      ****     trigger_high();
+ 201              	 .loc 1 67 76 view .LVU43
+ 202 0002 0646     	 mov r6,r0
+ 203              	 .loc 1 68 5 view .LVU44
+ 204 0004 074B     	 ldr r3,.L10
+  67:verify.c      ****     trigger_high();
+ 205              	 .loc 1 67 76 view .LVU45
+ 206 0006 0C46     	 mov r4,r1
+ 207 0008 1546     	 mov r5,r2
+ 208              	 .loc 1 68 5 view .LVU46
+ 209 000a 9847     	 blx r3
+ 210              	.LVL18:
+  69:verify.c      ****     b = -b;
+ 211              	 .loc 1 69 5 is_stmt 1 view .LVU47
+  70:verify.c      ****     *r ^= b & ((*r) ^ v);
+ 212              	 .loc 1 70 5 view .LVU48
+ 213 000c B6F90030 	 ldrsh r3,[r6]
+  69:verify.c      ****     b = -b;
+ 214              	 .loc 1 69 7 is_stmt 0 view .LVU49
+ 215 0010 6D42     	 rsbs r5,r5,#0
+ 216              	.LVL19:
+ 217              	 .loc 1 70 13 view .LVU50
+ 218 0012 5C40     	 eors r4,r4,r3
+ 219              	.LVL20:
+ 220              	 .loc 1 70 13 view .LVU51
+ 221 0014 2C40     	 ands r4,r4,r5
+ 222              	 .loc 1 70 8 view .LVU52
+ 223 0016 6340     	 eors r3,r3,r4
+ 224 0018 3380     	 strh r3,[r6]
+  71:verify.c      ****     trigger_low();
+ 225              	 .loc 1 71 5 is_stmt 1 view .LVU53
+  72:verify.c      **** }
+ 226              	 .loc 1 72 1 is_stmt 0 view .LVU54
+ 227 001a BDE87040 	 pop {r4,r5,r6,lr}
+ 228              	.LCFI5:
+ 229              	 .cfi_restore 14
+ 230              	 .cfi_restore 6
+ 231              	 .cfi_restore 5
+ 232              	 .cfi_restore 4
+ 233              	 .cfi_def_cfa_offset 0
+ 234              	.LVL21:
+  71:verify.c      ****     trigger_low();
+ 235              	 .loc 1 71 5 view .LVU55
+ 236 001e 024B     	 ldr r3,.L10+4
+ 237 0020 1847     	 bx r3
+ 238              	.LVL22:
+ 239              	.L11:
+ 240 0022 00BF     	 .align 2
+ 241              	.L10:
+ 242 0024 00000000 	 .word trigger_high
+ 243 0028 00000000 	 .word trigger_low
+ 244              	 .cfi_endproc
+ 245              	.LFE2:
+ 247              	 .text
+ 248              	.Letext0:
+ 249              	 .file 2 "/usr/lib/gcc/arm-none-eabi/14.2.1/include/stddef.h"
+ 250              	 .file 3 "/usr/lib/gcc/arm-none-eabi/14.2.1/include/stdint.h"
+ 251              	 .file 4 ".././hal/sam4s/sam4s_hal.h"
+DEFINED SYMBOLS
+                            *ABS*:00000000 verify.c
+    {standard input}:19     .text.PQCLEAN_MLKEM1024_CLEAN_verify:00000000 $t
+    {standard input}:25     .text.PQCLEAN_MLKEM1024_CLEAN_verify:00000000 PQCLEAN_MLKEM1024_CLEAN_verify
+    {standard input}:80     .text.PQCLEAN_MLKEM1024_CLEAN_cmov:00000000 $t
+    {standard input}:86     .text.PQCLEAN_MLKEM1024_CLEAN_cmov:00000000 PQCLEAN_MLKEM1024_CLEAN_cmov
+    {standard input}:173    .text.PQCLEAN_MLKEM1024_CLEAN_cmov:00000038 $d
+    {standard input}:179    .text.PQCLEAN_MLKEM1024_CLEAN_cmov_int16:00000000 $t
+    {standard input}:185    .text.PQCLEAN_MLKEM1024_CLEAN_cmov_int16:00000000 PQCLEAN_MLKEM1024_CLEAN_cmov_int16
+    {standard input}:242    .text.PQCLEAN_MLKEM1024_CLEAN_cmov_int16:00000024 $d
+                           .group:00000000 wm4.0.2f1d4b5f906b2af29100e61b04549e40
+                           .group:00000000 wm4.compat.h.3.4396059b58c7aef9e63d1e758cc4de9f
+                           .group:00000000 wm4.params.h.2.22867f1080b87a69db95c0eefaa1c826
+                           .group:00000000 wm4.stddef.h.39.38eb7ec030421799c657b13be5aa21c7
+                           .group:00000000 wm4.stdint.h.29.6d480f4ba0f60596e88234283d42444f
+                           .group:00000000 wm4.hal.h.20.4ce509bfa0d05e14954b01d3e94d8ba2
+
+UNDEFINED SYMBOLS
+trigger_high
+trigger_low

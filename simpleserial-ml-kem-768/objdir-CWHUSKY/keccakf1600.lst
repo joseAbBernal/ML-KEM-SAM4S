@@ -1,0 +1,3600 @@
+   1              	 .cpu cortex-m4
+   2              	 .arch armv7e-m
+   3              	 .fpu softvfp
+   4              	 .eabi_attribute 20,1
+   5              	 .eabi_attribute 21,1
+   6              	 .eabi_attribute 23,3
+   7              	 .eabi_attribute 24,1
+   8              	 .eabi_attribute 25,1
+   9              	 .eabi_attribute 26,1
+  10              	 .eabi_attribute 30,4
+  11              	 .eabi_attribute 34,1
+  12              	 .eabi_attribute 18,4
+  13              	 .file "keccakf1600.c"
+  14              	 .text
+  15              	.Ltext0:
+  16              	 .cfi_sections .debug_frame
+  17              	 .file 1 "keccakf1600.c"
+  18              	 .section .text.KeccakF1600_StateExtractBytes,"ax",%progbits
+  19              	 .align 1
+  20              	 .global KeccakF1600_StateExtractBytes
+  21              	 .syntax unified
+  22              	 .thumb
+  23              	 .thumb_func
+  25              	KeccakF1600_StateExtractBytes:
+  26              	.LVL0:
+  27              	.LFB0:
+   1:keccakf1600.c **** /* Based on the public domain implementation in
+   2:keccakf1600.c ****  * crypto_hash/keccakc512/simple/ from http://bench.cr.yp.to/supercop.html
+   3:keccakf1600.c ****  * by Ronny Van Keer
+   4:keccakf1600.c ****  * and the public domain "TweetFips202" implementation
+   5:keccakf1600.c ****  * from https://twitter.com/tweetfips202
+   6:keccakf1600.c ****  * by Gilles Van Assche, Daniel J. Bernstein, and Peter Schwabe */
+   7:keccakf1600.c **** 
+   8:keccakf1600.c **** #include <stdint.h>
+   9:keccakf1600.c **** #include <assert.h>
+  10:keccakf1600.c **** #include "keccakf1600.h"
+  11:keccakf1600.c **** 
+  12:keccakf1600.c **** #define NROUNDS 24
+  13:keccakf1600.c **** #define ROL(a, offset) ((a << offset) ^ (a >> (64-offset)))
+  14:keccakf1600.c **** 
+  15:keccakf1600.c **** static const uint64_t KeccakF_RoundConstants[NROUNDS] =
+  16:keccakf1600.c **** {
+  17:keccakf1600.c ****     (uint64_t)0x0000000000000001ULL,
+  18:keccakf1600.c ****     (uint64_t)0x0000000000008082ULL,
+  19:keccakf1600.c ****     (uint64_t)0x800000000000808aULL,
+  20:keccakf1600.c ****     (uint64_t)0x8000000080008000ULL,
+  21:keccakf1600.c ****     (uint64_t)0x000000000000808bULL,
+  22:keccakf1600.c ****     (uint64_t)0x0000000080000001ULL,
+  23:keccakf1600.c ****     (uint64_t)0x8000000080008081ULL,
+  24:keccakf1600.c ****     (uint64_t)0x8000000000008009ULL,
+  25:keccakf1600.c ****     (uint64_t)0x000000000000008aULL,
+  26:keccakf1600.c ****     (uint64_t)0x0000000000000088ULL,
+  27:keccakf1600.c ****     (uint64_t)0x0000000080008009ULL,
+  28:keccakf1600.c ****     (uint64_t)0x000000008000000aULL,
+  29:keccakf1600.c ****     (uint64_t)0x000000008000808bULL,
+  30:keccakf1600.c ****     (uint64_t)0x800000000000008bULL,
+  31:keccakf1600.c ****     (uint64_t)0x8000000000008089ULL,
+  32:keccakf1600.c ****     (uint64_t)0x8000000000008003ULL,
+  33:keccakf1600.c ****     (uint64_t)0x8000000000008002ULL,
+  34:keccakf1600.c ****     (uint64_t)0x8000000000000080ULL,
+  35:keccakf1600.c ****     (uint64_t)0x000000000000800aULL,
+  36:keccakf1600.c ****     (uint64_t)0x800000008000000aULL,
+  37:keccakf1600.c ****     (uint64_t)0x8000000080008081ULL,
+  38:keccakf1600.c ****     (uint64_t)0x8000000000008080ULL,
+  39:keccakf1600.c ****     (uint64_t)0x0000000080000001ULL,
+  40:keccakf1600.c ****     (uint64_t)0x8000000080008008ULL
+  41:keccakf1600.c **** };
+  42:keccakf1600.c **** 
+  43:keccakf1600.c **** void KeccakF1600_StateExtractBytes(uint64_t *state, unsigned char *data, unsigned int offset, unsig
+  44:keccakf1600.c **** {
+  28              	 .loc 1 44 1 view-0
+  29              	 .cfi_startproc
+  30              	 
+  31              	 
+  45:keccakf1600.c ****     unsigned int i;
+  32              	 .loc 1 45 5 view .LVU1
+  46:keccakf1600.c ****     for(i=0;i<length;i++)
+  33              	 .loc 1 46 5 view .LVU2
+  44:keccakf1600.c ****     unsigned int i;
+  34              	 .loc 1 44 1 is_stmt 0 view .LVU3
+  35 0000 F0B5     	 push {r4,r5,r6,r7,lr}
+  36              	.LCFI0:
+  37              	 .cfi_def_cfa_offset 20
+  38              	 .cfi_offset 4,-20
+  39              	 .cfi_offset 5,-16
+  40              	 .cfi_offset 6,-12
+  41              	 .cfi_offset 7,-8
+  42              	 .cfi_offset 14,-4
+  43 0002 0B44     	 add r3,r3,r1
+  44              	.LVL1:
+  47:keccakf1600.c ****     {
+  48:keccakf1600.c ****         data[i] = state[(offset + i) >> 3] >> (8*((offset + i) & 0x07));
+  45              	 .loc 1 48 33 view .LVU4
+  46 0004 521A     	 subs r2,r2,r1
+  47              	.LVL2:
+  48              	.L2:
+  46:keccakf1600.c ****     {
+  49              	 .loc 1 46 14 is_stmt 1 discriminator 1 view .LVU5
+  50 0006 9942     	 cmp r1,r3
+  51 0008 00D1     	 bne .L3
+  49:keccakf1600.c ****     }
+  50:keccakf1600.c **** }
+  52              	 .loc 1 50 1 is_stmt 0 view .LVU6
+  53 000a F0BD     	 pop {r4,r5,r6,r7,pc}
+  54              	.L3:
+  48:keccakf1600.c ****     }
+  55              	 .loc 1 48 9 is_stmt 1 view .LVU7
+  48:keccakf1600.c ****     }
+  56              	 .loc 1 48 33 is_stmt 0 view .LVU8
+  57 000c 5418     	 adds r4,r2,r1
+  48:keccakf1600.c ****     }
+  58              	 .loc 1 48 24 view .LVU9
+  59 000e 24F00706 	 bic r6,r4,#7
+  48:keccakf1600.c ****     }
+  60              	 .loc 1 48 38 view .LVU10
+  61 0012 E508     	 lsrs r5,r4,#3
+  48:keccakf1600.c ****     }
+  62              	 .loc 1 48 24 view .LVU11
+  63 0014 0644     	 add r6,r6,r0
+  48:keccakf1600.c ****     }
+  64              	 .loc 1 48 64 view .LVU12
+  65 0016 04F00704 	 and r4,r4,#7
+  48:keccakf1600.c ****     }
+  66              	 .loc 1 48 44 view .LVU13
+  67 001a D6F804C0 	 ldr ip,[r6,#4]
+  68 001e 50F83550 	 ldr r5,[r0,r5,lsl#3]
+  48:keccakf1600.c ****     }
+  69              	 .loc 1 48 49 view .LVU14
+  70 0022 E400     	 lsls r4,r4,#3
+  48:keccakf1600.c ****     }
+  71              	 .loc 1 48 44 view .LVU15
+  72 0024 C4F12007 	 rsb r7,r4,#32
+  73 0028 A4F12006 	 sub r6,r4,#32
+  74 002c 0CFA07F7 	 lsl r7,ip,r7
+  75 0030 25FA04F4 	 lsr r4,r5,r4
+  76 0034 3C43     	 orrs r4,r4,r7
+  77 0036 2CFA06F6 	 lsr r6,ip,r6
+  78 003a 3443     	 orrs r4,r4,r6
+  48:keccakf1600.c ****     }
+  79              	 .loc 1 48 17 view .LVU16
+  80 003c 01F8014B 	 strb r4,[r1],#1
+  81              	.LVL3:
+  46:keccakf1600.c ****     {
+  82              	 .loc 1 46 23 is_stmt 1 discriminator 3 view .LVU17
+  83 0040 E1E7     	 b .L2
+  84              	 .cfi_endproc
+  85              	.LFE0:
+  87              	 .section .text.KeccakF1600_StateXORBytes,"ax",%progbits
+  88              	 .align 1
+  89              	 .global KeccakF1600_StateXORBytes
+  90              	 .syntax unified
+  91              	 .thumb
+  92              	 .thumb_func
+  94              	KeccakF1600_StateXORBytes:
+  95              	.LVL4:
+  96              	.LFB1:
+  51:keccakf1600.c **** 
+  52:keccakf1600.c **** void KeccakF1600_StateXORBytes(uint64_t *state, const unsigned char *data, unsigned int offset, uns
+  53:keccakf1600.c **** {
+  97              	 .loc 1 53 1 view-0
+  98              	 .cfi_startproc
+  99              	 
+ 100              	 
+  54:keccakf1600.c ****     unsigned int i;
+ 101              	 .loc 1 54 5 view .LVU19
+  55:keccakf1600.c ****     for(i = 0; i < length; i++)
+ 102              	 .loc 1 55 5 view .LVU20
+  53:keccakf1600.c ****     unsigned int i;
+ 103              	 .loc 1 53 1 is_stmt 0 view .LVU21
+ 104 0000 F7B5     	 push {r0,r1,r2,r4,r5,r6,r7,lr}
+ 105              	.LCFI1:
+ 106              	 .cfi_def_cfa_offset 32
+ 107              	 .cfi_offset 4,-20
+ 108              	 .cfi_offset 5,-16
+ 109              	 .cfi_offset 6,-12
+ 110              	 .cfi_offset 7,-8
+ 111              	 .cfi_offset 14,-4
+ 112 0002 0B44     	 add r3,r3,r1
+ 113              	.LVL5:
+  56:keccakf1600.c ****     {
+  57:keccakf1600.c ****         state[(offset + i) >> 3] ^= (uint64_t)data[i] << (8 * ((offset + i) & 0x07));
+ 114              	 .loc 1 57 14 view .LVU22
+ 115 0004 521A     	 subs r2,r2,r1
+ 116              	.LVL6:
+ 117              	.L5:
+  55:keccakf1600.c ****     {
+ 118              	 .loc 1 55 18 is_stmt 1 discriminator 1 view .LVU23
+ 119 0006 9942     	 cmp r1,r3
+ 120 0008 01D1     	 bne .L6
+  58:keccakf1600.c ****     }
+  59:keccakf1600.c **** }
+ 121              	 .loc 1 59 1 is_stmt 0 view .LVU24
+ 122 000a 03B0     	 add sp,sp,#12
+ 123              	.LCFI2:
+ 124              	 .cfi_remember_state
+ 125              	 .cfi_def_cfa_offset 20
+ 126              	 
+ 127 000c F0BD     	 pop {r4,r5,r6,r7,pc}
+ 128              	.L6:
+ 129              	.LCFI3:
+ 130              	 .cfi_restore_state
+  57:keccakf1600.c ****     }
+ 131              	 .loc 1 57 9 is_stmt 1 view .LVU25
+  57:keccakf1600.c ****     }
+ 132              	 .loc 1 57 14 is_stmt 0 view .LVU26
+ 133 000e 5418     	 adds r4,r2,r1
+ 134 0010 4FEAD40C 	 lsr ip,r4,#3
+ 135 0014 24F00707 	 bic r7,r4,#7
+  57:keccakf1600.c ****     }
+ 136              	 .loc 1 57 77 view .LVU27
+ 137 0018 04F00704 	 and r4,r4,#7
+  57:keccakf1600.c ****     }
+ 138              	 .loc 1 57 51 view .LVU28
+ 139 001c 11F8016B 	 ldrb r6,[r1],#1
+ 140              	.LVL7:
+  57:keccakf1600.c ****     }
+ 141              	 .loc 1 57 61 view .LVU29
+ 142 0020 E400     	 lsls r4,r4,#3
+  57:keccakf1600.c ****     }
+ 143              	 .loc 1 57 14 view .LVU30
+ 144 0022 0744     	 add r7,r7,r0
+  57:keccakf1600.c ****     }
+ 145              	 .loc 1 57 55 view .LVU31
+ 146 0024 A4F12005 	 sub r5,r4,#32
+ 147 0028 C4F1200E 	 rsb lr,r4,#32
+ 148 002c 06FA05F5 	 lsl r5,r6,r5
+ 149 0030 26FA0EFE 	 lsr lr,r6,lr
+ 150 0034 A640     	 lsls r6,r6,r4
+  57:keccakf1600.c ****     }
+ 151              	 .loc 1 57 34 view .LVU32
+ 152 0036 7C68     	 ldr r4,[r7,#4]
+ 153 0038 0194     	 str r4,[sp,#4]
+ 154 003a 50F83C40 	 ldr r4,[r0,ip,lsl#3]
+ 155 003e 6640     	 eors r6,r6,r4
+ 156 0040 019C     	 ldr r4,[sp,#4]
+ 157 0042 40F83C60 	 str r6,[r0,ip,lsl#3]
+  57:keccakf1600.c ****     }
+ 158              	 .loc 1 57 55 view .LVU33
+ 159 0046 45EA0E05 	 orr r5,r5,lr
+  57:keccakf1600.c ****     }
+ 160              	 .loc 1 57 34 view .LVU34
+ 161 004a 6C40     	 eors r4,r4,r5
+ 162 004c 7C60     	 str r4,[r7,#4]
+  55:keccakf1600.c ****     {
+ 163              	 .loc 1 55 29 is_stmt 1 discriminator 3 view .LVU35
+ 164 004e DAE7     	 b .L5
+ 165              	 .cfi_endproc
+ 166              	.LFE1:
+ 168              	 .section .text.KeccakF1600_StatePermute,"ax",%progbits
+ 169              	 .align 1
+ 170              	 .global KeccakF1600_StatePermute
+ 171              	 .syntax unified
+ 172              	 .thumb
+ 173              	 .thumb_func
+ 175              	KeccakF1600_StatePermute:
+ 176              	.LVL8:
+ 177              	.LFB2:
+  60:keccakf1600.c **** 
+  61:keccakf1600.c **** void KeccakF1600_StatePermute(uint64_t * state)
+  62:keccakf1600.c **** {
+ 178              	 .loc 1 62 1 view-0
+ 179              	 .cfi_startproc
+ 180              	 
+ 181              	 
+  63:keccakf1600.c ****   int round;
+ 182              	 .loc 1 63 3 view .LVU37
+  64:keccakf1600.c **** 
+  65:keccakf1600.c ****         uint64_t Aba, Abe, Abi, Abo, Abu;
+ 183              	 .loc 1 65 9 view .LVU38
+  66:keccakf1600.c ****         uint64_t Aga, Age, Agi, Ago, Agu;
+ 184              	 .loc 1 66 9 view .LVU39
+  67:keccakf1600.c ****         uint64_t Aka, Ake, Aki, Ako, Aku;
+ 185              	 .loc 1 67 9 view .LVU40
+  68:keccakf1600.c ****         uint64_t Ama, Ame, Ami, Amo, Amu;
+ 186              	 .loc 1 68 9 view .LVU41
+  69:keccakf1600.c ****         uint64_t Asa, Ase, Asi, Aso, Asu;
+ 187              	 .loc 1 69 9 view .LVU42
+  70:keccakf1600.c ****         uint64_t BCa, BCe, BCi, BCo, BCu;
+ 188              	 .loc 1 70 9 view .LVU43
+  71:keccakf1600.c ****         uint64_t Da, De, Di, Do, Du;
+ 189              	 .loc 1 71 9 view .LVU44
+  72:keccakf1600.c ****         uint64_t Eba, Ebe, Ebi, Ebo, Ebu;
+ 190              	 .loc 1 72 9 view .LVU45
+  73:keccakf1600.c ****         uint64_t Ega, Ege, Egi, Ego, Egu;
+ 191              	 .loc 1 73 9 view .LVU46
+  74:keccakf1600.c ****         uint64_t Eka, Eke, Eki, Eko, Eku;
+ 192              	 .loc 1 74 9 view .LVU47
+  75:keccakf1600.c ****         uint64_t Ema, Eme, Emi, Emo, Emu;
+ 193              	 .loc 1 75 9 view .LVU48
+  76:keccakf1600.c ****         uint64_t Esa, Ese, Esi, Eso, Esu;
+ 194              	 .loc 1 76 9 view .LVU49
+  77:keccakf1600.c **** 
+  78:keccakf1600.c ****         //copyFromState(A, state)
+  79:keccakf1600.c ****         Aba = state[ 0];
+ 195              	 .loc 1 79 9 view .LVU50
+  62:keccakf1600.c ****   int round;
+ 196              	 .loc 1 62 1 is_stmt 0 view .LVU51
+ 197 0000 2DE9F04F 	 push {r4,r5,r6,r7,r8,r9,r10,fp,lr}
+ 198              	.LCFI4:
+ 199              	 .cfi_def_cfa_offset 36
+ 200              	 .cfi_offset 4,-36
+ 201              	 .cfi_offset 5,-32
+ 202              	 .cfi_offset 6,-28
+ 203              	 .cfi_offset 7,-24
+ 204              	 .cfi_offset 8,-20
+ 205              	 .cfi_offset 9,-16
+ 206              	 .cfi_offset 10,-12
+ 207              	 .cfi_offset 11,-8
+ 208              	 .cfi_offset 14,-4
+ 209 0004 BDB0     	 sub sp,sp,#244
+ 210              	.LCFI5:
+ 211              	 .cfi_def_cfa_offset 280
+ 212              	 .loc 1 79 13 view .LVU52
+ 213 0006 0368     	 ldr r3,[r0]
+ 214 0008 0A93     	 str r3,[sp,#40]
+ 215 000a 4368     	 ldr r3,[r0,#4]
+ 216 000c 0B93     	 str r3,[sp,#44]
+ 217              	.LVL9:
+  80:keccakf1600.c ****         Abe = state[ 1];
+ 218              	 .loc 1 80 9 is_stmt 1 view .LVU53
+ 219              	 .loc 1 80 13 is_stmt 0 view .LVU54
+ 220 000e 8368     	 ldr r3,[r0,#8]
+ 221              	.LVL10:
+ 222              	 .loc 1 80 13 view .LVU55
+ 223 0010 0C93     	 str r3,[sp,#48]
+ 224 0012 C368     	 ldr r3,[r0,#12]
+ 225 0014 0D93     	 str r3,[sp,#52]
+ 226              	.LVL11:
+  81:keccakf1600.c ****         Abi = state[ 2];
+ 227              	 .loc 1 81 9 is_stmt 1 view .LVU56
+ 228              	 .loc 1 81 13 is_stmt 0 view .LVU57
+ 229 0016 0369     	 ldr r3,[r0,#16]
+ 230              	.LVL12:
+ 231              	 .loc 1 81 13 view .LVU58
+ 232 0018 0E93     	 str r3,[sp,#56]
+ 233 001a 4369     	 ldr r3,[r0,#20]
+ 234 001c 0F93     	 str r3,[sp,#60]
+ 235              	.LVL13:
+  82:keccakf1600.c ****         Abo = state[ 3];
+ 236              	 .loc 1 82 9 is_stmt 1 view .LVU59
+ 237              	 .loc 1 82 13 is_stmt 0 view .LVU60
+ 238 001e 8369     	 ldr r3,[r0,#24]
+ 239              	.LVL14:
+ 240              	 .loc 1 82 13 view .LVU61
+ 241 0020 1093     	 str r3,[sp,#64]
+ 242 0022 C369     	 ldr r3,[r0,#28]
+ 243 0024 1193     	 str r3,[sp,#68]
+ 244              	.LVL15:
+  83:keccakf1600.c ****         Abu = state[ 4];
+ 245              	 .loc 1 83 9 is_stmt 1 view .LVU62
+ 246              	 .loc 1 83 13 is_stmt 0 view .LVU63
+ 247 0026 036A     	 ldr r3,[r0,#32]
+ 248              	.LVL16:
+ 249              	 .loc 1 83 13 view .LVU64
+ 250 0028 1293     	 str r3,[sp,#72]
+ 251 002a 436A     	 ldr r3,[r0,#36]
+ 252 002c 1393     	 str r3,[sp,#76]
+ 253              	.LVL17:
+  84:keccakf1600.c ****         Aga = state[ 5];
+ 254              	 .loc 1 84 9 is_stmt 1 view .LVU65
+ 255              	 .loc 1 84 13 is_stmt 0 view .LVU66
+ 256 002e 836A     	 ldr r3,[r0,#40]
+ 257              	.LVL18:
+ 258              	 .loc 1 84 13 view .LVU67
+ 259 0030 1493     	 str r3,[sp,#80]
+ 260 0032 C36A     	 ldr r3,[r0,#44]
+ 261 0034 1593     	 str r3,[sp,#84]
+ 262              	.LVL19:
+  85:keccakf1600.c ****         Age = state[ 6];
+ 263              	 .loc 1 85 9 is_stmt 1 view .LVU68
+ 264              	 .loc 1 85 13 is_stmt 0 view .LVU69
+ 265 0036 036B     	 ldr r3,[r0,#48]
+ 266              	.LVL20:
+ 267              	 .loc 1 85 13 view .LVU70
+ 268 0038 1693     	 str r3,[sp,#88]
+ 269 003a 436B     	 ldr r3,[r0,#52]
+ 270 003c 1793     	 str r3,[sp,#92]
+ 271              	.LVL21:
+  86:keccakf1600.c ****         Agi = state[ 7];
+ 272              	 .loc 1 86 9 is_stmt 1 view .LVU71
+ 273              	 .loc 1 86 13 is_stmt 0 view .LVU72
+ 274 003e 836B     	 ldr r3,[r0,#56]
+ 275              	.LVL22:
+ 276              	 .loc 1 86 13 view .LVU73
+ 277 0040 1893     	 str r3,[sp,#96]
+ 278 0042 C36B     	 ldr r3,[r0,#60]
+ 279 0044 1993     	 str r3,[sp,#100]
+ 280              	.LVL23:
+  87:keccakf1600.c ****         Ago = state[ 8];
+ 281              	 .loc 1 87 9 is_stmt 1 view .LVU74
+ 282              	 .loc 1 87 13 is_stmt 0 view .LVU75
+ 283 0046 036C     	 ldr r3,[r0,#64]
+ 284              	.LVL24:
+ 285              	 .loc 1 87 13 view .LVU76
+ 286 0048 1A93     	 str r3,[sp,#104]
+ 287 004a 436C     	 ldr r3,[r0,#68]
+ 288 004c 1B93     	 str r3,[sp,#108]
+ 289              	.LVL25:
+  88:keccakf1600.c ****         Agu = state[ 9];
+ 290              	 .loc 1 88 9 is_stmt 1 view .LVU77
+ 291              	 .loc 1 88 13 is_stmt 0 view .LVU78
+ 292 004e 836C     	 ldr r3,[r0,#72]
+ 293              	.LVL26:
+ 294              	 .loc 1 88 13 view .LVU79
+ 295 0050 1C93     	 str r3,[sp,#112]
+ 296 0052 C36C     	 ldr r3,[r0,#76]
+ 297 0054 1D93     	 str r3,[sp,#116]
+ 298              	.LVL27:
+  89:keccakf1600.c ****         Aka = state[10];
+ 299              	 .loc 1 89 9 is_stmt 1 view .LVU80
+ 300              	 .loc 1 89 13 is_stmt 0 view .LVU81
+ 301 0056 036D     	 ldr r3,[r0,#80]
+ 302              	.LVL28:
+ 303              	 .loc 1 89 13 view .LVU82
+ 304 0058 1E93     	 str r3,[sp,#120]
+ 305 005a 436D     	 ldr r3,[r0,#84]
+ 306 005c 1F93     	 str r3,[sp,#124]
+ 307              	.LVL29:
+  90:keccakf1600.c ****         Ake = state[11];
+ 308              	 .loc 1 90 9 is_stmt 1 view .LVU83
+ 309              	 .loc 1 90 13 is_stmt 0 view .LVU84
+ 310 005e 836D     	 ldr r3,[r0,#88]
+ 311              	.LVL30:
+ 312              	 .loc 1 90 13 view .LVU85
+ 313 0060 2093     	 str r3,[sp,#128]
+ 314 0062 C36D     	 ldr r3,[r0,#92]
+ 315 0064 2193     	 str r3,[sp,#132]
+ 316              	.LVL31:
+  91:keccakf1600.c ****         Aki = state[12];
+ 317              	 .loc 1 91 9 is_stmt 1 view .LVU86
+ 318              	 .loc 1 91 13 is_stmt 0 view .LVU87
+ 319 0066 036E     	 ldr r3,[r0,#96]
+ 320              	.LVL32:
+ 321              	 .loc 1 91 13 view .LVU88
+ 322 0068 2293     	 str r3,[sp,#136]
+ 323 006a 436E     	 ldr r3,[r0,#100]
+ 324 006c 2393     	 str r3,[sp,#140]
+ 325              	.LVL33:
+  92:keccakf1600.c ****         Ako = state[13];
+ 326              	 .loc 1 92 9 is_stmt 1 view .LVU89
+ 327              	 .loc 1 92 13 is_stmt 0 view .LVU90
+ 328 006e 836E     	 ldr r3,[r0,#104]
+ 329              	.LVL34:
+ 330              	 .loc 1 92 13 view .LVU91
+ 331 0070 2493     	 str r3,[sp,#144]
+ 332 0072 C36E     	 ldr r3,[r0,#108]
+ 333 0074 2593     	 str r3,[sp,#148]
+ 334              	.LVL35:
+  93:keccakf1600.c ****         Aku = state[14];
+ 335              	 .loc 1 93 9 is_stmt 1 view .LVU92
+ 336              	 .loc 1 93 13 is_stmt 0 view .LVU93
+ 337 0076 036F     	 ldr r3,[r0,#112]
+ 338              	.LVL36:
+ 339              	 .loc 1 93 13 view .LVU94
+ 340 0078 2693     	 str r3,[sp,#152]
+ 341 007a 436F     	 ldr r3,[r0,#116]
+ 342 007c 2793     	 str r3,[sp,#156]
+ 343              	.LVL37:
+  94:keccakf1600.c ****         Ama = state[15];
+ 344              	 .loc 1 94 9 is_stmt 1 view .LVU95
+ 345              	 .loc 1 94 13 is_stmt 0 view .LVU96
+ 346 007e 836F     	 ldr r3,[r0,#120]
+ 347              	.LVL38:
+ 348              	 .loc 1 94 13 view .LVU97
+ 349 0080 2893     	 str r3,[sp,#160]
+ 350 0082 C36F     	 ldr r3,[r0,#124]
+ 351 0084 2993     	 str r3,[sp,#164]
+ 352              	.LVL39:
+  95:keccakf1600.c ****         Ame = state[16];
+ 353              	 .loc 1 95 9 is_stmt 1 view .LVU98
+ 354              	 .loc 1 95 13 is_stmt 0 view .LVU99
+ 355 0086 D0F88030 	 ldr r3,[r0,#128]
+ 356              	.LVL40:
+ 357              	 .loc 1 95 13 view .LVU100
+ 358 008a 2A93     	 str r3,[sp,#168]
+ 359 008c D0F88430 	 ldr r3,[r0,#132]
+ 360 0090 2B93     	 str r3,[sp,#172]
+ 361              	.LVL41:
+  96:keccakf1600.c ****         Ami = state[17];
+ 362              	 .loc 1 96 9 is_stmt 1 view .LVU101
+ 363              	 .loc 1 96 13 is_stmt 0 view .LVU102
+ 364 0092 D0F88830 	 ldr r3,[r0,#136]
+ 365              	.LVL42:
+ 366              	 .loc 1 96 13 view .LVU103
+ 367 0096 2C93     	 str r3,[sp,#176]
+ 368 0098 D0F88C30 	 ldr r3,[r0,#140]
+ 369 009c 2D93     	 str r3,[sp,#180]
+ 370              	.LVL43:
+  97:keccakf1600.c ****         Amo = state[18];
+ 371              	 .loc 1 97 9 is_stmt 1 view .LVU104
+ 372              	 .loc 1 97 13 is_stmt 0 view .LVU105
+ 373 009e D0F89030 	 ldr r3,[r0,#144]
+ 374              	.LVL44:
+ 375              	 .loc 1 97 13 view .LVU106
+ 376 00a2 2E93     	 str r3,[sp,#184]
+ 377 00a4 D0F89430 	 ldr r3,[r0,#148]
+ 378 00a8 2F93     	 str r3,[sp,#188]
+ 379              	.LVL45:
+  98:keccakf1600.c ****         Amu = state[19];
+ 380              	 .loc 1 98 9 is_stmt 1 view .LVU107
+ 381              	 .loc 1 98 13 is_stmt 0 view .LVU108
+ 382 00aa D0F89830 	 ldr r3,[r0,#152]
+ 383              	.LVL46:
+ 384              	 .loc 1 98 13 view .LVU109
+ 385 00ae 3093     	 str r3,[sp,#192]
+ 386 00b0 D0F89C30 	 ldr r3,[r0,#156]
+ 387 00b4 3193     	 str r3,[sp,#196]
+ 388              	.LVL47:
+  99:keccakf1600.c ****         Asa = state[20];
+ 389              	 .loc 1 99 9 is_stmt 1 view .LVU110
+ 390              	 .loc 1 99 13 is_stmt 0 view .LVU111
+ 391 00b6 D0F8A030 	 ldr r3,[r0,#160]
+ 392              	.LVL48:
+ 393              	 .loc 1 99 13 view .LVU112
+ 394 00ba 3293     	 str r3,[sp,#200]
+ 395 00bc D0F8A430 	 ldr r3,[r0,#164]
+ 396 00c0 3393     	 str r3,[sp,#204]
+ 397              	.LVL49:
+ 100:keccakf1600.c ****         Ase = state[21];
+ 398              	 .loc 1 100 9 is_stmt 1 view .LVU113
+ 399              	 .loc 1 100 13 is_stmt 0 view .LVU114
+ 400 00c2 D0F8A830 	 ldr r3,[r0,#168]
+ 401              	.LVL50:
+ 402              	 .loc 1 100 13 view .LVU115
+ 403 00c6 3493     	 str r3,[sp,#208]
+ 404 00c8 D0F8AC30 	 ldr r3,[r0,#172]
+ 405 00cc 3593     	 str r3,[sp,#212]
+ 406              	.LVL51:
+ 101:keccakf1600.c ****         Asi = state[22];
+ 407              	 .loc 1 101 9 is_stmt 1 view .LVU116
+ 408              	 .loc 1 101 13 is_stmt 0 view .LVU117
+ 409 00ce D0F8B030 	 ldr r3,[r0,#176]
+ 410              	.LVL52:
+ 411              	 .loc 1 101 13 view .LVU118
+ 412 00d2 3693     	 str r3,[sp,#216]
+ 413 00d4 D0F8B430 	 ldr r3,[r0,#180]
+ 414 00d8 3793     	 str r3,[sp,#220]
+ 415              	.LVL53:
+ 102:keccakf1600.c ****         Aso = state[23];
+ 416              	 .loc 1 102 9 is_stmt 1 view .LVU119
+ 417              	 .loc 1 102 13 is_stmt 0 view .LVU120
+ 418 00da D0F8B830 	 ldr r3,[r0,#184]
+ 419              	.LVL54:
+ 420              	 .loc 1 102 13 view .LVU121
+ 421 00de 3893     	 str r3,[sp,#224]
+ 422 00e0 D0F8BC30 	 ldr r3,[r0,#188]
+ 423 00e4 3993     	 str r3,[sp,#228]
+ 424              	.LVL55:
+ 103:keccakf1600.c ****         Asu = state[24];
+ 425              	 .loc 1 103 9 is_stmt 1 view .LVU122
+ 426              	 .loc 1 103 13 is_stmt 0 view .LVU123
+ 427 00e6 D0F8C030 	 ldr r3,[r0,#192]
+ 428              	.LVL56:
+ 429              	 .loc 1 103 13 view .LVU124
+ 430 00ea 034A     	 ldr r2,.L10
+ 431 00ec 3A93     	 str r3,[sp,#232]
+ 432 00ee D0F8C430 	 ldr r3,[r0,#196]
+ 433              	.LVL57:
+ 104:keccakf1600.c **** 
+ 105:keccakf1600.c ****         for( round = 0; round < NROUNDS; round += 2 )
+ 434              	 .loc 1 105 9 is_stmt 1 view .LVU125
+ 435              	 .loc 1 105 31 discriminator 1 view .LVU126
+ 436 00f2 0092     	 str r2,[sp]
+ 437 00f4 02E0     	 b .L11
+ 438              	.L12:
+ 439 00f6 00BF     	 .align 2
+ 440              	.L10:
+ 441 00f8 00000000 	 .word KeccakF_RoundConstants
+ 442              	.L11:
+ 443              	.LVL58:
+ 444              	.L8:
+ 106:keccakf1600.c ****         {
+ 107:keccakf1600.c ****             //    prepareTheta
+ 108:keccakf1600.c ****             BCa = Aba^Aga^Aka^Ama^Asa;
+ 445              	 .loc 1 108 13 view .LVU127
+ 446              	 .loc 1 108 22 is_stmt 0 view .LVU128
+ 447 00fc 0A9A     	 ldr r2,[sp,#40]
+ 448 00fe 1499     	 ldr r1,[sp,#80]
+ 449 0100 82EA0106 	 eor r6,r2,r1
+ 450 0104 1599     	 ldr r1,[sp,#84]
+ 451 0106 0B9A     	 ldr r2,[sp,#44]
+ 452 0108 4A40     	 eors r2,r2,r1
+ 453              	 .loc 1 108 26 view .LVU129
+ 454 010a 1E99     	 ldr r1,[sp,#120]
+ 455 010c 4E40     	 eors r6,r6,r1
+ 456 010e 1F99     	 ldr r1,[sp,#124]
+ 457 0110 4A40     	 eors r2,r2,r1
+ 458              	 .loc 1 108 30 view .LVU130
+ 459 0112 2899     	 ldr r1,[sp,#160]
+ 460 0114 4E40     	 eors r6,r6,r1
+ 461 0116 2999     	 ldr r1,[sp,#164]
+ 462 0118 4A40     	 eors r2,r2,r1
+ 463              	 .loc 1 108 17 view .LVU131
+ 464 011a 3299     	 ldr r1,[sp,#200]
+ 465 011c 4E40     	 eors r6,r6,r1
+ 466 011e 3399     	 ldr r1,[sp,#204]
+ 467 0120 4A40     	 eors r2,r2,r1
+ 468 0122 0892     	 str r2,[sp,#32]
+ 469              	.LVL59:
+ 109:keccakf1600.c ****             BCe = Abe^Age^Ake^Ame^Ase;
+ 470              	 .loc 1 109 13 is_stmt 1 view .LVU132
+ 471              	 .loc 1 109 22 is_stmt 0 view .LVU133
+ 472 0124 1699     	 ldr r1,[sp,#88]
+ 473 0126 0C9A     	 ldr r2,[sp,#48]
+ 474              	.LVL60:
+ 475              	 .loc 1 109 22 view .LVU134
+ 476 0128 82EA0109 	 eor r9,r2,r1
+ 477 012c 0D9A     	 ldr r2,[sp,#52]
+ 478 012e 1799     	 ldr r1,[sp,#92]
+ 479 0130 82EA0108 	 eor r8,r2,r1
+ 480              	 .loc 1 109 26 view .LVU135
+ 481 0134 209A     	 ldr r2,[sp,#128]
+ 110:keccakf1600.c ****             BCi = Abi^Agi^Aki^Ami^Asi;
+ 482              	 .loc 1 110 22 view .LVU136
+ 483 0136 1899     	 ldr r1,[sp,#96]
+ 109:keccakf1600.c ****             BCe = Abe^Age^Ake^Ame^Ase;
+ 484              	 .loc 1 109 26 view .LVU137
+ 485 0138 89EA0209 	 eor r9,r9,r2
+ 486 013c 219A     	 ldr r2,[sp,#132]
+ 487 013e 88EA0208 	 eor r8,r8,r2
+ 109:keccakf1600.c ****             BCe = Abe^Age^Ake^Ame^Ase;
+ 488              	 .loc 1 109 30 view .LVU138
+ 489 0142 2A9A     	 ldr r2,[sp,#168]
+ 490 0144 89EA0209 	 eor r9,r9,r2
+ 491 0148 2B9A     	 ldr r2,[sp,#172]
+ 492 014a 88EA0208 	 eor r8,r8,r2
+ 109:keccakf1600.c ****             BCe = Abe^Age^Ake^Ame^Ase;
+ 493              	 .loc 1 109 17 view .LVU139
+ 494 014e 349A     	 ldr r2,[sp,#208]
+ 495 0150 89EA0209 	 eor r9,r9,r2
+ 496 0154 359A     	 ldr r2,[sp,#212]
+ 497 0156 88EA0208 	 eor r8,r8,r2
+ 498              	.LVL61:
+ 499              	 .loc 1 110 13 is_stmt 1 view .LVU140
+ 500              	 .loc 1 110 22 is_stmt 0 view .LVU141
+ 501 015a 0E9A     	 ldr r2,[sp,#56]
+ 502 015c 82EA010C 	 eor ip,r2,r1
+ 503 0160 0F9A     	 ldr r2,[sp,#60]
+ 504 0162 1999     	 ldr r1,[sp,#100]
+ 505 0164 82EA0107 	 eor r7,r2,r1
+ 506              	 .loc 1 110 26 view .LVU142
+ 507 0168 229A     	 ldr r2,[sp,#136]
+ 508 016a 2399     	 ldr r1,[sp,#140]
+ 509 016c 8CEA020C 	 eor ip,ip,r2
+ 510 0170 4F40     	 eors r7,r7,r1
+ 511              	 .loc 1 110 30 view .LVU143
+ 512 0172 2C9A     	 ldr r2,[sp,#176]
+ 513 0174 2D99     	 ldr r1,[sp,#180]
+ 514 0176 8CEA020C 	 eor ip,ip,r2
+ 515 017a 4F40     	 eors r7,r7,r1
+ 516              	 .loc 1 110 17 view .LVU144
+ 517 017c 369A     	 ldr r2,[sp,#216]
+ 518 017e 3799     	 ldr r1,[sp,#220]
+ 519 0180 8CEA020C 	 eor ip,ip,r2
+ 520 0184 4F40     	 eors r7,r7,r1
+ 521              	.LVL62:
+ 111:keccakf1600.c ****             BCo = Abo^Ago^Ako^Amo^Aso;
+ 522              	 .loc 1 111 13 is_stmt 1 view .LVU145
+ 523              	 .loc 1 111 22 is_stmt 0 view .LVU146
+ 524 0186 109A     	 ldr r2,[sp,#64]
+ 525 0188 1A99     	 ldr r1,[sp,#104]
+ 526 018a 82EA0105 	 eor r5,r2,r1
+ 527 018e 119A     	 ldr r2,[sp,#68]
+ 528 0190 1B99     	 ldr r1,[sp,#108]
+ 529 0192 82EA0104 	 eor r4,r2,r1
+ 530              	 .loc 1 111 26 view .LVU147
+ 531 0196 2499     	 ldr r1,[sp,#144]
+ 112:keccakf1600.c ****             BCu = Abu^Agu^Aku^Amu^Asu;
+ 532              	 .loc 1 112 22 view .LVU148
+ 533 0198 129A     	 ldr r2,[sp,#72]
+ 111:keccakf1600.c ****             BCo = Abo^Ago^Ako^Amo^Aso;
+ 534              	 .loc 1 111 26 view .LVU149
+ 535 019a 4D40     	 eors r5,r5,r1
+ 536 019c 2599     	 ldr r1,[sp,#148]
+ 537 019e 4C40     	 eors r4,r4,r1
+ 111:keccakf1600.c ****             BCo = Abo^Ago^Ako^Amo^Aso;
+ 538              	 .loc 1 111 30 view .LVU150
+ 539 01a0 2E99     	 ldr r1,[sp,#184]
+ 540 01a2 4D40     	 eors r5,r5,r1
+ 541 01a4 2F99     	 ldr r1,[sp,#188]
+ 542 01a6 4C40     	 eors r4,r4,r1
+ 111:keccakf1600.c ****             BCo = Abo^Ago^Ako^Amo^Aso;
+ 543              	 .loc 1 111 17 view .LVU151
+ 544 01a8 3899     	 ldr r1,[sp,#224]
+ 545 01aa 4D40     	 eors r5,r5,r1
+ 546 01ac 3999     	 ldr r1,[sp,#228]
+ 547 01ae 4C40     	 eors r4,r4,r1
+ 548              	.LVL63:
+ 549              	 .loc 1 112 13 is_stmt 1 view .LVU152
+ 550              	 .loc 1 112 22 is_stmt 0 view .LVU153
+ 551 01b0 1C99     	 ldr r1,[sp,#112]
+ 552 01b2 82EA010E 	 eor lr,r2,r1
+ 553 01b6 139A     	 ldr r2,[sp,#76]
+ 554 01b8 1D99     	 ldr r1,[sp,#116]
+ 555 01ba 5140     	 eors r1,r1,r2
+ 556              	 .loc 1 112 26 view .LVU154
+ 557 01bc 269A     	 ldr r2,[sp,#152]
+ 558 01be 8EEA020E 	 eor lr,lr,r2
+ 559 01c2 279A     	 ldr r2,[sp,#156]
+ 560 01c4 5140     	 eors r1,r1,r2
+ 561              	 .loc 1 112 30 view .LVU155
+ 562 01c6 309A     	 ldr r2,[sp,#192]
+ 563 01c8 8EEA020E 	 eor lr,lr,r2
+ 564 01cc 319A     	 ldr r2,[sp,#196]
+ 565 01ce 5140     	 eors r1,r1,r2
+ 566              	 .loc 1 112 17 view .LVU156
+ 567 01d0 3A9A     	 ldr r2,[sp,#232]
+ 113:keccakf1600.c **** 
+ 114:keccakf1600.c ****             //thetaRhoPiChiIotaPrepareTheta(round  , A, E)
+ 115:keccakf1600.c ****             Da = BCu^ROL(BCe, 1);
+ 568              	 .loc 1 115 22 view .LVU157
+ 569 01d2 4FEA490B 	 lsl fp,r9,#1
+ 112:keccakf1600.c ****             BCu = Abu^Agu^Aku^Amu^Asu;
+ 570              	 .loc 1 112 17 view .LVU158
+ 571 01d6 8EEA020E 	 eor lr,lr,r2
+ 572              	 .loc 1 115 22 view .LVU159
+ 573 01da 4BEAD87B 	 orr fp,fp,r8,lsr#31
+ 574 01de 4FEA480A 	 lsl r10,r8,#1
+ 112:keccakf1600.c ****             BCu = Abu^Agu^Aku^Amu^Asu;
+ 575              	 .loc 1 112 17 view .LVU160
+ 576 01e2 5940     	 eors r1,r1,r3
+ 577              	.LVL64:
+ 578              	 .loc 1 115 13 is_stmt 1 view .LVU161
+ 579              	 .loc 1 115 16 is_stmt 0 view .LVU162
+ 580 01e4 8BEA0E02 	 eor r2,fp,lr
+ 581              	 .loc 1 115 22 view .LVU163
+ 582 01e8 4AEAD97A 	 orr r10,r10,r9,lsr#31
+ 116:keccakf1600.c ****             De = BCa^ROL(BCi, 1);
+ 583              	 .loc 1 116 22 view .LVU164
+ 584 01ec 4FEA4C0B 	 lsl fp,ip,#1
+ 115:keccakf1600.c ****             De = BCa^ROL(BCi, 1);
+ 585              	 .loc 1 115 16 view .LVU165
+ 586 01f0 0192     	 str r2,[sp,#4]
+ 587              	 .loc 1 116 22 view .LVU166
+ 588 01f2 4BEAD77B 	 orr fp,fp,r7,lsr#31
+ 115:keccakf1600.c ****             De = BCa^ROL(BCi, 1);
+ 589              	 .loc 1 115 16 view .LVU167
+ 590 01f6 8AEA0102 	 eor r2,r10,r1
+ 591 01fa 0292     	 str r2,[sp,#8]
+ 592              	.LVL65:
+ 593              	 .loc 1 116 13 is_stmt 1 view .LVU168
+ 594              	 .loc 1 116 16 is_stmt 0 view .LVU169
+ 595 01fc 8BEA0602 	 eor r2,fp,r6
+ 596              	.LVL66:
+ 597              	 .loc 1 116 22 view .LVU170
+ 598 0200 4FEA470A 	 lsl r10,r7,#1
+ 599              	 .loc 1 116 16 view .LVU171
+ 600 0204 0392     	 str r2,[sp,#12]
+ 601 0206 089A     	 ldr r2,[sp,#32]
+ 602              	 .loc 1 116 22 view .LVU172
+ 603 0208 4AEADC7A 	 orr r10,r10,ip,lsr#31
+ 604              	 .loc 1 116 16 view .LVU173
+ 605 020c 8AEA0202 	 eor r2,r10,r2
+ 117:keccakf1600.c ****             Di = BCe^ROL(BCo, 1);
+ 606              	 .loc 1 117 22 view .LVU174
+ 607 0210 4FEA440A 	 lsl r10,r4,#1
+ 608 0214 4AEAD57A 	 orr r10,r10,r5,lsr#31
+ 116:keccakf1600.c ****             De = BCa^ROL(BCi, 1);
+ 609              	 .loc 1 116 16 view .LVU175
+ 610 0218 0492     	 str r2,[sp,#16]
+ 611              	.LVL67:
+ 612              	 .loc 1 117 13 is_stmt 1 view .LVU176
+ 613              	 .loc 1 117 16 is_stmt 0 view .LVU177
+ 614 021a 8AEA0802 	 eor r2,r10,r8
+ 615              	.LVL68:
+ 118:keccakf1600.c ****             Do = BCi^ROL(BCu, 1);
+ 616              	 .loc 1 118 22 view .LVU178
+ 617 021e 4FEA4E08 	 lsl r8,lr,#1
+ 618              	.LVL69:
+ 619              	 .loc 1 118 22 view .LVU179
+ 620 0222 48EAD178 	 orr r8,r8,r1,lsr#31
+ 621 0226 4900     	 lsls r1,r1,#1
+ 622              	.LVL70:
+ 623              	 .loc 1 118 22 view .LVU180
+ 624 0228 41EADE71 	 orr r1,r1,lr,lsr#31
+ 117:keccakf1600.c ****             Di = BCe^ROL(BCo, 1);
+ 625              	 .loc 1 117 16 view .LVU181
+ 626 022c 0592     	 str r2,[sp,#20]
+ 627              	 .loc 1 118 16 view .LVU182
+ 628 022e 88EA0C02 	 eor r2,r8,ip
+ 629 0232 0692     	 str r2,[sp,#24]
+ 630 0234 81EA0702 	 eor r2,r1,r7
+ 631 0238 0792     	 str r2,[sp,#28]
+ 119:keccakf1600.c ****             Du = BCo^ROL(BCa, 1);
+ 632              	 .loc 1 119 22 view .LVU183
+ 633 023a 089A     	 ldr r2,[sp,#32]
+ 634 023c 7100     	 lsls r1,r6,#1
+ 635 023e 41EAD271 	 orr r1,r1,r2,lsr#31
+ 636 0242 5200     	 lsls r2,r2,#1
+ 637 0244 42EAD672 	 orr r2,r2,r6,lsr#31
+ 638              	 .loc 1 119 16 view .LVU184
+ 639 0248 6940     	 eors r1,r1,r5
+ 640 024a 6240     	 eors r2,r2,r4
+ 117:keccakf1600.c ****             Di = BCe^ROL(BCo, 1);
+ 641              	 .loc 1 117 22 view .LVU185
+ 642 024c 4FEA450B 	 lsl fp,r5,#1
+ 643              	 .loc 1 119 16 view .LVU186
+ 644 0250 0891     	 str r1,[sp,#32]
+ 645              	.LVL71:
+ 646              	 .loc 1 119 16 view .LVU187
+ 647 0252 0992     	 str r2,[sp,#36]
+ 120:keccakf1600.c **** 
+ 121:keccakf1600.c ****             Aba ^= Da;
+ 648              	 .loc 1 121 17 view .LVU188
+ 649 0254 0A99     	 ldr r1,[sp,#40]
+ 650 0256 019A     	 ldr r2,[sp,#4]
+ 117:keccakf1600.c ****             Do = BCi^ROL(BCu, 1);
+ 651              	 .loc 1 117 22 view .LVU189
+ 652 0258 4BEAD47B 	 orr fp,fp,r4,lsr#31
+ 117:keccakf1600.c ****             Do = BCi^ROL(BCu, 1);
+ 653              	 .loc 1 117 16 view .LVU190
+ 654 025c 8BEA090B 	 eor fp,fp,r9
+ 655              	.LVL72:
+ 118:keccakf1600.c ****             Du = BCo^ROL(BCa, 1);
+ 656              	 .loc 1 118 13 is_stmt 1 view .LVU191
+ 119:keccakf1600.c **** 
+ 657              	 .loc 1 119 13 view .LVU192
+ 658              	 .loc 1 121 13 view .LVU193
+ 659              	 .loc 1 121 17 is_stmt 0 view .LVU194
+ 660 0260 82EA0109 	 eor r9,r2,r1
+ 661              	.LVL73:
+ 662              	 .loc 1 121 17 view .LVU195
+ 663 0264 029A     	 ldr r2,[sp,#8]
+ 664 0266 0B99     	 ldr r1,[sp,#44]
+ 122:keccakf1600.c ****             BCa = Aba;
+ 123:keccakf1600.c ****             Age ^= De;
+ 665              	 .loc 1 123 17 view .LVU196
+ 666 0268 179C     	 ldr r4,[sp,#92]
+ 667              	.LVL74:
+ 124:keccakf1600.c ****             BCe = ROL(Age, 44);
+ 125:keccakf1600.c ****             Aki ^= Di;
+ 668              	 .loc 1 125 17 view .LVU197
+ 669 026a 239E     	 ldr r6,[sp,#140]
+ 670              	.LVL75:
+ 126:keccakf1600.c ****             BCi = ROL(Aki, 43);
+ 127:keccakf1600.c ****             Amo ^= Do;
+ 671              	 .loc 1 127 17 view .LVU198
+ 672 026c 2F9F     	 ldr r7,[sp,#188]
+ 673              	.LVL76:
+ 121:keccakf1600.c ****             BCa = Aba;
+ 674              	 .loc 1 121 17 view .LVU199
+ 675 026e 82EA010A 	 eor r10,r2,r1
+ 676              	.LVL77:
+ 122:keccakf1600.c ****             Age ^= De;
+ 677              	 .loc 1 122 13 is_stmt 1 view .LVU200
+ 123:keccakf1600.c ****             BCe = ROL(Age, 44);
+ 678              	 .loc 1 123 13 view .LVU201
+ 124:keccakf1600.c ****             Aki ^= Di;
+ 679              	 .loc 1 124 13 view .LVU202
+ 123:keccakf1600.c ****             BCe = ROL(Age, 44);
+ 680              	 .loc 1 123 17 is_stmt 0 view .LVU203
+ 681 0272 039A     	 ldr r2,[sp,#12]
+ 682 0274 1699     	 ldr r1,[sp,#88]
+ 683 0276 5140     	 eors r1,r1,r2
+ 684 0278 049A     	 ldr r2,[sp,#16]
+ 124:keccakf1600.c ****             Aki ^= Di;
+ 685              	 .loc 1 124 17 view .LVU204
+ 686 027a 0D0D     	 lsrs r5,r1,#20
+ 687              	.LVL78:
+ 123:keccakf1600.c ****             BCe = ROL(Age, 44);
+ 688              	 .loc 1 123 17 view .LVU205
+ 689 027c 6240     	 eors r2,r2,r4
+ 124:keccakf1600.c ****             Aki ^= Di;
+ 690              	 .loc 1 124 17 view .LVU206
+ 691 027e 45EA0235 	 orr r5,r5,r2,lsl#12
+ 692 0282 120D     	 lsrs r2,r2,#20
+ 693 0284 42EA0132 	 orr r2,r2,r1,lsl#12
+ 694              	.LVL79:
+ 125:keccakf1600.c ****             BCi = ROL(Aki, 43);
+ 695              	 .loc 1 125 13 is_stmt 1 view .LVU207
+ 126:keccakf1600.c ****             Amo ^= Do;
+ 696              	 .loc 1 126 13 view .LVU208
+ 125:keccakf1600.c ****             BCi = ROL(Aki, 43);
+ 697              	 .loc 1 125 17 is_stmt 0 view .LVU209
+ 698 0288 2299     	 ldr r1,[sp,#136]
+ 699 028a 059C     	 ldr r4,[sp,#20]
+ 700 028c 8BEA0101 	 eor r1,fp,r1
+ 701 0290 7440     	 eors r4,r4,r6
+ 126:keccakf1600.c ****             Amo ^= Do;
+ 702              	 .loc 1 126 17 view .LVU210
+ 703 0292 4FEA5158 	 lsr r8,r1,#21
+ 704 0296 48EAC428 	 orr r8,r8,r4,lsl#11
+ 705 029a 640D     	 lsrs r4,r4,#21
+ 706 029c 44EAC124 	 orr r4,r4,r1,lsl#11
+ 707              	.LVL80:
+ 708              	 .loc 1 127 13 is_stmt 1 view .LVU211
+ 128:keccakf1600.c ****             BCo = ROL(Amo, 21);
+ 709              	 .loc 1 128 13 view .LVU212
+ 127:keccakf1600.c ****             BCo = ROL(Amo, 21);
+ 710              	 .loc 1 127 17 is_stmt 0 view .LVU213
+ 711 02a0 2E9E     	 ldr r6,[sp,#184]
+ 712 02a2 0699     	 ldr r1,[sp,#24]
+ 713 02a4 4E40     	 eors r6,r6,r1
+ 714 02a6 0799     	 ldr r1,[sp,#28]
+ 715              	 .loc 1 128 17 view .LVU214
+ 716 02a8 4FEA465E 	 lsl lr,r6,#21
+ 717              	.LVL81:
+ 127:keccakf1600.c ****             BCo = ROL(Amo, 21);
+ 718              	 .loc 1 127 17 view .LVU215
+ 719 02ac 7940     	 eors r1,r1,r7
+ 720              	 .loc 1 128 17 view .LVU216
+ 721 02ae 4EEAD12E 	 orr lr,lr,r1,lsr#11
+ 722 02b2 4905     	 lsls r1,r1,#21
+ 129:keccakf1600.c ****             Asu ^= Du;
+ 723              	 .loc 1 129 17 view .LVU217
+ 724 02b4 3A9F     	 ldr r7,[sp,#232]
+ 128:keccakf1600.c ****             BCo = ROL(Amo, 21);
+ 725              	 .loc 1 128 17 view .LVU218
+ 726 02b6 41EAD621 	 orr r1,r1,r6,lsr#11
+ 727              	.LVL82:
+ 728              	 .loc 1 129 13 is_stmt 1 view .LVU219
+ 130:keccakf1600.c ****             BCu = ROL(Asu, 14);
+ 729              	 .loc 1 130 13 view .LVU220
+ 129:keccakf1600.c ****             Asu ^= Du;
+ 730              	 .loc 1 129 17 is_stmt 0 view .LVU221
+ 731 02ba 089E     	 ldr r6,[sp,#32]
+ 732 02bc 7E40     	 eors r6,r6,r7
+ 733 02be 099F     	 ldr r7,[sp,#36]
+ 734              	 .loc 1 130 17 view .LVU222
+ 735 02c0 4FEA863C 	 lsl ip,r6,#14
+ 129:keccakf1600.c ****             Asu ^= Du;
+ 736              	 .loc 1 129 17 view .LVU223
+ 737 02c4 7B40     	 eors r3,r3,r7
+ 738              	.LVL83:
+ 739              	 .loc 1 130 17 view .LVU224
+ 740 02c6 4CEA934C 	 orr ip,ip,r3,lsr#18
+ 741 02ca 9B03     	 lsls r3,r3,#14
+ 742 02cc 43EA9643 	 orr r3,r3,r6,lsr#18
+ 743              	.LVL84:
+ 131:keccakf1600.c ****             Eba =   BCa ^((~BCe)&  BCi );
+ 744              	 .loc 1 131 13 is_stmt 1 view .LVU225
+ 132:keccakf1600.c ****             Eba ^= (uint64_t)KeccakF_RoundConstants[round];
+ 745              	 .loc 1 132 13 view .LVU226
+ 746              	 .loc 1 132 17 is_stmt 0 view .LVU227
+ 747 02d0 009E     	 ldr r6,[sp]
+ 748 02d2 D6E90076 	 ldrd r7,r6,[r6]
+ 749 02d6 8AEA0606 	 eor r6,r10,r6
+ 750 02da 0B96     	 str r6,[sp,#44]
+ 751 02dc 89EA0707 	 eor r7,r9,r7
+ 752 02e0 28EA0506 	 bic r6,r8,r5
+ 753 02e4 7E40     	 eors r6,r6,r7
+ 754 02e6 0B9F     	 ldr r7,[sp,#44]
+ 755 02e8 0A96     	 str r6,[sp,#40]
+ 756 02ea 24EA0206 	 bic r6,r4,r2
+ 757 02ee 7740     	 eors r7,r7,r6
+ 133:keccakf1600.c ****             Ebe =   BCe ^((~BCi)&  BCo );
+ 758              	 .loc 1 133 33 view .LVU228
+ 759 02f0 21EA0406 	 bic r6,r1,r4
+ 760              	 .loc 1 133 17 view .LVU229
+ 761 02f4 5640     	 eors r6,r6,r2
+ 762 02f6 2396     	 str r6,[sp,#140]
+ 763              	.LVL85:
+ 134:keccakf1600.c ****             Ebi =   BCi ^((~BCo)&  BCu );
+ 764              	 .loc 1 134 33 view .LVU230
+ 765 02f8 23EA0106 	 bic r6,r3,r1
+ 766              	 .loc 1 134 17 view .LVU231
+ 767 02fc 7440     	 eors r4,r4,r6
+ 768              	.LVL86:
+ 135:keccakf1600.c ****             Ebo =   BCo ^((~BCu)&  BCa );
+ 136:keccakf1600.c ****             Ebu =   BCu ^((~BCa)&  BCe );
+ 769              	 .loc 1 136 33 view .LVU232
+ 770 02fe 22EA0A02 	 bic r2,r2,r10
+ 771              	.LVL87:
+ 132:keccakf1600.c ****             Ebe =   BCe ^((~BCi)&  BCo );
+ 772              	 .loc 1 132 17 view .LVU233
+ 773 0302 0B97     	 str r7,[sp,#44]
+ 774              	.LVL88:
+ 133:keccakf1600.c ****             Ebi =   BCi ^((~BCo)&  BCu );
+ 775              	 .loc 1 133 13 is_stmt 1 view .LVU234
+ 134:keccakf1600.c ****             Ebo =   BCo ^((~BCu)&  BCa );
+ 776              	 .loc 1 134 13 view .LVU235
+ 133:keccakf1600.c ****             Ebi =   BCi ^((~BCo)&  BCu );
+ 777              	 .loc 1 133 33 is_stmt 0 view .LVU236
+ 778 0304 2EEA0807 	 bic r7,lr,r8
+ 779              	.LVL89:
+ 133:keccakf1600.c ****             Ebi =   BCi ^((~BCo)&  BCu );
+ 780              	 .loc 1 133 17 view .LVU237
+ 781 0308 6F40     	 eors r7,r7,r5
+ 134:keccakf1600.c ****             Ebo =   BCo ^((~BCu)&  BCa );
+ 782              	 .loc 1 134 17 view .LVU238
+ 783 030a 3B94     	 str r4,[sp,#236]
+ 784              	.LVL90:
+ 135:keccakf1600.c ****             Ebu =   BCu ^((~BCa)&  BCe );
+ 785              	 .loc 1 135 13 is_stmt 1 view .LVU239
+ 135:keccakf1600.c ****             Ebu =   BCu ^((~BCa)&  BCe );
+ 786              	 .loc 1 135 33 is_stmt 0 view .LVU240
+ 787 030c 2AEA0304 	 bic r4,r10,r3
+ 788              	.LVL91:
+ 789              	 .loc 1 136 17 view .LVU241
+ 790 0310 5340     	 eors r3,r3,r2
+ 791              	.LVL92:
+ 135:keccakf1600.c ****             Ebu =   BCu ^((~BCa)&  BCe );
+ 792              	 .loc 1 135 33 view .LVU242
+ 793 0312 29EA0C06 	 bic r6,r9,ip
+ 135:keccakf1600.c ****             Ebu =   BCu ^((~BCa)&  BCe );
+ 794              	 .loc 1 135 17 view .LVU243
+ 795 0316 6140     	 eors r1,r1,r4
+ 796              	.LVL93:
+ 797              	 .loc 1 136 33 view .LVU244
+ 798 0318 25EA0905 	 bic r5,r5,r9
+ 799              	.LVL94:
+ 137:keccakf1600.c **** 
+ 138:keccakf1600.c ****             Abo ^= Do;
+ 800              	 .loc 1 138 17 view .LVU245
+ 801 031c 109A     	 ldr r2,[sp,#64]
+ 133:keccakf1600.c ****             Ebi =   BCi ^((~BCo)&  BCu );
+ 802              	 .loc 1 133 17 view .LVU246
+ 803 031e 2297     	 str r7,[sp,#136]
+ 804              	.LVL95:
+ 136:keccakf1600.c **** 
+ 805              	 .loc 1 136 17 view .LVU247
+ 806 0320 2F93     	 str r3,[sp,#188]
+ 807              	.LVL96:
+ 134:keccakf1600.c ****             Ebo =   BCo ^((~BCu)&  BCa );
+ 808              	 .loc 1 134 33 view .LVU248
+ 809 0322 2CEA0E07 	 bic r7,ip,lr
+ 810              	 .loc 1 138 17 view .LVU249
+ 811 0326 069B     	 ldr r3,[sp,#24]
+ 135:keccakf1600.c ****             Ebu =   BCu ^((~BCa)&  BCe );
+ 812              	 .loc 1 135 17 view .LVU250
+ 813 0328 1791     	 str r1,[sp,#92]
+ 814              	.LVL97:
+ 136:keccakf1600.c **** 
+ 815              	 .loc 1 136 13 is_stmt 1 view .LVU251
+ 816              	 .loc 1 138 13 view .LVU252
+ 139:keccakf1600.c ****             BCa = ROL(Abo, 28);
+ 817              	 .loc 1 139 13 view .LVU253
+ 134:keccakf1600.c ****             Ebo =   BCo ^((~BCu)&  BCa );
+ 818              	 .loc 1 134 17 is_stmt 0 view .LVU254
+ 819 032a 87EA0807 	 eor r7,r7,r8
+ 136:keccakf1600.c **** 
+ 820              	 .loc 1 136 17 view .LVU255
+ 821 032e 85EA0C01 	 eor r1,r5,ip
+ 822              	.LVL98:
+ 135:keccakf1600.c ****             Ebu =   BCu ^((~BCa)&  BCe );
+ 823              	 .loc 1 135 17 view .LVU256
+ 824 0332 86EA0E06 	 eor r6,r6,lr
+ 138:keccakf1600.c ****             BCa = ROL(Abo, 28);
+ 825              	 .loc 1 138 17 view .LVU257
+ 826 0336 5340     	 eors r3,r3,r2
+ 134:keccakf1600.c ****             Ebo =   BCo ^((~BCu)&  BCa );
+ 827              	 .loc 1 134 17 view .LVU258
+ 828 0338 3A97     	 str r7,[sp,#232]
+ 829              	.LVL99:
+ 135:keccakf1600.c ****             Ebu =   BCu ^((~BCa)&  BCe );
+ 830              	 .loc 1 135 17 view .LVU259
+ 831 033a 1696     	 str r6,[sp,#88]
+ 832              	.LVL100:
+ 136:keccakf1600.c **** 
+ 833              	 .loc 1 136 17 view .LVU260
+ 834 033c 2E91     	 str r1,[sp,#184]
+ 835              	.LVL101:
+ 138:keccakf1600.c ****             BCa = ROL(Abo, 28);
+ 836              	 .loc 1 138 17 view .LVU261
+ 837 033e 079A     	 ldr r2,[sp,#28]
+ 838 0340 1199     	 ldr r1,[sp,#68]
+ 140:keccakf1600.c ****             Agu ^= Du;
+ 839              	 .loc 1 140 17 view .LVU262
+ 840 0342 1D9C     	 ldr r4,[sp,#116]
+ 141:keccakf1600.c ****             BCe = ROL(Agu, 20);
+ 142:keccakf1600.c ****             Aka ^= Da;
+ 841              	 .loc 1 142 17 view .LVU263
+ 842 0344 1F9D     	 ldr r5,[sp,#124]
+ 143:keccakf1600.c ****             BCi = ROL(Aka,  3);
+ 144:keccakf1600.c ****             Ame ^= De;
+ 843              	 .loc 1 144 17 view .LVU264
+ 844 0346 2B9F     	 ldr r7,[sp,#172]
+ 138:keccakf1600.c ****             BCa = ROL(Abo, 28);
+ 845              	 .loc 1 138 17 view .LVU265
+ 846 0348 5140     	 eors r1,r1,r2
+ 139:keccakf1600.c ****             Agu ^= Du;
+ 847              	 .loc 1 139 17 view .LVU266
+ 848 034a 4FEA037C 	 lsl ip,r3,#28
+ 139:keccakf1600.c ****             Agu ^= Du;
+ 849              	 .loc 1 139 17 view .LVU267
+ 850 034e 4CEA111C 	 orr ip,ip,r1,lsr#4
+ 851 0352 0907     	 lsls r1,r1,#28
+ 852 0354 41EA1311 	 orr r1,r1,r3,lsr#4
+ 853              	.LVL102:
+ 140:keccakf1600.c ****             BCe = ROL(Agu, 20);
+ 854              	 .loc 1 140 13 is_stmt 1 view .LVU268
+ 141:keccakf1600.c ****             Aka ^= Da;
+ 855              	 .loc 1 141 13 view .LVU269
+ 140:keccakf1600.c ****             BCe = ROL(Agu, 20);
+ 856              	 .loc 1 140 17 is_stmt 0 view .LVU270
+ 857 0358 1C9A     	 ldr r2,[sp,#112]
+ 858 035a 089B     	 ldr r3,[sp,#32]
+ 859 035c 5A40     	 eors r2,r2,r3
+ 860 035e 099B     	 ldr r3,[sp,#36]
+ 141:keccakf1600.c ****             Aka ^= Da;
+ 861              	 .loc 1 141 17 view .LVU271
+ 862 0360 1605     	 lsls r6,r2,#20
+ 140:keccakf1600.c ****             BCe = ROL(Agu, 20);
+ 863              	 .loc 1 140 17 view .LVU272
+ 864 0362 6340     	 eors r3,r3,r4
+ 141:keccakf1600.c ****             Aka ^= Da;
+ 865              	 .loc 1 141 17 view .LVU273
+ 866 0364 46EA1336 	 orr r6,r6,r3,lsr#12
+ 867 0368 1B05     	 lsls r3,r3,#20
+ 142:keccakf1600.c ****             BCi = ROL(Aka,  3);
+ 868              	 .loc 1 142 17 view .LVU274
+ 869 036a 1E9C     	 ldr r4,[sp,#120]
+ 141:keccakf1600.c ****             Aka ^= Da;
+ 870              	 .loc 1 141 17 view .LVU275
+ 871 036c 43EA1233 	 orr r3,r3,r2,lsr#12
+ 872              	.LVL103:
+ 142:keccakf1600.c ****             BCi = ROL(Aka,  3);
+ 873              	 .loc 1 142 13 is_stmt 1 view .LVU276
+ 143:keccakf1600.c ****             Ame ^= De;
+ 874              	 .loc 1 143 13 view .LVU277
+ 142:keccakf1600.c ****             BCi = ROL(Aka,  3);
+ 875              	 .loc 1 142 17 is_stmt 0 view .LVU278
+ 876 0370 019A     	 ldr r2,[sp,#4]
+ 877 0372 6240     	 eors r2,r2,r4
+ 878 0374 029C     	 ldr r4,[sp,#8]
+ 143:keccakf1600.c ****             Ame ^= De;
+ 879              	 .loc 1 143 17 view .LVU279
+ 880 0376 4FEAC208 	 lsl r8,r2,#3
+ 142:keccakf1600.c ****             BCi = ROL(Aka,  3);
+ 881              	 .loc 1 142 17 view .LVU280
+ 882 037a 6540     	 eors r5,r5,r4
+ 143:keccakf1600.c ****             Ame ^= De;
+ 883              	 .loc 1 143 17 view .LVU281
+ 884 037c 48EA5578 	 orr r8,r8,r5,lsr#29
+ 885 0380 ED00     	 lsls r5,r5,#3
+ 886              	 .loc 1 144 17 view .LVU282
+ 887 0382 2A9C     	 ldr r4,[sp,#168]
+ 143:keccakf1600.c ****             Ame ^= De;
+ 888              	 .loc 1 143 17 view .LVU283
+ 889 0384 45EA5275 	 orr r5,r5,r2,lsr#29
+ 890              	.LVL104:
+ 891              	 .loc 1 144 13 is_stmt 1 view .LVU284
+ 145:keccakf1600.c ****             BCo = ROL(Ame, 45);
+ 892              	 .loc 1 145 13 view .LVU285
+ 144:keccakf1600.c ****             BCo = ROL(Ame, 45);
+ 893              	 .loc 1 144 17 is_stmt 0 view .LVU286
+ 894 0388 039A     	 ldr r2,[sp,#12]
+ 895 038a 6240     	 eors r2,r2,r4
+ 896 038c 049C     	 ldr r4,[sp,#16]
+ 897              	 .loc 1 145 17 view .LVU287
+ 898 038e 4FEAD24E 	 lsr lr,r2,#19
+ 144:keccakf1600.c ****             BCo = ROL(Ame, 45);
+ 899              	 .loc 1 144 17 view .LVU288
+ 900 0392 7C40     	 eors r4,r4,r7
+ 901              	 .loc 1 145 17 view .LVU289
+ 902 0394 4EEA443E 	 orr lr,lr,r4,lsl#13
+ 903 0398 E40C     	 lsrs r4,r4,#19
+ 904 039a 44EA4234 	 orr r4,r4,r2,lsl#13
+ 905              	.LVL105:
+ 146:keccakf1600.c ****             Asi ^= Di;
+ 906              	 .loc 1 146 13 is_stmt 1 view .LVU290
+ 147:keccakf1600.c ****             BCu = ROL(Asi, 61);
+ 907              	 .loc 1 147 13 view .LVU291
+ 146:keccakf1600.c ****             Asi ^= Di;
+ 908              	 .loc 1 146 17 is_stmt 0 view .LVU292
+ 909 039e 369A     	 ldr r2,[sp,#216]
+ 910 03a0 379F     	 ldr r7,[sp,#220]
+ 911 03a2 8BEA0209 	 eor r9,fp,r2
+ 912              	.LVL106:
+ 146:keccakf1600.c ****             Asi ^= Di;
+ 913              	 .loc 1 146 17 view .LVU293
+ 914 03a6 059A     	 ldr r2,[sp,#20]
+ 915 03a8 7A40     	 eors r2,r2,r7
+ 916              	 .loc 1 147 17 view .LVU294
+ 917 03aa 4FEAD907 	 lsr r7,r9,#3
+ 918 03ae 47EA4277 	 orr r7,r7,r2,lsl#29
+ 919 03b2 D208     	 lsrs r2,r2,#3
+ 920 03b4 42EA4972 	 orr r2,r2,r9,lsl#29
+ 921              	.LVL107:
+ 148:keccakf1600.c ****             Ega =   BCa ^((~BCe)&  BCi );
+ 922              	 .loc 1 148 13 is_stmt 1 view .LVU295
+ 923              	 .loc 1 148 33 is_stmt 0 view .LVU296
+ 924 03b8 25EA0309 	 bic r9,r5,r3
+ 925              	 .loc 1 148 17 view .LVU297
+ 926 03bc 89EA0109 	 eor r9,r9,r1
+ 927 03c0 CDF8AC90 	 str r9,[sp,#172]
+ 928              	.LVL108:
+ 149:keccakf1600.c ****             Ege =   BCe ^((~BCi)&  BCo );
+ 929              	 .loc 1 149 13 is_stmt 1 view .LVU298
+ 930              	 .loc 1 149 33 is_stmt 0 view .LVU299
+ 931 03c4 24EA0509 	 bic r9,r4,r5
+ 932              	.LVL109:
+ 148:keccakf1600.c ****             Ega =   BCa ^((~BCe)&  BCi );
+ 933              	 .loc 1 148 33 view .LVU300
+ 934 03c8 28EA060A 	 bic r10,r8,r6
+ 935              	 .loc 1 149 17 view .LVU301
+ 936 03cc 89EA0309 	 eor r9,r9,r3
+ 148:keccakf1600.c ****             Ega =   BCa ^((~BCe)&  BCi );
+ 937              	 .loc 1 148 17 view .LVU302
+ 938 03d0 8AEA0C0A 	 eor r10,r10,ip
+ 939              	 .loc 1 149 17 view .LVU303
+ 940 03d4 CDF84490 	 str r9,[sp,#68]
+ 941              	.LVL110:
+ 150:keccakf1600.c ****             Egi =   BCi ^((~BCo)&  BCu );
+ 942              	 .loc 1 150 13 is_stmt 1 view .LVU304
+ 151:keccakf1600.c ****             Ego =   BCo ^((~BCu)&  BCa );
+ 152:keccakf1600.c ****             Egu =   BCu ^((~BCa)&  BCe );
+ 943              	 .loc 1 152 33 is_stmt 0 view .LVU305
+ 944 03d8 23EA0103 	 bic r3,r3,r1
+ 945              	.LVL111:
+ 150:keccakf1600.c ****             Egi =   BCi ^((~BCo)&  BCu );
+ 946              	 .loc 1 150 33 view .LVU306
+ 947 03dc 22EA0409 	 bic r9,r2,r4
+ 948              	.LVL112:
+ 150:keccakf1600.c ****             Egi =   BCi ^((~BCo)&  BCu );
+ 949              	 .loc 1 150 17 view .LVU307
+ 950 03e0 89EA0505 	 eor r5,r9,r5
+ 951              	.LVL113:
+ 952              	 .loc 1 152 17 view .LVU308
+ 953 03e4 5340     	 eors r3,r3,r2
+ 148:keccakf1600.c ****             Ege =   BCe ^((~BCi)&  BCo );
+ 954              	 .loc 1 148 17 view .LVU309
+ 955 03e6 CDF8A8A0 	 str r10,[sp,#168]
+ 956              	.LVL114:
+ 149:keccakf1600.c ****             Egi =   BCi ^((~BCo)&  BCu );
+ 957              	 .loc 1 149 33 view .LVU310
+ 958 03ea 2EEA080A 	 bic r10,lr,r8
+ 149:keccakf1600.c ****             Egi =   BCi ^((~BCo)&  BCu );
+ 959              	 .loc 1 149 17 view .LVU311
+ 960 03ee 8AEA060A 	 eor r10,r10,r6
+ 150:keccakf1600.c ****             Ego =   BCo ^((~BCu)&  BCa );
+ 961              	 .loc 1 150 17 view .LVU312
+ 962 03f2 1F95     	 str r5,[sp,#124]
+ 963              	.LVL115:
+ 151:keccakf1600.c ****             Egu =   BCu ^((~BCa)&  BCe );
+ 964              	 .loc 1 151 13 is_stmt 1 view .LVU313
+ 965              	 .loc 1 152 33 is_stmt 0 view .LVU314
+ 966 03f4 26EA0C06 	 bic r6,r6,ip
+ 967              	.LVL116:
+ 151:keccakf1600.c ****             Egu =   BCu ^((~BCa)&  BCe );
+ 968              	 .loc 1 151 33 view .LVU315
+ 969 03f8 21EA0205 	 bic r5,r1,r2
+ 970              	.LVL117:
+ 971              	 .loc 1 152 17 view .LVU316
+ 972 03fc 1D93     	 str r3,[sp,#116]
+ 973              	.LVL118:
+ 153:keccakf1600.c **** 
+ 154:keccakf1600.c ****             Abe ^= De;
+ 974              	 .loc 1 154 17 view .LVU317
+ 975 03fe 0C9A     	 ldr r2,[sp,#48]
+ 976              	.LVL119:
+ 977              	 .loc 1 154 17 view .LVU318
+ 978 0400 039B     	 ldr r3,[sp,#12]
+ 149:keccakf1600.c ****             Egi =   BCi ^((~BCo)&  BCu );
+ 979              	 .loc 1 149 17 view .LVU319
+ 980 0402 CDF840A0 	 str r10,[sp,#64]
+ 981              	.LVL120:
+ 152:keccakf1600.c **** 
+ 982              	 .loc 1 152 17 view .LVU320
+ 983 0406 86EA0701 	 eor r1,r6,r7
+ 984              	.LVL121:
+ 150:keccakf1600.c ****             Ego =   BCo ^((~BCu)&  BCa );
+ 985              	 .loc 1 150 33 view .LVU321
+ 986 040a 27EA0E0A 	 bic r10,r7,lr
+ 987              	 .loc 1 154 17 view .LVU322
+ 988 040e 5340     	 eors r3,r3,r2
+ 152:keccakf1600.c **** 
+ 989              	 .loc 1 152 17 view .LVU323
+ 990 0410 1C91     	 str r1,[sp,#112]
+ 991              	 .loc 1 154 17 view .LVU324
+ 992 0412 049A     	 ldr r2,[sp,#16]
+ 993 0414 0D99     	 ldr r1,[sp,#52]
+ 150:keccakf1600.c ****             Ego =   BCo ^((~BCu)&  BCa );
+ 994              	 .loc 1 150 17 view .LVU325
+ 995 0416 8AEA0808 	 eor r8,r10,r8
+ 996              	 .loc 1 154 17 view .LVU326
+ 997 041a 5140     	 eors r1,r1,r2
+ 150:keccakf1600.c ****             Ego =   BCo ^((~BCu)&  BCa );
+ 998              	 .loc 1 150 17 view .LVU327
+ 999 041c CDF87880 	 str r8,[sp,#120]
+ 1000              	.LVL122:
+ 151:keccakf1600.c ****             Egu =   BCu ^((~BCa)&  BCe );
+ 1001              	 .loc 1 151 33 view .LVU328
+ 1002 0420 2CEA0708 	 bic r8,ip,r7
+ 155:keccakf1600.c ****             BCa = ROL(Abe,  1);
+ 1003              	 .loc 1 155 17 view .LVU329
+ 1004 0424 4FEA430C 	 lsl ip,r3,#1
+ 1005              	 .loc 1 155 17 view .LVU330
+ 1006 0428 4CEAD17C 	 orr ip,ip,r1,lsr#31
+ 1007 042c 4900     	 lsls r1,r1,#1
+ 1008 042e 41EAD371 	 orr r1,r1,r3,lsr#31
+ 156:keccakf1600.c ****             Agi ^= Di;
+ 1009              	 .loc 1 156 17 view .LVU331
+ 1010 0432 189B     	 ldr r3,[sp,#96]
+ 151:keccakf1600.c ****             Egu =   BCu ^((~BCa)&  BCe );
+ 1011              	 .loc 1 151 17 view .LVU332
+ 1012 0434 88EA0E0E 	 eor lr,r8,lr
+ 1013              	.LVL123:
+ 151:keccakf1600.c ****             Egu =   BCu ^((~BCa)&  BCe );
+ 1014              	 .loc 1 151 17 view .LVU333
+ 1015 0438 6C40     	 eors r4,r4,r5
+ 1016              	 .loc 1 156 17 view .LVU334
+ 1017 043a 8BEA0302 	 eor r2,fp,r3
+ 151:keccakf1600.c ****             Egu =   BCu ^((~BCa)&  BCe );
+ 1018              	 .loc 1 151 17 view .LVU335
+ 1019 043e CDF8D8E0 	 str lr,[sp,#216]
+ 1020              	.LVL124:
+ 151:keccakf1600.c ****             Egu =   BCu ^((~BCa)&  BCe );
+ 1021              	 .loc 1 151 17 view .LVU336
+ 1022 0442 3794     	 str r4,[sp,#220]
+ 1023              	.LVL125:
+ 152:keccakf1600.c **** 
+ 1024              	 .loc 1 152 13 is_stmt 1 view .LVU337
+ 154:keccakf1600.c ****             BCa = ROL(Abe,  1);
+ 1025              	 .loc 1 154 13 view .LVU338
+ 155:keccakf1600.c ****             Agi ^= Di;
+ 1026              	 .loc 1 155 13 view .LVU339
+ 1027              	 .loc 1 156 13 view .LVU340
+ 157:keccakf1600.c ****             BCe = ROL(Agi,  6);
+ 1028              	 .loc 1 157 13 view .LVU341
+ 156:keccakf1600.c ****             BCe = ROL(Agi,  6);
+ 1029              	 .loc 1 156 17 is_stmt 0 view .LVU342
+ 1030 0444 059B     	 ldr r3,[sp,#20]
+ 1031 0446 199C     	 ldr r4,[sp,#100]
+ 1032              	.LVL126:
+ 158:keccakf1600.c ****             Ako ^= Do;
+ 1033              	 .loc 1 158 17 view .LVU343
+ 1034 0448 259D     	 ldr r5,[sp,#148]
+ 159:keccakf1600.c ****             BCi = ROL(Ako, 25);
+ 160:keccakf1600.c ****             Amu ^= Du;
+ 1035              	 .loc 1 160 17 view .LVU344
+ 1036 044a 319F     	 ldr r7,[sp,#196]
+ 156:keccakf1600.c ****             BCe = ROL(Agi,  6);
+ 1037              	 .loc 1 156 17 view .LVU345
+ 1038 044c 6340     	 eors r3,r3,r4
+ 157:keccakf1600.c ****             Ako ^= Do;
+ 1039              	 .loc 1 157 17 view .LVU346
+ 1040 044e 9601     	 lsls r6,r2,#6
+ 1041 0450 46EA9366 	 orr r6,r6,r3,lsr#26
+ 1042 0454 9B01     	 lsls r3,r3,#6
+ 158:keccakf1600.c ****             BCi = ROL(Ako, 25);
+ 1043              	 .loc 1 158 17 view .LVU347
+ 1044 0456 249C     	 ldr r4,[sp,#144]
+ 157:keccakf1600.c ****             Ako ^= Do;
+ 1045              	 .loc 1 157 17 view .LVU348
+ 1046 0458 43EA9263 	 orr r3,r3,r2,lsr#26
+ 1047              	.LVL127:
+ 158:keccakf1600.c ****             BCi = ROL(Ako, 25);
+ 1048              	 .loc 1 158 13 is_stmt 1 view .LVU349
+ 159:keccakf1600.c ****             Amu ^= Du;
+ 1049              	 .loc 1 159 13 view .LVU350
+ 158:keccakf1600.c ****             BCi = ROL(Ako, 25);
+ 1050              	 .loc 1 158 17 is_stmt 0 view .LVU351
+ 1051 045c 069A     	 ldr r2,[sp,#24]
+ 1052 045e 6240     	 eors r2,r2,r4
+ 1053 0460 079C     	 ldr r4,[sp,#28]
+ 159:keccakf1600.c ****             Amu ^= Du;
+ 1054              	 .loc 1 159 17 view .LVU352
+ 1055 0462 4FEA4268 	 lsl r8,r2,#25
+ 158:keccakf1600.c ****             BCi = ROL(Ako, 25);
+ 1056              	 .loc 1 158 17 view .LVU353
+ 1057 0466 6540     	 eors r5,r5,r4
+ 159:keccakf1600.c ****             Amu ^= Du;
+ 1058              	 .loc 1 159 17 view .LVU354
+ 1059 0468 48EAD518 	 orr r8,r8,r5,lsr#7
+ 1060 046c 6D06     	 lsls r5,r5,#25
+ 1061              	 .loc 1 160 17 view .LVU355
+ 1062 046e 309C     	 ldr r4,[sp,#192]
+ 159:keccakf1600.c ****             Amu ^= Du;
+ 1063              	 .loc 1 159 17 view .LVU356
+ 1064 0470 45EAD215 	 orr r5,r5,r2,lsr#7
+ 1065              	.LVL128:
+ 1066              	 .loc 1 160 13 is_stmt 1 view .LVU357
+ 161:keccakf1600.c ****             BCo = ROL(Amu,  8);
+ 1067              	 .loc 1 161 13 view .LVU358
+ 160:keccakf1600.c ****             BCo = ROL(Amu,  8);
+ 1068              	 .loc 1 160 17 is_stmt 0 view .LVU359
+ 1069 0474 089A     	 ldr r2,[sp,#32]
+ 1070 0476 6240     	 eors r2,r2,r4
+ 1071 0478 099C     	 ldr r4,[sp,#36]
+ 1072              	 .loc 1 161 17 view .LVU360
+ 1073 047a 4FEA022E 	 lsl lr,r2,#8
+ 1074              	.LVL129:
+ 160:keccakf1600.c ****             BCo = ROL(Amu,  8);
+ 1075              	 .loc 1 160 17 view .LVU361
+ 1076 047e 7C40     	 eors r4,r4,r7
+ 1077              	 .loc 1 161 17 view .LVU362
+ 1078 0480 4EEA146E 	 orr lr,lr,r4,lsr#24
+ 1079 0484 2402     	 lsls r4,r4,#8
+ 162:keccakf1600.c ****             Asa ^= Da;
+ 1080              	 .loc 1 162 17 view .LVU363
+ 1081 0486 329F     	 ldr r7,[sp,#200]
+ 161:keccakf1600.c ****             BCo = ROL(Amu,  8);
+ 1082              	 .loc 1 161 17 view .LVU364
+ 1083 0488 44EA1264 	 orr r4,r4,r2,lsr#24
+ 1084              	.LVL130:
+ 1085              	 .loc 1 162 13 is_stmt 1 view .LVU365
+ 163:keccakf1600.c ****             BCu = ROL(Asa, 18);
+ 1086              	 .loc 1 163 13 view .LVU366
+ 162:keccakf1600.c ****             Asa ^= Da;
+ 1087              	 .loc 1 162 17 is_stmt 0 view .LVU367
+ 1088 048c 019A     	 ldr r2,[sp,#4]
+ 1089 048e 82EA0709 	 eor r9,r2,r7
+ 1090 0492 339F     	 ldr r7,[sp,#204]
+ 1091 0494 029A     	 ldr r2,[sp,#8]
+ 1092 0496 7A40     	 eors r2,r2,r7
+ 1093              	 .loc 1 163 17 view .LVU368
+ 1094 0498 4FEA8947 	 lsl r7,r9,#18
+ 1095 049c 47EA9237 	 orr r7,r7,r2,lsr#14
+ 1096 04a0 9204     	 lsls r2,r2,#18
+ 1097 04a2 42EA9932 	 orr r2,r2,r9,lsr#14
+ 1098              	.LVL131:
+ 164:keccakf1600.c ****             Eka =   BCa ^((~BCe)&  BCi );
+ 1099              	 .loc 1 164 13 is_stmt 1 view .LVU369
+ 1100              	 .loc 1 164 33 is_stmt 0 view .LVU370
+ 1101 04a6 25EA0309 	 bic r9,r5,r3
+ 1102              	 .loc 1 164 17 view .LVU371
+ 1103 04aa 89EA0109 	 eor r9,r9,r1
+ 1104 04ae CDF86490 	 str r9,[sp,#100]
+ 1105              	.LVL132:
+ 165:keccakf1600.c ****             Eke =   BCe ^((~BCi)&  BCo );
+ 1106              	 .loc 1 165 13 is_stmt 1 view .LVU372
+ 1107              	 .loc 1 165 33 is_stmt 0 view .LVU373
+ 1108 04b2 24EA0509 	 bic r9,r4,r5
+ 1109              	.LVL133:
+ 164:keccakf1600.c ****             Eka =   BCa ^((~BCe)&  BCi );
+ 1110              	 .loc 1 164 33 view .LVU374
+ 1111 04b6 28EA060A 	 bic r10,r8,r6
+ 1112              	 .loc 1 165 17 view .LVU375
+ 1113 04ba 89EA0309 	 eor r9,r9,r3
+ 164:keccakf1600.c ****             Eka =   BCa ^((~BCe)&  BCi );
+ 1114              	 .loc 1 164 17 view .LVU376
+ 1115 04be 8AEA0C0A 	 eor r10,r10,ip
+ 1116              	 .loc 1 165 17 view .LVU377
+ 1117 04c2 CDF8C490 	 str r9,[sp,#196]
+ 1118              	.LVL134:
+ 166:keccakf1600.c ****             Eki =   BCi ^((~BCo)&  BCu );
+ 1119              	 .loc 1 166 13 is_stmt 1 view .LVU378
+ 167:keccakf1600.c ****             Eko =   BCo ^((~BCu)&  BCa );
+ 168:keccakf1600.c ****             Eku =   BCu ^((~BCa)&  BCe );
+ 1120              	 .loc 1 168 33 is_stmt 0 view .LVU379
+ 1121 04c6 23EA0103 	 bic r3,r3,r1
+ 1122              	.LVL135:
+ 166:keccakf1600.c ****             Eki =   BCi ^((~BCo)&  BCu );
+ 1123              	 .loc 1 166 33 view .LVU380
+ 1124 04ca 22EA0409 	 bic r9,r2,r4
+ 1125              	.LVL136:
+ 166:keccakf1600.c ****             Eki =   BCi ^((~BCo)&  BCu );
+ 1126              	 .loc 1 166 17 view .LVU381
+ 1127 04ce 89EA0505 	 eor r5,r9,r5
+ 1128              	.LVL137:
+ 1129              	 .loc 1 168 17 view .LVU382
+ 1130 04d2 5340     	 eors r3,r3,r2
+ 164:keccakf1600.c ****             Eke =   BCe ^((~BCi)&  BCo );
+ 1131              	 .loc 1 164 17 view .LVU383
+ 1132 04d4 CDF860A0 	 str r10,[sp,#96]
+ 1133              	.LVL138:
+ 165:keccakf1600.c ****             Eki =   BCi ^((~BCo)&  BCu );
+ 1134              	 .loc 1 165 33 view .LVU384
+ 1135 04d8 2EEA080A 	 bic r10,lr,r8
+ 165:keccakf1600.c ****             Eki =   BCi ^((~BCo)&  BCu );
+ 1136              	 .loc 1 165 17 view .LVU385
+ 1137 04dc 8AEA060A 	 eor r10,r10,r6
+ 166:keccakf1600.c ****             Eko =   BCo ^((~BCu)&  BCa );
+ 1138              	 .loc 1 166 17 view .LVU386
+ 1139 04e0 0D95     	 str r5,[sp,#52]
+ 1140              	.LVL139:
+ 167:keccakf1600.c ****             Eku =   BCu ^((~BCa)&  BCe );
+ 1141              	 .loc 1 167 13 is_stmt 1 view .LVU387
+ 1142              	 .loc 1 168 33 is_stmt 0 view .LVU388
+ 1143 04e2 26EA0C06 	 bic r6,r6,ip
+ 167:keccakf1600.c ****             Eku =   BCu ^((~BCa)&  BCe );
+ 1144              	 .loc 1 167 33 view .LVU389
+ 1145 04e6 21EA0205 	 bic r5,r1,r2
+ 1146              	.LVL140:
+ 1147              	 .loc 1 168 17 view .LVU390
+ 1148 04ea 3393     	 str r3,[sp,#204]
+ 1149              	.LVL141:
+ 169:keccakf1600.c **** 
+ 170:keccakf1600.c ****             Abu ^= Du;
+ 1150              	 .loc 1 170 17 view .LVU391
+ 1151 04ec 129A     	 ldr r2,[sp,#72]
+ 1152              	.LVL142:
+ 1153              	 .loc 1 170 17 view .LVU392
+ 1154 04ee 089B     	 ldr r3,[sp,#32]
+ 165:keccakf1600.c ****             Eki =   BCi ^((~BCo)&  BCu );
+ 1155              	 .loc 1 165 17 view .LVU393
+ 1156 04f0 CDF8C0A0 	 str r10,[sp,#192]
+ 1157              	.LVL143:
+ 168:keccakf1600.c **** 
+ 1158              	 .loc 1 168 17 view .LVU394
+ 1159 04f4 86EA0701 	 eor r1,r6,r7
+ 1160              	.LVL144:
+ 166:keccakf1600.c ****             Eko =   BCo ^((~BCu)&  BCa );
+ 1161              	 .loc 1 166 33 view .LVU395
+ 1162 04f8 27EA0E0A 	 bic r10,r7,lr
+ 1163              	 .loc 1 170 17 view .LVU396
+ 1164 04fc 5340     	 eors r3,r3,r2
+ 168:keccakf1600.c **** 
+ 1165              	 .loc 1 168 17 view .LVU397
+ 1166 04fe 3291     	 str r1,[sp,#200]
+ 1167              	 .loc 1 170 17 view .LVU398
+ 1168 0500 099A     	 ldr r2,[sp,#36]
+ 1169 0502 1399     	 ldr r1,[sp,#76]
+ 166:keccakf1600.c ****             Eko =   BCo ^((~BCu)&  BCa );
+ 1170              	 .loc 1 166 17 view .LVU399
+ 1171 0504 8AEA0808 	 eor r8,r10,r8
+ 1172              	.LVL145:
+ 1173              	 .loc 1 170 17 view .LVU400
+ 1174 0508 5140     	 eors r1,r1,r2
+ 166:keccakf1600.c ****             Eko =   BCo ^((~BCu)&  BCa );
+ 1175              	 .loc 1 166 17 view .LVU401
+ 1176 050a CDF83080 	 str r8,[sp,#48]
+ 1177              	.LVL146:
+ 167:keccakf1600.c ****             Eku =   BCu ^((~BCa)&  BCe );
+ 1178              	 .loc 1 167 33 view .LVU402
+ 1179 050e 2CEA0708 	 bic r8,ip,r7
+ 171:keccakf1600.c ****             BCa = ROL(Abu, 27);
+ 1180              	 .loc 1 171 17 view .LVU403
+ 1181 0512 4FEAC36C 	 lsl ip,r3,#27
+ 1182              	 .loc 1 171 17 view .LVU404
+ 1183 0516 4CEA511C 	 orr ip,ip,r1,lsr#5
+ 1184 051a C906     	 lsls r1,r1,#27
+ 1185 051c 41EA5311 	 orr r1,r1,r3,lsr#5
+ 172:keccakf1600.c ****             Aga ^= Da;
+ 1186              	 .loc 1 172 17 view .LVU405
+ 1187 0520 149A     	 ldr r2,[sp,#80]
+ 1188 0522 019B     	 ldr r3,[sp,#4]
+ 167:keccakf1600.c ****             Eku =   BCu ^((~BCa)&  BCe );
+ 1189              	 .loc 1 167 17 view .LVU406
+ 1190 0524 6C40     	 eors r4,r4,r5
+ 1191              	.LVL147:
+ 1192              	 .loc 1 172 17 view .LVU407
+ 1193 0526 5A40     	 eors r2,r2,r3
+ 167:keccakf1600.c ****             Eku =   BCu ^((~BCa)&  BCe );
+ 1194              	 .loc 1 167 17 view .LVU408
+ 1195 0528 2594     	 str r4,[sp,#148]
+ 1196              	.LVL148:
+ 168:keccakf1600.c **** 
+ 1197              	 .loc 1 168 13 is_stmt 1 view .LVU409
+ 170:keccakf1600.c ****             BCa = ROL(Abu, 27);
+ 1198              	 .loc 1 170 13 view .LVU410
+ 171:keccakf1600.c ****             Aga ^= Da;
+ 1199              	 .loc 1 171 13 view .LVU411
+ 1200              	 .loc 1 172 13 view .LVU412
+ 173:keccakf1600.c ****             BCe = ROL(Aga, 36);
+ 1201              	 .loc 1 173 13 view .LVU413
+ 172:keccakf1600.c ****             BCe = ROL(Aga, 36);
+ 1202              	 .loc 1 172 17 is_stmt 0 view .LVU414
+ 1203 052a 029B     	 ldr r3,[sp,#8]
+ 1204 052c 159C     	 ldr r4,[sp,#84]
+ 1205              	.LVL149:
+ 1206              	 .loc 1 173 17 view .LVU415
+ 1207 052e 160F     	 lsrs r6,r2,#28
+ 172:keccakf1600.c ****             BCe = ROL(Aga, 36);
+ 1208              	 .loc 1 172 17 view .LVU416
+ 1209 0530 6340     	 eors r3,r3,r4
+ 1210              	 .loc 1 173 17 view .LVU417
+ 1211 0532 46EA0316 	 orr r6,r6,r3,lsl#4
+ 167:keccakf1600.c ****             Eku =   BCu ^((~BCa)&  BCe );
+ 1212              	 .loc 1 167 17 view .LVU418
+ 1213 0536 88EA0E0E 	 eor lr,r8,lr
+ 1214              	 .loc 1 173 17 view .LVU419
+ 1215 053a 1B0F     	 lsrs r3,r3,#28
+ 1216 053c 43EA0213 	 orr r3,r3,r2,lsl#4
+ 1217              	.LVL150:
+ 174:keccakf1600.c ****             Ake ^= De;
+ 1218              	 .loc 1 174 13 is_stmt 1 view .LVU420
+ 175:keccakf1600.c ****             BCi = ROL(Ake, 10);
+ 1219              	 .loc 1 175 13 view .LVU421
+ 167:keccakf1600.c ****             Eku =   BCu ^((~BCa)&  BCe );
+ 1220              	 .loc 1 167 17 is_stmt 0 view .LVU422
+ 1221 0540 CDF890E0 	 str lr,[sp,#144]
+ 1222              	.LVL151:
+ 174:keccakf1600.c ****             Ake ^= De;
+ 1223              	 .loc 1 174 17 view .LVU423
+ 1224 0544 039A     	 ldr r2,[sp,#12]
+ 1225 0546 209C     	 ldr r4,[sp,#128]
+ 1226 0548 219D     	 ldr r5,[sp,#132]
+ 176:keccakf1600.c ****             Ami ^= Di;
+ 1227              	 .loc 1 176 17 view .LVU424
+ 1228 054a 2D9F     	 ldr r7,[sp,#180]
+ 174:keccakf1600.c ****             Ake ^= De;
+ 1229              	 .loc 1 174 17 view .LVU425
+ 1230 054c 6240     	 eors r2,r2,r4
+ 1231 054e 049C     	 ldr r4,[sp,#16]
+ 175:keccakf1600.c ****             BCi = ROL(Ake, 10);
+ 1232              	 .loc 1 175 17 view .LVU426
+ 1233 0550 4FEA8228 	 lsl r8,r2,#10
+ 174:keccakf1600.c ****             Ake ^= De;
+ 1234              	 .loc 1 174 17 view .LVU427
+ 1235 0554 6540     	 eors r5,r5,r4
+ 175:keccakf1600.c ****             BCi = ROL(Ake, 10);
+ 1236              	 .loc 1 175 17 view .LVU428
+ 1237 0556 48EA9558 	 orr r8,r8,r5,lsr#22
+ 1238 055a AD02     	 lsls r5,r5,#10
+ 1239 055c 45EA9255 	 orr r5,r5,r2,lsr#22
+ 1240              	.LVL152:
+ 1241              	 .loc 1 176 13 is_stmt 1 view .LVU429
+ 177:keccakf1600.c ****             BCo = ROL(Ami, 15);
+ 1242              	 .loc 1 177 13 view .LVU430
+ 176:keccakf1600.c ****             Ami ^= Di;
+ 1243              	 .loc 1 176 17 is_stmt 0 view .LVU431
+ 1244 0560 2C9A     	 ldr r2,[sp,#176]
+ 1245 0562 059C     	 ldr r4,[sp,#20]
+ 1246 0564 8BEA0202 	 eor r2,fp,r2
+ 1247 0568 7C40     	 eors r4,r4,r7
+ 1248              	 .loc 1 177 17 view .LVU432
+ 1249 056a 4FEAC23E 	 lsl lr,r2,#15
+ 1250 056e 4EEA544E 	 orr lr,lr,r4,lsr#17
+ 1251 0572 E403     	 lsls r4,r4,#15
+ 178:keccakf1600.c ****             Aso ^= Do;
+ 1252              	 .loc 1 178 17 view .LVU433
+ 1253 0574 389F     	 ldr r7,[sp,#224]
+ 177:keccakf1600.c ****             BCo = ROL(Ami, 15);
+ 1254              	 .loc 1 177 17 view .LVU434
+ 1255 0576 44EA5244 	 orr r4,r4,r2,lsr#17
+ 1256              	.LVL153:
+ 1257              	 .loc 1 178 13 is_stmt 1 view .LVU435
+ 179:keccakf1600.c ****             BCu = ROL(Aso, 56);
+ 1258              	 .loc 1 179 13 view .LVU436
+ 178:keccakf1600.c ****             Aso ^= Do;
+ 1259              	 .loc 1 178 17 is_stmt 0 view .LVU437
+ 1260 057a 069A     	 ldr r2,[sp,#24]
+ 1261 057c 82EA0709 	 eor r9,r2,r7
+ 1262 0580 399F     	 ldr r7,[sp,#228]
+ 1263 0582 079A     	 ldr r2,[sp,#28]
+ 1264 0584 7A40     	 eors r2,r2,r7
+ 1265              	 .loc 1 179 17 view .LVU438
+ 1266 0586 4FEA1927 	 lsr r7,r9,#8
+ 1267 058a 47EA0267 	 orr r7,r7,r2,lsl#24
+ 1268 058e 120A     	 lsrs r2,r2,#8
+ 1269 0590 42EA0962 	 orr r2,r2,r9,lsl#24
+ 1270              	.LVL154:
+ 180:keccakf1600.c ****             Ema =   BCa ^((~BCe)&  BCi );
+ 1271              	 .loc 1 180 13 is_stmt 1 view .LVU439
+ 1272              	 .loc 1 180 33 is_stmt 0 view .LVU440
+ 1273 0594 25EA0309 	 bic r9,r5,r3
+ 1274              	 .loc 1 180 17 view .LVU441
+ 1275 0598 89EA0109 	 eor r9,r9,r1
+ 1276              	 .loc 1 180 33 view .LVU442
+ 1277 059c 28EA060A 	 bic r10,r8,r6
+ 1278              	 .loc 1 180 17 view .LVU443
+ 1279 05a0 CDF8E490 	 str r9,[sp,#228]
+ 1280              	.LVL155:
+ 181:keccakf1600.c ****             Eme =   BCe ^((~BCi)&  BCo );
+ 1281              	 .loc 1 181 13 is_stmt 1 view .LVU444
+ 1282              	 .loc 1 181 33 is_stmt 0 view .LVU445
+ 1283 05a4 24EA0509 	 bic r9,r4,r5
+ 1284              	.LVL156:
+ 180:keccakf1600.c ****             Ema =   BCa ^((~BCe)&  BCi );
+ 1285              	 .loc 1 180 17 view .LVU446
+ 1286 05a8 8AEA0C0A 	 eor r10,r10,ip
+ 1287              	 .loc 1 181 17 view .LVU447
+ 1288 05ac 89EA0309 	 eor r9,r9,r3
+ 180:keccakf1600.c ****             Ema =   BCa ^((~BCe)&  BCi );
+ 1289              	 .loc 1 180 17 view .LVU448
+ 1290 05b0 CDF8E0A0 	 str r10,[sp,#224]
+ 1291              	.LVL157:
+ 1292              	 .loc 1 181 17 view .LVU449
+ 1293 05b4 CDF85490 	 str r9,[sp,#84]
+ 1294              	.LVL158:
+ 182:keccakf1600.c ****             Emi =   BCi ^((~BCo)&  BCu );
+ 1295              	 .loc 1 182 13 is_stmt 1 view .LVU450
+ 181:keccakf1600.c ****             Eme =   BCe ^((~BCi)&  BCo );
+ 1296              	 .loc 1 181 33 is_stmt 0 view .LVU451
+ 1297 05b8 2EEA080A 	 bic r10,lr,r8
+ 1298              	 .loc 1 182 33 view .LVU452
+ 1299 05bc 22EA0409 	 bic r9,r2,r4
+ 1300              	.LVL159:
+ 183:keccakf1600.c ****             Emo =   BCo ^((~BCu)&  BCa );
+ 184:keccakf1600.c ****             Emu =   BCu ^((~BCa)&  BCe );
+ 1301              	 .loc 1 184 33 view .LVU453
+ 1302 05c0 23EA0103 	 bic r3,r3,r1
+ 1303              	.LVL160:
+ 181:keccakf1600.c ****             Emi =   BCi ^((~BCo)&  BCu );
+ 1304              	 .loc 1 181 17 view .LVU454
+ 1305 05c4 8AEA060A 	 eor r10,r10,r6
+ 182:keccakf1600.c ****             Emi =   BCi ^((~BCo)&  BCu );
+ 1306              	 .loc 1 182 17 view .LVU455
+ 1307 05c8 89EA0505 	 eor r5,r9,r5
+ 1308              	.LVL161:
+ 1309              	 .loc 1 184 33 view .LVU456
+ 1310 05cc 26EA0C06 	 bic r6,r6,ip
+ 1311              	 .loc 1 184 17 view .LVU457
+ 1312 05d0 5340     	 eors r3,r3,r2
+ 182:keccakf1600.c ****             Emi =   BCi ^((~BCo)&  BCu );
+ 1313              	 .loc 1 182 17 view .LVU458
+ 1314 05d2 2D95     	 str r5,[sp,#180]
+ 1315              	.LVL162:
+ 183:keccakf1600.c ****             Emo =   BCo ^((~BCu)&  BCa );
+ 1316              	 .loc 1 183 13 is_stmt 1 view .LVU459
+ 1317              	 .loc 1 184 17 is_stmt 0 view .LVU460
+ 1318 05d4 2193     	 str r3,[sp,#132]
+ 1319              	.LVL163:
+ 183:keccakf1600.c ****             Emo =   BCo ^((~BCu)&  BCa );
+ 1320              	 .loc 1 183 33 view .LVU461
+ 1321 05d6 21EA0205 	 bic r5,r1,r2
+ 1322              	.LVL164:
+ 185:keccakf1600.c **** 
+ 186:keccakf1600.c ****             Abi ^= Di;
+ 1323              	 .loc 1 186 17 view .LVU462
+ 1324 05da 0E9B     	 ldr r3,[sp,#56]
+ 1325 05dc 059A     	 ldr r2,[sp,#20]
+ 1326              	.LVL165:
+ 181:keccakf1600.c ****             Emi =   BCi ^((~BCo)&  BCu );
+ 1327              	 .loc 1 181 17 view .LVU463
+ 1328 05de CDF850A0 	 str r10,[sp,#80]
+ 1329              	.LVL166:
+ 184:keccakf1600.c **** 
+ 1330              	 .loc 1 184 17 view .LVU464
+ 1331 05e2 86EA0701 	 eor r1,r6,r7
+ 1332              	.LVL167:
+ 184:keccakf1600.c **** 
+ 1333              	 .loc 1 184 17 view .LVU465
+ 1334 05e6 2091     	 str r1,[sp,#128]
+ 1335              	 .loc 1 186 17 view .LVU466
+ 1336 05e8 0F99     	 ldr r1,[sp,#60]
+ 187:keccakf1600.c ****             BCa = ROL(Abi, 62);
+ 188:keccakf1600.c ****             Ago ^= Do;
+ 189:keccakf1600.c ****             BCe = ROL(Ago, 55);
+ 190:keccakf1600.c ****             Aku ^= Du;
+ 1337              	 .loc 1 190 17 view .LVU467
+ 1338 05ea 269E     	 ldr r6,[sp,#152]
+ 186:keccakf1600.c ****             BCa = ROL(Abi, 62);
+ 1339              	 .loc 1 186 17 view .LVU468
+ 1340 05ec 8BEA0303 	 eor r3,fp,r3
+ 183:keccakf1600.c ****             Emu =   BCu ^((~BCa)&  BCe );
+ 1341              	 .loc 1 183 17 view .LVU469
+ 1342 05f0 6C40     	 eors r4,r4,r5
+ 1343              	.LVL168:
+ 183:keccakf1600.c ****             Emu =   BCu ^((~BCa)&  BCe );
+ 1344              	 .loc 1 183 17 view .LVU470
+ 1345 05f2 1394     	 str r4,[sp,#76]
+ 1346              	.LVL169:
+ 184:keccakf1600.c **** 
+ 1347              	 .loc 1 184 13 is_stmt 1 view .LVU471
+ 186:keccakf1600.c ****             BCa = ROL(Abi, 62);
+ 1348              	 .loc 1 186 13 view .LVU472
+ 187:keccakf1600.c ****             Ago ^= Do;
+ 1349              	 .loc 1 187 13 view .LVU473
+ 187:keccakf1600.c ****             Ago ^= Do;
+ 1350              	 .loc 1 187 17 is_stmt 0 view .LVU474
+ 1351 05f4 9D08     	 lsrs r5,r3,#2
+ 186:keccakf1600.c ****             BCa = ROL(Abi, 62);
+ 1352              	 .loc 1 186 17 view .LVU475
+ 1353 05f6 82EA0104 	 eor r4,r2,r1
+ 1354              	.LVL170:
+ 187:keccakf1600.c ****             Ago ^= Do;
+ 1355              	 .loc 1 187 17 view .LVU476
+ 1356 05fa 45EA8475 	 orr r5,r5,r4,lsl#30
+ 1357 05fe A408     	 lsrs r4,r4,#2
+ 1358 0600 44EA8374 	 orr r4,r4,r3,lsl#30
+ 1359              	.LVL171:
+ 188:keccakf1600.c ****             BCe = ROL(Ago, 55);
+ 1360              	 .loc 1 188 13 is_stmt 1 view .LVU477
+ 189:keccakf1600.c ****             Aku ^= Du;
+ 1361              	 .loc 1 189 13 view .LVU478
+ 188:keccakf1600.c ****             BCe = ROL(Ago, 55);
+ 1362              	 .loc 1 188 17 is_stmt 0 view .LVU479
+ 1363 0604 1A9A     	 ldr r2,[sp,#104]
+ 1364 0606 069B     	 ldr r3,[sp,#24]
+ 1365 0608 83EA0201 	 eor r1,r3,r2
+ 1366 060c 1B9A     	 ldr r2,[sp,#108]
+ 1367 060e 079B     	 ldr r3,[sp,#28]
+ 1368 0610 5340     	 eors r3,r3,r2
+ 189:keccakf1600.c ****             Aku ^= Du;
+ 1369              	 .loc 1 189 17 view .LVU480
+ 1370 0612 4A0A     	 lsrs r2,r1,#9
+ 1371 0614 42EAC352 	 orr r2,r2,r3,lsl#23
+ 1372 0618 5B0A     	 lsrs r3,r3,#9
+ 182:keccakf1600.c ****             Emo =   BCo ^((~BCu)&  BCa );
+ 1373              	 .loc 1 182 33 view .LVU481
+ 1374 061a 27EA0E0A 	 bic r10,r7,lr
+ 189:keccakf1600.c ****             Aku ^= Du;
+ 1375              	 .loc 1 189 17 view .LVU482
+ 1376 061e 43EAC153 	 orr r3,r3,r1,lsl#23
+ 1377              	.LVL172:
+ 1378              	 .loc 1 190 13 is_stmt 1 view .LVU483
+ 191:keccakf1600.c ****             BCi = ROL(Aku, 39);
+ 1379              	 .loc 1 191 13 view .LVU484
+ 190:keccakf1600.c ****             BCi = ROL(Aku, 39);
+ 1380              	 .loc 1 190 17 is_stmt 0 view .LVU485
+ 1381 0622 0899     	 ldr r1,[sp,#32]
+ 182:keccakf1600.c ****             Emo =   BCo ^((~BCu)&  BCa );
+ 1382              	 .loc 1 182 17 view .LVU486
+ 1383 0624 8AEA0808 	 eor r8,r10,r8
+ 190:keccakf1600.c ****             BCi = ROL(Aku, 39);
+ 1384              	 .loc 1 190 17 view .LVU487
+ 1385 0628 7140     	 eors r1,r1,r6
+ 182:keccakf1600.c ****             Emo =   BCo ^((~BCu)&  BCa );
+ 1386              	 .loc 1 182 17 view .LVU488
+ 1387 062a CDF8B080 	 str r8,[sp,#176]
+ 1388              	.LVL173:
+ 190:keccakf1600.c ****             BCi = ROL(Aku, 39);
+ 1389              	 .loc 1 190 17 view .LVU489
+ 1390 062e 099E     	 ldr r6,[sp,#36]
+ 183:keccakf1600.c ****             Emu =   BCu ^((~BCa)&  BCe );
+ 1391              	 .loc 1 183 33 view .LVU490
+ 1392 0630 2CEA0708 	 bic r8,ip,r7
+ 190:keccakf1600.c ****             BCi = ROL(Aku, 39);
+ 1393              	 .loc 1 190 17 view .LVU491
+ 1394 0634 279F     	 ldr r7,[sp,#156]
+ 1395              	 .loc 1 191 17 view .LVU492
+ 1396 0636 4FEA516C 	 lsr ip,r1,#25
+ 190:keccakf1600.c ****             BCi = ROL(Aku, 39);
+ 1397              	 .loc 1 190 17 view .LVU493
+ 1398 063a 7740     	 eors r7,r7,r6
+ 1399              	 .loc 1 191 17 view .LVU494
+ 1400 063c 4CEAC71C 	 orr ip,ip,r7,lsl#7
+ 183:keccakf1600.c ****             Emu =   BCu ^((~BCa)&  BCe );
+ 1401              	 .loc 1 183 17 view .LVU495
+ 1402 0640 88EA0E0E 	 eor lr,r8,lr
+ 1403              	 .loc 1 191 17 view .LVU496
+ 1404 0644 7F0E     	 lsrs r7,r7,#25
+ 1405 0646 47EAC117 	 orr r7,r7,r1,lsl#7
+ 1406              	.LVL174:
+ 192:keccakf1600.c ****             Ama ^= Da;
+ 1407              	 .loc 1 192 13 is_stmt 1 view .LVU497
+ 193:keccakf1600.c ****             BCo = ROL(Ama, 41);
+ 1408              	 .loc 1 193 13 view .LVU498
+ 183:keccakf1600.c ****             Emu =   BCu ^((~BCa)&  BCe );
+ 1409              	 .loc 1 183 17 is_stmt 0 view .LVU499
+ 1410 064a CDF848E0 	 str lr,[sp,#72]
+ 1411              	.LVL175:
+ 192:keccakf1600.c ****             Ama ^= Da;
+ 1412              	 .loc 1 192 17 view .LVU500
+ 1413 064e 0199     	 ldr r1,[sp,#4]
+ 1414 0650 289E     	 ldr r6,[sp,#160]
+ 1415 0652 DDF8A4E0 	 ldr lr,[sp,#164]
+ 1416 0656 7140     	 eors r1,r1,r6
+ 1417 0658 029E     	 ldr r6,[sp,#8]
+ 1418              	 .loc 1 193 17 view .LVU501
+ 1419 065a 4FEAD158 	 lsr r8,r1,#23
+ 192:keccakf1600.c ****             Ama ^= Da;
+ 1420              	 .loc 1 192 17 view .LVU502
+ 1421 065e 86EA0E06 	 eor r6,r6,lr
+ 1422              	 .loc 1 193 17 view .LVU503
+ 1423 0662 48EA4628 	 orr r8,r8,r6,lsl#9
+ 1424 0666 F60D     	 lsrs r6,r6,#23
+ 194:keccakf1600.c ****             Ase ^= De;
+ 1425              	 .loc 1 194 17 view .LVU504
+ 1426 0668 DDF8D0E0 	 ldr lr,[sp,#208]
+ 193:keccakf1600.c ****             BCo = ROL(Ama, 41);
+ 1427              	 .loc 1 193 17 view .LVU505
+ 1428 066c 46EA4126 	 orr r6,r6,r1,lsl#9
+ 1429              	.LVL176:
+ 1430              	 .loc 1 194 13 is_stmt 1 view .LVU506
+ 195:keccakf1600.c ****             BCu = ROL(Ase,  2);
+ 1431              	 .loc 1 195 13 view .LVU507
+ 194:keccakf1600.c ****             Ase ^= De;
+ 1432              	 .loc 1 194 17 is_stmt 0 view .LVU508
+ 1433 0670 0399     	 ldr r1,[sp,#12]
+ 1434 0672 81EA0E09 	 eor r9,r1,lr
+ 1435 0676 DDF8D4E0 	 ldr lr,[sp,#212]
+ 1436 067a 0499     	 ldr r1,[sp,#16]
+ 1437 067c 81EA0E01 	 eor r1,r1,lr
+ 1438              	 .loc 1 195 17 view .LVU509
+ 1439 0680 4FEA890E 	 lsl lr,r9,#2
+ 1440 0684 4EEA917E 	 orr lr,lr,r1,lsr#30
+ 1441 0688 8900     	 lsls r1,r1,#2
+ 1442 068a 41EA9971 	 orr r1,r1,r9,lsr#30
+ 1443              	.LVL177:
+ 196:keccakf1600.c ****             Esa =   BCa ^((~BCe)&  BCi );
+ 1444              	 .loc 1 196 13 is_stmt 1 view .LVU510
+ 1445              	 .loc 1 196 33 is_stmt 0 view .LVU511
+ 1446 068e 27EA0309 	 bic r9,r7,r3
+ 1447 0692 2CEA020A 	 bic r10,ip,r2
+ 1448              	 .loc 1 196 17 view .LVU512
+ 1449 0696 89EA0409 	 eor r9,r9,r4
+ 1450 069a 8AEA050A 	 eor r10,r10,r5
+ 1451 069e CDF89C90 	 str r9,[sp,#156]
+ 1452              	.LVL178:
+ 197:keccakf1600.c ****             Ese =   BCe ^((~BCi)&  BCo );
+ 1453              	 .loc 1 197 13 is_stmt 1 view .LVU513
+ 1454              	 .loc 1 197 33 is_stmt 0 view .LVU514
+ 1455 06a2 26EA0709 	 bic r9,r6,r7
+ 1456              	.LVL179:
+ 196:keccakf1600.c ****             Esa =   BCa ^((~BCe)&  BCi );
+ 1457              	 .loc 1 196 17 view .LVU515
+ 1458 06a6 CDF898A0 	 str r10,[sp,#152]
+ 1459              	.LVL180:
+ 1460              	 .loc 1 197 17 view .LVU516
+ 1461 06aa 89EA0309 	 eor r9,r9,r3
+ 1462              	 .loc 1 197 33 view .LVU517
+ 1463 06ae 28EA0C0A 	 bic r10,r8,ip
+ 1464              	 .loc 1 197 17 view .LVU518
+ 1465 06b2 8AEA020A 	 eor r10,r10,r2
+ 1466 06b6 CDF8D490 	 str r9,[sp,#212]
+ 1467              	.LVL181:
+ 198:keccakf1600.c ****             Esi =   BCi ^((~BCo)&  BCu );
+ 1468              	 .loc 1 198 13 is_stmt 1 view .LVU519
+ 199:keccakf1600.c ****             Eso =   BCo ^((~BCu)&  BCa );
+ 200:keccakf1600.c ****             Esu =   BCu ^((~BCa)&  BCe );
+ 1469              	 .loc 1 200 33 is_stmt 0 view .LVU520
+ 1470 06ba 22EA0502 	 bic r2,r2,r5
+ 1471              	.LVL182:
+ 198:keccakf1600.c ****             Esi =   BCi ^((~BCo)&  BCu );
+ 1472              	 .loc 1 198 33 view .LVU521
+ 1473 06be 21EA0609 	 bic r9,r1,r6
+ 1474              	.LVL183:
+ 1475              	 .loc 1 200 33 view .LVU522
+ 1476 06c2 23EA0403 	 bic r3,r3,r4
+ 1477              	.LVL184:
+ 198:keccakf1600.c ****             Esi =   BCi ^((~BCo)&  BCu );
+ 1478              	 .loc 1 198 17 view .LVU523
+ 1479 06c6 89EA0707 	 eor r7,r9,r7
+ 1480              	.LVL185:
+ 1481              	 .loc 1 200 17 view .LVU524
+ 1482 06ca 82EA0E02 	 eor r2,r2,lr
+ 1483 06ce 4B40     	 eors r3,r3,r1
+ 198:keccakf1600.c ****             Esi =   BCi ^((~BCo)&  BCu );
+ 1484              	 .loc 1 198 17 view .LVU525
+ 1485 06d0 1B97     	 str r7,[sp,#108]
+ 1486              	.LVL186:
+ 199:keccakf1600.c ****             Eso =   BCo ^((~BCu)&  BCa );
+ 1487              	 .loc 1 199 13 is_stmt 1 view .LVU526
+ 1488              	 .loc 1 200 17 is_stmt 0 view .LVU527
+ 1489 06d2 0E92     	 str r2,[sp,#56]
+ 1490              	.LVL187:
+ 199:keccakf1600.c ****             Eso =   BCo ^((~BCu)&  BCa );
+ 1491              	 .loc 1 199 33 view .LVU528
+ 1492 06d4 24EA0107 	 bic r7,r4,r1
+ 1493              	.LVL188:
+ 201:keccakf1600.c **** 
+ 202:keccakf1600.c ****             //    prepareTheta
+ 203:keccakf1600.c ****             BCa = Eba^Ega^Eka^Ema^Esa;
+ 1494              	 .loc 1 203 17 view .LVU529
+ 1495 06d8 2A9A     	 ldr r2,[sp,#168]
+ 200:keccakf1600.c **** 
+ 1496              	 .loc 1 200 17 view .LVU530
+ 1497 06da 0F93     	 str r3,[sp,#60]
+ 1498              	 .loc 1 203 17 view .LVU531
+ 1499 06dc 0A9B     	 ldr r3,[sp,#40]
+ 1500 06de 1899     	 ldr r1,[sp,#96]
+ 1501              	.LVL189:
+ 197:keccakf1600.c ****             Esi =   BCi ^((~BCo)&  BCu );
+ 1502              	 .loc 1 197 17 view .LVU532
+ 1503 06e0 CDF8D0A0 	 str r10,[sp,#208]
+ 1504              	.LVL190:
+ 199:keccakf1600.c ****             Esu =   BCu ^((~BCa)&  BCe );
+ 1505              	 .loc 1 199 17 view .LVU533
+ 1506 06e4 7E40     	 eors r6,r6,r7
+ 1507              	.LVL191:
+ 199:keccakf1600.c ****             Esu =   BCu ^((~BCa)&  BCe );
+ 1508              	 .loc 1 199 17 view .LVU534
+ 1509 06e6 2996     	 str r6,[sp,#164]
+ 1510              	.LVL192:
+ 200:keccakf1600.c **** 
+ 1511              	 .loc 1 200 13 is_stmt 1 view .LVU535
+ 1512              	 .loc 1 203 13 view .LVU536
+ 1513              	 .loc 1 203 17 is_stmt 0 view .LVU537
+ 1514 06e8 83EA0206 	 eor r6,r3,r2
+ 1515              	.LVL193:
+ 1516              	 .loc 1 203 17 view .LVU538
+ 1517 06ec 2B9A     	 ldr r2,[sp,#172]
+ 1518 06ee 0B9B     	 ldr r3,[sp,#44]
+ 1519 06f0 4E40     	 eors r6,r6,r1
+ 1520 06f2 1999     	 ldr r1,[sp,#100]
+ 1521 06f4 5340     	 eors r3,r3,r2
+ 1522 06f6 4B40     	 eors r3,r3,r1
+ 1523 06f8 3899     	 ldr r1,[sp,#224]
+ 204:keccakf1600.c ****             BCe = Ebe^Ege^Eke^Eme^Ese;
+ 1524              	 .loc 1 204 22 view .LVU539
+ 1525 06fa 229A     	 ldr r2,[sp,#136]
+ 203:keccakf1600.c ****             BCe = Ebe^Ege^Eke^Eme^Ese;
+ 1526              	 .loc 1 203 17 view .LVU540
+ 1527 06fc 4E40     	 eors r6,r6,r1
+ 1528 06fe 3999     	 ldr r1,[sp,#228]
+ 1529 0700 4B40     	 eors r3,r3,r1
+ 1530 0702 2699     	 ldr r1,[sp,#152]
+ 1531 0704 4E40     	 eors r6,r6,r1
+ 1532 0706 2799     	 ldr r1,[sp,#156]
+ 198:keccakf1600.c ****             Eso =   BCo ^((~BCu)&  BCa );
+ 1533              	 .loc 1 198 33 view .LVU541
+ 1534 0708 2EEA080A 	 bic r10,lr,r8
+ 203:keccakf1600.c ****             BCe = Ebe^Ege^Eke^Eme^Ese;
+ 1535              	 .loc 1 203 17 view .LVU542
+ 1536 070c 4B40     	 eors r3,r3,r1
+ 1537              	.LVL194:
+ 1538              	 .loc 1 204 13 is_stmt 1 view .LVU543
+ 1539              	 .loc 1 204 22 is_stmt 0 view .LVU544
+ 1540 070e 1099     	 ldr r1,[sp,#64]
+ 198:keccakf1600.c ****             Eso =   BCo ^((~BCu)&  BCa );
+ 1541              	 .loc 1 198 17 view .LVU545
+ 1542 0710 8AEA0C0C 	 eor ip,r10,ip
+ 1543              	 .loc 1 204 22 view .LVU546
+ 1544 0714 82EA0109 	 eor r9,r2,r1
+ 198:keccakf1600.c ****             Eso =   BCo ^((~BCu)&  BCa );
+ 1545              	 .loc 1 198 17 view .LVU547
+ 1546 0718 CDF868C0 	 str ip,[sp,#104]
+ 1547              	.LVL195:
+ 1548              	 .loc 1 204 22 view .LVU548
+ 1549 071c 1199     	 ldr r1,[sp,#68]
+ 1550 071e 239A     	 ldr r2,[sp,#140]
+ 199:keccakf1600.c ****             Esu =   BCu ^((~BCa)&  BCe );
+ 1551              	 .loc 1 199 33 view .LVU549
+ 1552 0720 25EA0E0C 	 bic ip,r5,lr
+ 199:keccakf1600.c ****             Esu =   BCu ^((~BCa)&  BCe );
+ 1553              	 .loc 1 199 17 view .LVU550
+ 1554 0724 8CEA080C 	 eor ip,ip,r8
+ 1555 0728 CDF8A0C0 	 str ip,[sp,#160]
+ 1556              	.LVL196:
+ 1557              	 .loc 1 204 22 view .LVU551
+ 1558 072c 82EA0108 	 eor r8,r2,r1
+ 1559              	 .loc 1 204 26 view .LVU552
+ 1560 0730 309A     	 ldr r2,[sp,#192]
+ 205:keccakf1600.c ****             BCi = Ebi^Egi^Eki^Emi^Esi;
+ 1561              	 .loc 1 205 22 view .LVU553
+ 1562 0732 1E99     	 ldr r1,[sp,#120]
+ 204:keccakf1600.c ****             BCi = Ebi^Egi^Eki^Emi^Esi;
+ 1563              	 .loc 1 204 26 view .LVU554
+ 1564 0734 89EA0209 	 eor r9,r9,r2
+ 1565 0738 319A     	 ldr r2,[sp,#196]
+ 1566 073a 88EA0208 	 eor r8,r8,r2
+ 204:keccakf1600.c ****             BCi = Ebi^Egi^Eki^Emi^Esi;
+ 1567              	 .loc 1 204 30 view .LVU555
+ 1568 073e 149A     	 ldr r2,[sp,#80]
+ 1569 0740 89EA0209 	 eor r9,r9,r2
+ 1570 0744 159A     	 ldr r2,[sp,#84]
+ 1571 0746 88EA0208 	 eor r8,r8,r2
+ 204:keccakf1600.c ****             BCi = Ebi^Egi^Eki^Emi^Esi;
+ 1572              	 .loc 1 204 17 view .LVU556
+ 1573 074a 349A     	 ldr r2,[sp,#208]
+ 1574 074c 89EA0209 	 eor r9,r9,r2
+ 1575 0750 359A     	 ldr r2,[sp,#212]
+ 1576 0752 88EA0208 	 eor r8,r8,r2
+ 1577              	.LVL197:
+ 1578              	 .loc 1 205 13 is_stmt 1 view .LVU557
+ 1579              	 .loc 1 205 22 is_stmt 0 view .LVU558
+ 1580 0756 3A9A     	 ldr r2,[sp,#232]
+ 1581 0758 82EA010C 	 eor ip,r2,r1
+ 1582 075c 3B9A     	 ldr r2,[sp,#236]
+ 1583 075e 1F99     	 ldr r1,[sp,#124]
+ 1584 0760 82EA0107 	 eor r7,r2,r1
+ 1585              	 .loc 1 205 26 view .LVU559
+ 1586 0764 0C9A     	 ldr r2,[sp,#48]
+ 1587 0766 0D99     	 ldr r1,[sp,#52]
+ 1588 0768 8CEA020C 	 eor ip,ip,r2
+ 1589 076c 4F40     	 eors r7,r7,r1
+ 1590              	 .loc 1 205 30 view .LVU560
+ 1591 076e 2C9A     	 ldr r2,[sp,#176]
+ 1592 0770 2D99     	 ldr r1,[sp,#180]
+ 1593 0772 8CEA020C 	 eor ip,ip,r2
+ 1594 0776 4F40     	 eors r7,r7,r1
+ 1595              	 .loc 1 205 17 view .LVU561
+ 1596 0778 1A9A     	 ldr r2,[sp,#104]
+ 1597 077a 1B99     	 ldr r1,[sp,#108]
+ 1598 077c 8CEA020C 	 eor ip,ip,r2
+ 1599 0780 4F40     	 eors r7,r7,r1
+ 1600              	.LVL198:
+ 206:keccakf1600.c ****             BCo = Ebo^Ego^Eko^Emo^Eso;
+ 1601              	 .loc 1 206 13 is_stmt 1 view .LVU562
+ 1602              	 .loc 1 206 22 is_stmt 0 view .LVU563
+ 1603 0782 169A     	 ldr r2,[sp,#88]
+ 1604 0784 3699     	 ldr r1,[sp,#216]
+ 1605 0786 82EA0105 	 eor r5,r2,r1
+ 1606 078a 179A     	 ldr r2,[sp,#92]
+ 1607 078c 3799     	 ldr r1,[sp,#220]
+ 1608 078e 82EA0104 	 eor r4,r2,r1
+ 1609              	 .loc 1 206 26 view .LVU564
+ 1610 0792 2499     	 ldr r1,[sp,#144]
+ 207:keccakf1600.c ****             BCu = Ebu^Egu^Eku^Emu^Esu;
+ 1611              	 .loc 1 207 26 view .LVU565
+ 1612 0794 1C9A     	 ldr r2,[sp,#112]
+ 206:keccakf1600.c ****             BCo = Ebo^Ego^Eko^Emo^Eso;
+ 1613              	 .loc 1 206 26 view .LVU566
+ 1614 0796 4D40     	 eors r5,r5,r1
+ 1615 0798 2599     	 ldr r1,[sp,#148]
+ 1616 079a 4C40     	 eors r4,r4,r1
+ 206:keccakf1600.c ****             BCo = Ebo^Ego^Eko^Emo^Eso;
+ 1617              	 .loc 1 206 30 view .LVU567
+ 1618 079c 1299     	 ldr r1,[sp,#72]
+ 1619 079e 4D40     	 eors r5,r5,r1
+ 1620 07a0 1399     	 ldr r1,[sp,#76]
+ 1621 07a2 4C40     	 eors r4,r4,r1
+ 206:keccakf1600.c ****             BCo = Ebo^Ego^Eko^Emo^Eso;
+ 1622              	 .loc 1 206 17 view .LVU568
+ 1623 07a4 2899     	 ldr r1,[sp,#160]
+ 1624 07a6 4D40     	 eors r5,r5,r1
+ 1625 07a8 2999     	 ldr r1,[sp,#164]
+ 1626 07aa 4C40     	 eors r4,r4,r1
+ 1627              	.LVL199:
+ 1628              	 .loc 1 207 13 is_stmt 1 view .LVU569
+ 1629              	 .loc 1 207 26 is_stmt 0 view .LVU570
+ 1630 07ac 3299     	 ldr r1,[sp,#200]
+ 1631 07ae 82EA010E 	 eor lr,r2,r1
+ 1632              	 .loc 1 207 26 view .LVU571
+ 1633 07b2 1D9A     	 ldr r2,[sp,#116]
+ 1634 07b4 3399     	 ldr r1,[sp,#204]
+ 1635 07b6 5140     	 eors r1,r1,r2
+ 1636 07b8 2E9A     	 ldr r2,[sp,#184]
+ 1637 07ba 8EEA020E 	 eor lr,lr,r2
+ 1638 07be 2F9A     	 ldr r2,[sp,#188]
+ 1639 07c0 5140     	 eors r1,r1,r2
+ 1640              	 .loc 1 207 30 view .LVU572
+ 1641 07c2 209A     	 ldr r2,[sp,#128]
+ 1642 07c4 8EEA020E 	 eor lr,lr,r2
+ 1643 07c8 219A     	 ldr r2,[sp,#132]
+ 1644 07ca 5140     	 eors r1,r1,r2
+ 1645              	 .loc 1 207 17 view .LVU573
+ 1646 07cc 0E9A     	 ldr r2,[sp,#56]
+ 208:keccakf1600.c **** 
+ 209:keccakf1600.c ****             //thetaRhoPiChiIotaPrepareTheta(round+1, E, A)
+ 210:keccakf1600.c ****             Da = BCu^ROL(BCe, 1);
+ 1647              	 .loc 1 210 22 view .LVU574
+ 1648 07ce 4FEA490B 	 lsl fp,r9,#1
+ 1649              	.LVL200:
+ 207:keccakf1600.c ****             BCu = Ebu^Egu^Eku^Emu^Esu;
+ 1650              	 .loc 1 207 17 view .LVU575
+ 1651 07d2 8EEA020E 	 eor lr,lr,r2
+ 1652 07d6 0F9A     	 ldr r2,[sp,#60]
+ 1653              	 .loc 1 210 22 view .LVU576
+ 1654 07d8 4BEAD87B 	 orr fp,fp,r8,lsr#31
+ 1655 07dc 4FEA480A 	 lsl r10,r8,#1
+ 207:keccakf1600.c ****             BCu = Ebu^Egu^Eku^Emu^Esu;
+ 1656              	 .loc 1 207 17 view .LVU577
+ 1657 07e0 5140     	 eors r1,r1,r2
+ 1658              	.LVL201:
+ 1659              	 .loc 1 210 13 is_stmt 1 view .LVU578
+ 1660              	 .loc 1 210 22 is_stmt 0 view .LVU579
+ 1661 07e2 4AEAD97A 	 orr r10,r10,r9,lsr#31
+ 1662              	 .loc 1 210 16 view .LVU580
+ 1663 07e6 8BEA0E02 	 eor r2,fp,lr
+ 211:keccakf1600.c ****             De = BCa^ROL(BCi, 1);
+ 1664              	 .loc 1 211 22 view .LVU581
+ 1665 07ea 4FEA4C0B 	 lsl fp,ip,#1
+ 210:keccakf1600.c ****             De = BCa^ROL(BCi, 1);
+ 1666              	 .loc 1 210 16 view .LVU582
+ 1667 07ee 0192     	 str r2,[sp,#4]
+ 1668              	.LVL202:
+ 1669              	 .loc 1 211 22 view .LVU583
+ 1670 07f0 4BEAD77B 	 orr fp,fp,r7,lsr#31
+ 210:keccakf1600.c ****             De = BCa^ROL(BCi, 1);
+ 1671              	 .loc 1 210 16 view .LVU584
+ 1672 07f4 8AEA0102 	 eor r2,r10,r1
+ 1673              	 .loc 1 211 22 view .LVU585
+ 1674 07f8 4FEA470A 	 lsl r10,r7,#1
+ 210:keccakf1600.c ****             De = BCa^ROL(BCi, 1);
+ 1675              	 .loc 1 210 16 view .LVU586
+ 1676 07fc 0292     	 str r2,[sp,#8]
+ 1677              	.LVL203:
+ 1678              	 .loc 1 211 13 is_stmt 1 view .LVU587
+ 1679              	 .loc 1 211 22 is_stmt 0 view .LVU588
+ 1680 07fe 4AEADC7A 	 orr r10,r10,ip,lsr#31
+ 1681              	 .loc 1 211 16 view .LVU589
+ 1682 0802 8BEA0602 	 eor r2,fp,r6
+ 1683              	.LVL204:
+ 1684              	 .loc 1 211 16 view .LVU590
+ 1685 0806 0392     	 str r2,[sp,#12]
+ 1686              	.LVL205:
+ 1687              	 .loc 1 211 16 view .LVU591
+ 1688 0808 8AEA0302 	 eor r2,r10,r3
+ 212:keccakf1600.c ****             Di = BCe^ROL(BCo, 1);
+ 1689              	 .loc 1 212 22 view .LVU592
+ 1690 080c 4FEA440A 	 lsl r10,r4,#1
+ 1691 0810 4AEAD57A 	 orr r10,r10,r5,lsr#31
+ 211:keccakf1600.c ****             De = BCa^ROL(BCi, 1);
+ 1692              	 .loc 1 211 16 view .LVU593
+ 1693 0814 0492     	 str r2,[sp,#16]
+ 1694              	.LVL206:
+ 1695              	 .loc 1 212 13 is_stmt 1 view .LVU594
+ 1696              	 .loc 1 212 16 is_stmt 0 view .LVU595
+ 1697 0816 8AEA0802 	 eor r2,r10,r8
+ 1698              	.LVL207:
+ 213:keccakf1600.c ****             Do = BCi^ROL(BCu, 1);
+ 1699              	 .loc 1 213 22 view .LVU596
+ 1700 081a 4FEA4E08 	 lsl r8,lr,#1
+ 1701              	.LVL208:
+ 1702              	 .loc 1 213 22 view .LVU597
+ 1703 081e 48EAD178 	 orr r8,r8,r1,lsr#31
+ 1704 0822 4900     	 lsls r1,r1,#1
+ 1705              	.LVL209:
+ 212:keccakf1600.c ****             Di = BCe^ROL(BCo, 1);
+ 1706              	 .loc 1 212 16 view .LVU598
+ 1707 0824 0592     	 str r2,[sp,#20]
+ 1708              	 .loc 1 213 22 view .LVU599
+ 1709 0826 41EADE71 	 orr r1,r1,lr,lsr#31
+ 1710              	 .loc 1 213 16 view .LVU600
+ 1711 082a 88EA0C02 	 eor r2,r8,ip
+ 1712 082e 0692     	 str r2,[sp,#24]
+ 1713              	.LVL210:
+ 1714              	 .loc 1 213 16 view .LVU601
+ 1715 0830 81EA0702 	 eor r2,r1,r7
+ 214:keccakf1600.c ****             Du = BCo^ROL(BCa, 1);
+ 1716              	 .loc 1 214 22 view .LVU602
+ 1717 0834 7100     	 lsls r1,r6,#1
+ 1718 0836 41EAD371 	 orr r1,r1,r3,lsr#31
+ 1719 083a 5B00     	 lsls r3,r3,#1
+ 1720              	.LVL211:
+ 1721              	 .loc 1 214 22 view .LVU603
+ 1722 083c 43EAD673 	 orr r3,r3,r6,lsr#31
+ 213:keccakf1600.c ****             Do = BCi^ROL(BCu, 1);
+ 1723              	 .loc 1 213 16 view .LVU604
+ 1724 0840 0792     	 str r2,[sp,#28]
+ 1725              	 .loc 1 214 16 view .LVU605
+ 1726 0842 6340     	 eors r3,r3,r4
+ 1727 0844 81EA0502 	 eor r2,r1,r5
+ 1728 0848 0892     	 str r2,[sp,#32]
+ 1729              	.LVL212:
+ 1730              	 .loc 1 214 16 view .LVU606
+ 1731 084a 0993     	 str r3,[sp,#36]
+ 215:keccakf1600.c **** 
+ 216:keccakf1600.c ****             Eba ^= Da;
+ 1732              	 .loc 1 216 17 view .LVU607
+ 1733 084c 019A     	 ldr r2,[sp,#4]
+ 1734 084e 0A9B     	 ldr r3,[sp,#40]
+ 217:keccakf1600.c ****             BCa = Eba;
+ 218:keccakf1600.c ****             Ege ^= De;
+ 219:keccakf1600.c ****             BCe = ROL(Ege, 44);
+ 220:keccakf1600.c ****             Eki ^= Di;
+ 221:keccakf1600.c ****             BCi = ROL(Eki, 43);
+ 222:keccakf1600.c ****             Emo ^= Do;
+ 223:keccakf1600.c ****             BCo = ROL(Emo, 21);
+ 224:keccakf1600.c ****             Esu ^= Du;
+ 1735              	 .loc 1 224 17 view .LVU608
+ 1736 0850 099F     	 ldr r7,[sp,#36]
+ 1737              	.LVL213:
+ 212:keccakf1600.c ****             Do = BCi^ROL(BCu, 1);
+ 1738              	 .loc 1 212 22 view .LVU609
+ 1739 0852 4FEA450B 	 lsl fp,r5,#1
+ 1740 0856 4BEAD47B 	 orr fp,fp,r4,lsr#31
+ 212:keccakf1600.c ****             Do = BCi^ROL(BCu, 1);
+ 1741              	 .loc 1 212 16 view .LVU610
+ 1742 085a 8BEA090B 	 eor fp,fp,r9
+ 1743              	.LVL214:
+ 213:keccakf1600.c ****             Du = BCo^ROL(BCa, 1);
+ 1744              	 .loc 1 213 13 is_stmt 1 view .LVU611
+ 214:keccakf1600.c **** 
+ 1745              	 .loc 1 214 13 view .LVU612
+ 216:keccakf1600.c ****             BCa = Eba;
+ 1746              	 .loc 1 216 13 view .LVU613
+ 216:keccakf1600.c ****             BCa = Eba;
+ 1747              	 .loc 1 216 17 is_stmt 0 view .LVU614
+ 1748 085e 83EA0209 	 eor r9,r3,r2
+ 1749              	.LVL215:
+ 216:keccakf1600.c ****             BCa = Eba;
+ 1750              	 .loc 1 216 17 view .LVU615
+ 1751 0862 0B9B     	 ldr r3,[sp,#44]
+ 1752 0864 029A     	 ldr r2,[sp,#8]
+ 220:keccakf1600.c ****             BCi = ROL(Eki, 43);
+ 1753              	 .loc 1 220 17 view .LVU616
+ 1754 0866 059C     	 ldr r4,[sp,#20]
+ 1755              	.LVL216:
+ 216:keccakf1600.c ****             BCa = Eba;
+ 1756              	 .loc 1 216 17 view .LVU617
+ 1757 0868 83EA020A 	 eor r10,r3,r2
+ 1758              	.LVL217:
+ 217:keccakf1600.c ****             Ege ^= De;
+ 1759              	 .loc 1 217 13 is_stmt 1 view .LVU618
+ 218:keccakf1600.c ****             BCe = ROL(Ege, 44);
+ 1760              	 .loc 1 218 13 view .LVU619
+ 219:keccakf1600.c ****             Eki ^= Di;
+ 1761              	 .loc 1 219 13 view .LVU620
+ 218:keccakf1600.c ****             BCe = ROL(Ege, 44);
+ 1762              	 .loc 1 218 17 is_stmt 0 view .LVU621
+ 1763 086c 109B     	 ldr r3,[sp,#64]
+ 1764 086e 039A     	 ldr r2,[sp,#12]
+ 1765 0870 83EA0201 	 eor r1,r3,r2
+ 1766 0874 049A     	 ldr r2,[sp,#16]
+ 1767 0876 119B     	 ldr r3,[sp,#68]
+ 219:keccakf1600.c ****             Eki ^= Di;
+ 1768              	 .loc 1 219 17 view .LVU622
+ 1769 0878 0D0D     	 lsrs r5,r1,#20
+ 1770              	.LVL218:
+ 218:keccakf1600.c ****             BCe = ROL(Ege, 44);
+ 1771              	 .loc 1 218 17 view .LVU623
+ 1772 087a 5340     	 eors r3,r3,r2
+ 220:keccakf1600.c ****             BCi = ROL(Eki, 43);
+ 1773              	 .loc 1 220 17 view .LVU624
+ 1774 087c 0C9A     	 ldr r2,[sp,#48]
+ 219:keccakf1600.c ****             Eki ^= Di;
+ 1775              	 .loc 1 219 17 view .LVU625
+ 1776 087e 45EA0335 	 orr r5,r5,r3,lsl#12
+ 1777 0882 1B0D     	 lsrs r3,r3,#20
+ 1778 0884 43EA0133 	 orr r3,r3,r1,lsl#12
+ 1779              	.LVL219:
+ 220:keccakf1600.c ****             BCi = ROL(Eki, 43);
+ 1780              	 .loc 1 220 13 is_stmt 1 view .LVU626
+ 221:keccakf1600.c ****             Emo ^= Do;
+ 1781              	 .loc 1 221 13 view .LVU627
+ 220:keccakf1600.c ****             BCi = ROL(Eki, 43);
+ 1782              	 .loc 1 220 17 is_stmt 0 view .LVU628
+ 1783 0888 82EA0B01 	 eor r1,r2,fp
+ 1784 088c 0D9A     	 ldr r2,[sp,#52]
+ 1785              	.LVL220:
+ 221:keccakf1600.c ****             Emo ^= Do;
+ 1786              	 .loc 1 221 17 view .LVU629
+ 1787 088e 4FEA5158 	 lsr r8,r1,#21
+ 220:keccakf1600.c ****             BCi = ROL(Eki, 43);
+ 1788              	 .loc 1 220 17 view .LVU630
+ 1789 0892 5440     	 eors r4,r4,r2
+ 221:keccakf1600.c ****             Emo ^= Do;
+ 1790              	 .loc 1 221 17 view .LVU631
+ 1791 0894 48EAC428 	 orr r8,r8,r4,lsl#11
+ 1792 0898 640D     	 lsrs r4,r4,#21
+ 1793 089a 44EAC124 	 orr r4,r4,r1,lsl#11
+ 1794              	.LVL221:
+ 222:keccakf1600.c ****             BCo = ROL(Emo, 21);
+ 1795              	 .loc 1 222 13 is_stmt 1 view .LVU632
+ 223:keccakf1600.c ****             Esu ^= Du;
+ 1796              	 .loc 1 223 13 view .LVU633
+ 222:keccakf1600.c ****             BCo = ROL(Emo, 21);
+ 1797              	 .loc 1 222 17 is_stmt 0 view .LVU634
+ 1798 089e 129A     	 ldr r2,[sp,#72]
+ 1799 08a0 0699     	 ldr r1,[sp,#24]
+ 1800 08a2 82EA0106 	 eor r6,r2,r1
+ 1801 08a6 139A     	 ldr r2,[sp,#76]
+ 1802 08a8 0799     	 ldr r1,[sp,#28]
+ 223:keccakf1600.c ****             Esu ^= Du;
+ 1803              	 .loc 1 223 17 view .LVU635
+ 1804 08aa 4FEA465E 	 lsl lr,r6,#21
+ 1805              	.LVL222:
+ 222:keccakf1600.c ****             BCo = ROL(Emo, 21);
+ 1806              	 .loc 1 222 17 view .LVU636
+ 1807 08ae 5140     	 eors r1,r1,r2
+ 223:keccakf1600.c ****             Esu ^= Du;
+ 1808              	 .loc 1 223 17 view .LVU637
+ 1809 08b0 4EEAD12E 	 orr lr,lr,r1,lsr#11
+ 1810 08b4 4905     	 lsls r1,r1,#21
+ 1811 08b6 41EAD621 	 orr r1,r1,r6,lsr#11
+ 1812              	.LVL223:
+ 1813              	 .loc 1 224 13 is_stmt 1 view .LVU638
+ 225:keccakf1600.c ****             BCu = ROL(Esu, 14);
+ 1814              	 .loc 1 225 13 view .LVU639
+ 224:keccakf1600.c ****             BCu = ROL(Esu, 14);
+ 1815              	 .loc 1 224 17 is_stmt 0 view .LVU640
+ 1816 08ba 089A     	 ldr r2,[sp,#32]
+ 1817 08bc 0E9E     	 ldr r6,[sp,#56]
+ 1818 08be 5640     	 eors r6,r6,r2
+ 1819 08c0 0F9A     	 ldr r2,[sp,#60]
+ 1820              	 .loc 1 225 17 view .LVU641
+ 1821 08c2 4FEA863C 	 lsl ip,r6,#14
+ 224:keccakf1600.c ****             BCu = ROL(Esu, 14);
+ 1822              	 .loc 1 224 17 view .LVU642
+ 1823 08c6 7A40     	 eors r2,r2,r7
+ 1824              	 .loc 1 225 17 view .LVU643
+ 1825 08c8 4CEA924C 	 orr ip,ip,r2,lsr#18
+ 1826 08cc 9203     	 lsls r2,r2,#14
+ 1827 08ce 42EA9642 	 orr r2,r2,r6,lsr#18
+ 1828              	.LVL224:
+ 226:keccakf1600.c ****             Aba =   BCa ^((~BCe)&  BCi );
+ 1829              	 .loc 1 226 13 is_stmt 1 view .LVU644
+ 227:keccakf1600.c ****             Aba ^= (uint64_t)KeccakF_RoundConstants[round+1];
+ 1830              	 .loc 1 227 13 view .LVU645
+ 1831              	 .loc 1 227 17 is_stmt 0 view .LVU646
+ 1832 08d2 009E     	 ldr r6,[sp]
+ 1833 08d4 D6E90276 	 ldrd r7,r6,[r6,#8]
+ 1834              	.LVL225:
+ 1835              	 .loc 1 227 17 view .LVU647
+ 1836 08d8 8AEA0606 	 eor r6,r10,r6
+ 1837 08dc 0B96     	 str r6,[sp,#44]
+ 1838 08de 89EA0707 	 eor r7,r9,r7
+ 1839 08e2 28EA0506 	 bic r6,r8,r5
+ 1840 08e6 7E40     	 eors r6,r6,r7
+ 1841 08e8 0B9F     	 ldr r7,[sp,#44]
+ 1842 08ea 0A96     	 str r6,[sp,#40]
+ 1843 08ec 24EA0306 	 bic r6,r4,r3
+ 1844 08f0 7740     	 eors r7,r7,r6
+ 228:keccakf1600.c ****             Abe =   BCe ^((~BCi)&  BCo );
+ 1845              	 .loc 1 228 33 view .LVU648
+ 1846 08f2 21EA0406 	 bic r6,r1,r4
+ 1847              	 .loc 1 228 17 view .LVU649
+ 1848 08f6 5E40     	 eors r6,r6,r3
+ 1849 08f8 0D96     	 str r6,[sp,#52]
+ 1850              	.LVL226:
+ 229:keccakf1600.c ****             Abi =   BCi ^((~BCo)&  BCu );
+ 1851              	 .loc 1 229 33 view .LVU650
+ 1852 08fa 22EA0106 	 bic r6,r2,r1
+ 1853              	 .loc 1 229 17 view .LVU651
+ 1854 08fe 7440     	 eors r4,r4,r6
+ 1855              	.LVL227:
+ 230:keccakf1600.c ****             Abo =   BCo ^((~BCu)&  BCa );
+ 231:keccakf1600.c ****             Abu =   BCu ^((~BCa)&  BCe );
+ 1856              	 .loc 1 231 33 view .LVU652
+ 1857 0900 23EA0A03 	 bic r3,r3,r10
+ 1858              	.LVL228:
+ 1859              	 .loc 1 231 17 view .LVU653
+ 1860 0904 5340     	 eors r3,r3,r2
+ 227:keccakf1600.c ****             Abe =   BCe ^((~BCi)&  BCo );
+ 1861              	 .loc 1 227 17 view .LVU654
+ 1862 0906 0B97     	 str r7,[sp,#44]
+ 1863              	.LVL229:
+ 228:keccakf1600.c ****             Abi =   BCi ^((~BCo)&  BCu );
+ 1864              	 .loc 1 228 13 is_stmt 1 view .LVU655
+ 229:keccakf1600.c ****             Abo =   BCo ^((~BCu)&  BCa );
+ 1865              	 .loc 1 229 13 view .LVU656
+ 229:keccakf1600.c ****             Abo =   BCo ^((~BCu)&  BCa );
+ 1866              	 .loc 1 229 17 is_stmt 0 view .LVU657
+ 1867 0908 0F94     	 str r4,[sp,#60]
+ 1868              	.LVL230:
+ 230:keccakf1600.c ****             Abu =   BCu ^((~BCa)&  BCe );
+ 1869              	 .loc 1 230 13 is_stmt 1 view .LVU658
+ 228:keccakf1600.c ****             Abi =   BCi ^((~BCo)&  BCu );
+ 1870              	 .loc 1 228 33 is_stmt 0 view .LVU659
+ 1871 090a 2EEA0807 	 bic r7,lr,r8
+ 1872              	.LVL231:
+ 230:keccakf1600.c ****             Abu =   BCu ^((~BCa)&  BCe );
+ 1873              	 .loc 1 230 33 view .LVU660
+ 1874 090e 2AEA0204 	 bic r4,r10,r2
+ 1875              	.LVL232:
+ 228:keccakf1600.c ****             Abi =   BCi ^((~BCo)&  BCu );
+ 1876              	 .loc 1 228 17 view .LVU661
+ 1877 0912 6F40     	 eors r7,r7,r5
+ 232:keccakf1600.c **** 
+ 233:keccakf1600.c ****             Ebo ^= Do;
+ 1878              	 .loc 1 233 17 view .LVU662
+ 1879 0914 069A     	 ldr r2,[sp,#24]
+ 1880              	.LVL233:
+ 231:keccakf1600.c **** 
+ 1881              	 .loc 1 231 17 view .LVU663
+ 1882 0916 1393     	 str r3,[sp,#76]
+ 1883              	.LVL234:
+ 230:keccakf1600.c ****             Abu =   BCu ^((~BCa)&  BCe );
+ 1884              	 .loc 1 230 17 view .LVU664
+ 1885 0918 6140     	 eors r1,r1,r4
+ 1886              	.LVL235:
+ 231:keccakf1600.c **** 
+ 1887              	 .loc 1 231 33 view .LVU665
+ 1888 091a 25EA0905 	 bic r5,r5,r9
+ 1889              	.LVL236:
+ 1890              	 .loc 1 233 17 view .LVU666
+ 1891 091e 169B     	 ldr r3,[sp,#88]
+ 230:keccakf1600.c ****             Abu =   BCu ^((~BCa)&  BCe );
+ 1892              	 .loc 1 230 17 view .LVU667
+ 1893 0920 1191     	 str r1,[sp,#68]
+ 1894              	.LVL237:
+ 231:keccakf1600.c **** 
+ 1895              	 .loc 1 231 13 is_stmt 1 view .LVU668
+ 1896              	 .loc 1 233 13 view .LVU669
+ 234:keccakf1600.c ****             BCa = ROL(Ebo, 28);
+ 1897              	 .loc 1 234 13 view .LVU670
+ 231:keccakf1600.c **** 
+ 1898              	 .loc 1 231 17 is_stmt 0 view .LVU671
+ 1899 0922 85EA0C01 	 eor r1,r5,ip
+ 1900              	.LVL238:
+ 233:keccakf1600.c ****             BCa = ROL(Ebo, 28);
+ 1901              	 .loc 1 233 17 view .LVU672
+ 1902 0926 5340     	 eors r3,r3,r2
+ 231:keccakf1600.c **** 
+ 1903              	 .loc 1 231 17 view .LVU673
+ 1904 0928 1291     	 str r1,[sp,#72]
+ 1905              	.LVL239:
+ 233:keccakf1600.c ****             BCa = ROL(Ebo, 28);
+ 1906              	 .loc 1 233 17 view .LVU674
+ 1907 092a 179A     	 ldr r2,[sp,#92]
+ 1908 092c 0799     	 ldr r1,[sp,#28]
+ 228:keccakf1600.c ****             Abi =   BCi ^((~BCo)&  BCu );
+ 1909              	 .loc 1 228 17 view .LVU675
+ 1910 092e 0C97     	 str r7,[sp,#48]
+ 1911              	.LVL240:
+ 230:keccakf1600.c ****             Abu =   BCu ^((~BCa)&  BCe );
+ 1912              	 .loc 1 230 33 view .LVU676
+ 1913 0930 29EA0C06 	 bic r6,r9,ip
+ 229:keccakf1600.c ****             Abo =   BCo ^((~BCu)&  BCa );
+ 1914              	 .loc 1 229 33 view .LVU677
+ 1915 0934 2CEA0E07 	 bic r7,ip,lr
+ 233:keccakf1600.c ****             BCa = ROL(Ebo, 28);
+ 1916              	 .loc 1 233 17 view .LVU678
+ 1917 0938 5140     	 eors r1,r1,r2
+ 1918              	 .loc 1 234 17 view .LVU679
+ 1919 093a 4FEA037C 	 lsl ip,r3,#28
+ 1920              	 .loc 1 234 17 view .LVU680
+ 1921 093e 4CEA111C 	 orr ip,ip,r1,lsr#4
+ 1922 0942 0907     	 lsls r1,r1,#28
+ 1923 0944 41EA1311 	 orr r1,r1,r3,lsr#4
+ 1924              	.LVL241:
+ 235:keccakf1600.c ****             Egu ^= Du;
+ 1925              	 .loc 1 235 13 is_stmt 1 view .LVU681
+ 236:keccakf1600.c ****             BCe = ROL(Egu, 20);
+ 1926              	 .loc 1 236 13 view .LVU682
+ 235:keccakf1600.c ****             Egu ^= Du;
+ 1927              	 .loc 1 235 17 is_stmt 0 view .LVU683
+ 1928 0948 089A     	 ldr r2,[sp,#32]
+ 1929 094a 1C9B     	 ldr r3,[sp,#112]
+ 1930 094c 099C     	 ldr r4,[sp,#36]
+ 237:keccakf1600.c ****             Eka ^= Da;
+ 1931              	 .loc 1 237 17 view .LVU684
+ 1932 094e 029D     	 ldr r5,[sp,#8]
+ 235:keccakf1600.c ****             Egu ^= Du;
+ 1933              	 .loc 1 235 17 view .LVU685
+ 1934 0950 5A40     	 eors r2,r2,r3
+ 1935 0952 1D9B     	 ldr r3,[sp,#116]
+ 230:keccakf1600.c ****             Abu =   BCu ^((~BCa)&  BCe );
+ 1936              	 .loc 1 230 17 view .LVU686
+ 1937 0954 86EA0E06 	 eor r6,r6,lr
+ 235:keccakf1600.c ****             BCe = ROL(Egu, 20);
+ 1938              	 .loc 1 235 17 view .LVU687
+ 1939 0958 6340     	 eors r3,r3,r4
+ 230:keccakf1600.c ****             Abu =   BCu ^((~BCa)&  BCe );
+ 1940              	 .loc 1 230 17 view .LVU688
+ 1941 095a 1096     	 str r6,[sp,#64]
+ 1942              	.LVL242:
+ 236:keccakf1600.c ****             Eka ^= Da;
+ 1943              	 .loc 1 236 17 view .LVU689
+ 1944 095c 1605     	 lsls r6,r2,#20
+ 1945 095e 46EA1336 	 orr r6,r6,r3,lsr#12
+ 1946 0962 1B05     	 lsls r3,r3,#20
+ 1947 0964 43EA1233 	 orr r3,r3,r2,lsr#12
+ 1948              	.LVL243:
+ 1949              	 .loc 1 237 13 is_stmt 1 view .LVU690
+ 238:keccakf1600.c ****             BCi = ROL(Eka, 3);
+ 1950              	 .loc 1 238 13 view .LVU691
+ 237:keccakf1600.c ****             BCi = ROL(Eka, 3);
+ 1951              	 .loc 1 237 17 is_stmt 0 view .LVU692
+ 1952 0968 019C     	 ldr r4,[sp,#4]
+ 1953 096a 189A     	 ldr r2,[sp,#96]
+ 1954 096c 6240     	 eors r2,r2,r4
+ 1955 096e 199C     	 ldr r4,[sp,#100]
+ 229:keccakf1600.c ****             Abo =   BCo ^((~BCu)&  BCa );
+ 1956              	 .loc 1 229 17 view .LVU693
+ 1957 0970 87EA0807 	 eor r7,r7,r8
+ 237:keccakf1600.c ****             BCi = ROL(Eka, 3);
+ 1958              	 .loc 1 237 17 view .LVU694
+ 1959 0974 6540     	 eors r5,r5,r4
+ 1960              	 .loc 1 238 17 view .LVU695
+ 1961 0976 4FEAC208 	 lsl r8,r2,#3
+ 1962              	 .loc 1 238 17 view .LVU696
+ 1963 097a 48EA5578 	 orr r8,r8,r5,lsr#29
+ 1964 097e ED00     	 lsls r5,r5,#3
+ 1965 0980 45EA5275 	 orr r5,r5,r2,lsr#29
+ 1966              	.LVL244:
+ 239:keccakf1600.c ****             Eme ^= De;
+ 1967              	 .loc 1 239 13 is_stmt 1 view .LVU697
+ 240:keccakf1600.c ****             BCo = ROL(Eme, 45);
+ 1968              	 .loc 1 240 13 view .LVU698
+ 239:keccakf1600.c ****             Eme ^= De;
+ 1969              	 .loc 1 239 17 is_stmt 0 view .LVU699
+ 1970 0984 039C     	 ldr r4,[sp,#12]
+ 1971 0986 149A     	 ldr r2,[sp,#80]
+ 229:keccakf1600.c ****             Abo =   BCo ^((~BCu)&  BCa );
+ 1972              	 .loc 1 229 17 view .LVU700
+ 1973 0988 0E97     	 str r7,[sp,#56]
+ 1974              	.LVL245:
+ 239:keccakf1600.c ****             Eme ^= De;
+ 1975              	 .loc 1 239 17 view .LVU701
+ 1976 098a 6240     	 eors r2,r2,r4
+ 1977 098c 049F     	 ldr r7,[sp,#16]
+ 1978 098e 159C     	 ldr r4,[sp,#84]
+ 1979              	 .loc 1 240 17 view .LVU702
+ 1980 0990 4FEAD24E 	 lsr lr,r2,#19
+ 239:keccakf1600.c ****             Eme ^= De;
+ 1981              	 .loc 1 239 17 view .LVU703
+ 1982 0994 7C40     	 eors r4,r4,r7
+ 1983              	 .loc 1 240 17 view .LVU704
+ 1984 0996 4EEA443E 	 orr lr,lr,r4,lsl#13
+ 1985 099a E40C     	 lsrs r4,r4,#19
+ 1986 099c 44EA4234 	 orr r4,r4,r2,lsl#13
+ 1987              	.LVL246:
+ 241:keccakf1600.c ****             Esi ^= Di;
+ 1988              	 .loc 1 241 13 is_stmt 1 view .LVU705
+ 242:keccakf1600.c ****             BCu = ROL(Esi, 61);
+ 1989              	 .loc 1 242 13 view .LVU706
+ 241:keccakf1600.c ****             Esi ^= Di;
+ 1990              	 .loc 1 241 17 is_stmt 0 view .LVU707
+ 1991 09a0 1A9A     	 ldr r2,[sp,#104]
+ 1992 09a2 82EA0B09 	 eor r9,r2,fp
+ 1993              	.LVL247:
+ 241:keccakf1600.c ****             Esi ^= Di;
+ 1994              	 .loc 1 241 17 view .LVU708
+ 1995 09a6 1B9A     	 ldr r2,[sp,#108]
+ 1996 09a8 059F     	 ldr r7,[sp,#20]
+ 1997 09aa 7A40     	 eors r2,r2,r7
+ 1998              	 .loc 1 242 17 view .LVU709
+ 1999 09ac 4FEAD907 	 lsr r7,r9,#3
+ 2000 09b0 47EA4277 	 orr r7,r7,r2,lsl#29
+ 2001 09b4 D208     	 lsrs r2,r2,#3
+ 2002 09b6 42EA4972 	 orr r2,r2,r9,lsl#29
+ 2003              	.LVL248:
+ 243:keccakf1600.c ****             Aga =   BCa ^((~BCe)&  BCi );
+ 2004              	 .loc 1 243 13 is_stmt 1 view .LVU710
+ 2005              	 .loc 1 243 33 is_stmt 0 view .LVU711
+ 2006 09ba 25EA0309 	 bic r9,r5,r3
+ 2007              	 .loc 1 243 17 view .LVU712
+ 2008 09be 89EA0109 	 eor r9,r9,r1
+ 2009 09c2 CDF85490 	 str r9,[sp,#84]
+ 2010              	.LVL249:
+ 244:keccakf1600.c ****             Age =   BCe ^((~BCi)&  BCo );
+ 2011              	 .loc 1 244 13 is_stmt 1 view .LVU713
+ 2012              	 .loc 1 244 33 is_stmt 0 view .LVU714
+ 2013 09c6 24EA0509 	 bic r9,r4,r5
+ 2014              	.LVL250:
+ 243:keccakf1600.c ****             Aga =   BCa ^((~BCe)&  BCi );
+ 2015              	 .loc 1 243 33 view .LVU715
+ 2016 09ca 28EA060A 	 bic r10,r8,r6
+ 2017              	 .loc 1 244 17 view .LVU716
+ 2018 09ce 89EA0309 	 eor r9,r9,r3
+ 243:keccakf1600.c ****             Aga =   BCa ^((~BCe)&  BCi );
+ 2019              	 .loc 1 243 17 view .LVU717
+ 2020 09d2 8AEA0C0A 	 eor r10,r10,ip
+ 2021              	 .loc 1 244 17 view .LVU718
+ 2022 09d6 CDF85C90 	 str r9,[sp,#92]
+ 2023              	.LVL251:
+ 245:keccakf1600.c ****             Agi =   BCi ^((~BCo)&  BCu );
+ 2024              	 .loc 1 245 13 is_stmt 1 view .LVU719
+ 246:keccakf1600.c ****             Ago =   BCo ^((~BCu)&  BCa );
+ 247:keccakf1600.c ****             Agu =   BCu ^((~BCa)&  BCe );
+ 2025              	 .loc 1 247 33 is_stmt 0 view .LVU720
+ 2026 09da 23EA0103 	 bic r3,r3,r1
+ 2027              	.LVL252:
+ 245:keccakf1600.c ****             Agi =   BCi ^((~BCo)&  BCu );
+ 2028              	 .loc 1 245 33 view .LVU721
+ 2029 09de 22EA0409 	 bic r9,r2,r4
+ 2030              	.LVL253:
+ 245:keccakf1600.c ****             Agi =   BCi ^((~BCo)&  BCu );
+ 2031              	 .loc 1 245 17 view .LVU722
+ 2032 09e2 89EA0505 	 eor r5,r9,r5
+ 2033              	.LVL254:
+ 2034              	 .loc 1 247 17 view .LVU723
+ 2035 09e6 5340     	 eors r3,r3,r2
+ 243:keccakf1600.c ****             Age =   BCe ^((~BCi)&  BCo );
+ 2036              	 .loc 1 243 17 view .LVU724
+ 2037 09e8 CDF850A0 	 str r10,[sp,#80]
+ 2038              	.LVL255:
+ 244:keccakf1600.c ****             Agi =   BCi ^((~BCo)&  BCu );
+ 2039              	 .loc 1 244 33 view .LVU725
+ 2040 09ec 2EEA080A 	 bic r10,lr,r8
+ 244:keccakf1600.c ****             Agi =   BCi ^((~BCo)&  BCu );
+ 2041              	 .loc 1 244 17 view .LVU726
+ 2042 09f0 8AEA060A 	 eor r10,r10,r6
+ 245:keccakf1600.c ****             Ago =   BCo ^((~BCu)&  BCa );
+ 2043              	 .loc 1 245 17 view .LVU727
+ 2044 09f4 1995     	 str r5,[sp,#100]
+ 2045              	.LVL256:
+ 246:keccakf1600.c ****             Agu =   BCu ^((~BCa)&  BCe );
+ 2046              	 .loc 1 246 13 is_stmt 1 view .LVU728
+ 2047              	 .loc 1 247 33 is_stmt 0 view .LVU729
+ 2048 09f6 26EA0C06 	 bic r6,r6,ip
+ 2049              	.LVL257:
+ 246:keccakf1600.c ****             Agu =   BCu ^((~BCa)&  BCe );
+ 2050              	 .loc 1 246 33 view .LVU730
+ 2051 09fa 21EA0205 	 bic r5,r1,r2
+ 2052              	.LVL258:
+ 2053              	 .loc 1 247 17 view .LVU731
+ 2054 09fe 1D93     	 str r3,[sp,#116]
+ 2055              	.LVL259:
+ 248:keccakf1600.c **** 
+ 249:keccakf1600.c ****             Ebe ^= De;
+ 2056              	 .loc 1 249 17 view .LVU732
+ 2057 0a00 039A     	 ldr r2,[sp,#12]
+ 2058              	.LVL260:
+ 2059              	 .loc 1 249 17 view .LVU733
+ 2060 0a02 229B     	 ldr r3,[sp,#136]
+ 244:keccakf1600.c ****             Agi =   BCi ^((~BCo)&  BCu );
+ 2061              	 .loc 1 244 17 view .LVU734
+ 2062 0a04 CDF858A0 	 str r10,[sp,#88]
+ 2063              	.LVL261:
+ 247:keccakf1600.c **** 
+ 2064              	 .loc 1 247 17 view .LVU735
+ 2065 0a08 86EA0701 	 eor r1,r6,r7
+ 2066              	.LVL262:
+ 245:keccakf1600.c ****             Ago =   BCo ^((~BCu)&  BCa );
+ 2067              	 .loc 1 245 33 view .LVU736
+ 2068 0a0c 27EA0E0A 	 bic r10,r7,lr
+ 2069              	 .loc 1 249 17 view .LVU737
+ 2070 0a10 5340     	 eors r3,r3,r2
+ 247:keccakf1600.c **** 
+ 2071              	 .loc 1 247 17 view .LVU738
+ 2072 0a12 1C91     	 str r1,[sp,#112]
+ 2073              	 .loc 1 249 17 view .LVU739
+ 2074 0a14 239A     	 ldr r2,[sp,#140]
+ 2075 0a16 0499     	 ldr r1,[sp,#16]
+ 245:keccakf1600.c ****             Ago =   BCo ^((~BCu)&  BCa );
+ 2076              	 .loc 1 245 17 view .LVU740
+ 2077 0a18 8AEA0808 	 eor r8,r10,r8
+ 2078              	 .loc 1 249 17 view .LVU741
+ 2079 0a1c 5140     	 eors r1,r1,r2
+ 245:keccakf1600.c ****             Ago =   BCo ^((~BCu)&  BCa );
+ 2080              	 .loc 1 245 17 view .LVU742
+ 2081 0a1e CDF86080 	 str r8,[sp,#96]
+ 2082              	.LVL263:
+ 246:keccakf1600.c ****             Agu =   BCu ^((~BCa)&  BCe );
+ 2083              	 .loc 1 246 33 view .LVU743
+ 2084 0a22 2CEA0708 	 bic r8,ip,r7
+ 250:keccakf1600.c ****             BCa = ROL(Ebe, 1);
+ 2085              	 .loc 1 250 17 view .LVU744
+ 2086 0a26 4FEA430C 	 lsl ip,r3,#1
+ 2087              	 .loc 1 250 17 view .LVU745
+ 2088 0a2a 4CEAD17C 	 orr ip,ip,r1,lsr#31
+ 2089 0a2e 4900     	 lsls r1,r1,#1
+ 2090 0a30 41EAD371 	 orr r1,r1,r3,lsr#31
+ 251:keccakf1600.c ****             Egi ^= Di;
+ 2091              	 .loc 1 251 17 view .LVU746
+ 2092 0a34 1E9B     	 ldr r3,[sp,#120]
+ 252:keccakf1600.c ****             BCe = ROL(Egi, 6);
+ 253:keccakf1600.c ****             Eko ^= Do;
+ 254:keccakf1600.c ****             BCi = ROL(Eko, 25);
+ 255:keccakf1600.c ****             Emu ^= Du;
+ 2093              	 .loc 1 255 17 view .LVU747
+ 2094 0a36 099F     	 ldr r7,[sp,#36]
+ 2095              	.LVL264:
+ 246:keccakf1600.c ****             Agu =   BCu ^((~BCa)&  BCe );
+ 2096              	 .loc 1 246 17 view .LVU748
+ 2097 0a38 6C40     	 eors r4,r4,r5
+ 2098              	.LVL265:
+ 251:keccakf1600.c ****             Egi ^= Di;
+ 2099              	 .loc 1 251 17 view .LVU749
+ 2100 0a3a 83EA0B02 	 eor r2,r3,fp
+ 246:keccakf1600.c ****             Agu =   BCu ^((~BCa)&  BCe );
+ 2101              	 .loc 1 246 17 view .LVU750
+ 2102 0a3e 1B94     	 str r4,[sp,#108]
+ 2103              	.LVL266:
+ 247:keccakf1600.c **** 
+ 2104              	 .loc 1 247 13 is_stmt 1 view .LVU751
+ 249:keccakf1600.c ****             BCa = ROL(Ebe, 1);
+ 2105              	 .loc 1 249 13 view .LVU752
+ 250:keccakf1600.c ****             Egi ^= Di;
+ 2106              	 .loc 1 250 13 view .LVU753
+ 251:keccakf1600.c ****             BCe = ROL(Egi, 6);
+ 2107              	 .loc 1 251 13 view .LVU754
+ 252:keccakf1600.c ****             Eko ^= Do;
+ 2108              	 .loc 1 252 13 view .LVU755
+ 251:keccakf1600.c ****             BCe = ROL(Egi, 6);
+ 2109              	 .loc 1 251 17 is_stmt 0 view .LVU756
+ 2110 0a40 1F9B     	 ldr r3,[sp,#124]
+ 2111              	.LVL267:
+ 251:keccakf1600.c ****             BCe = ROL(Egi, 6);
+ 2112              	 .loc 1 251 17 view .LVU757
+ 2113 0a42 059C     	 ldr r4,[sp,#20]
+ 2114              	.LVL268:
+ 253:keccakf1600.c ****             BCi = ROL(Eko, 25);
+ 2115              	 .loc 1 253 17 view .LVU758
+ 2116 0a44 079D     	 ldr r5,[sp,#28]
+ 251:keccakf1600.c ****             BCe = ROL(Egi, 6);
+ 2117              	 .loc 1 251 17 view .LVU759
+ 2118 0a46 6340     	 eors r3,r3,r4
+ 252:keccakf1600.c ****             Eko ^= Do;
+ 2119              	 .loc 1 252 17 view .LVU760
+ 2120 0a48 9601     	 lsls r6,r2,#6
+ 2121 0a4a 46EA9366 	 orr r6,r6,r3,lsr#26
+ 2122 0a4e 9B01     	 lsls r3,r3,#6
+ 2123 0a50 43EA9263 	 orr r3,r3,r2,lsr#26
+ 2124              	.LVL269:
+ 253:keccakf1600.c ****             BCi = ROL(Eko, 25);
+ 2125              	 .loc 1 253 13 is_stmt 1 view .LVU761
+ 254:keccakf1600.c ****             Emu ^= Du;
+ 2126              	 .loc 1 254 13 view .LVU762
+ 253:keccakf1600.c ****             BCi = ROL(Eko, 25);
+ 2127              	 .loc 1 253 17 is_stmt 0 view .LVU763
+ 2128 0a54 069C     	 ldr r4,[sp,#24]
+ 2129 0a56 249A     	 ldr r2,[sp,#144]
+ 2130 0a58 6240     	 eors r2,r2,r4
+ 2131 0a5a 259C     	 ldr r4,[sp,#148]
+ 246:keccakf1600.c ****             Agu =   BCu ^((~BCa)&  BCe );
+ 2132              	 .loc 1 246 17 view .LVU764
+ 2133 0a5c 88EA0E0E 	 eor lr,r8,lr
+ 253:keccakf1600.c ****             BCi = ROL(Eko, 25);
+ 2134              	 .loc 1 253 17 view .LVU765
+ 2135 0a60 6540     	 eors r5,r5,r4
+ 254:keccakf1600.c ****             Emu ^= Du;
+ 2136              	 .loc 1 254 17 view .LVU766
+ 2137 0a62 4FEA4268 	 lsl r8,r2,#25
+ 2138 0a66 48EAD518 	 orr r8,r8,r5,lsr#7
+ 2139 0a6a 6D06     	 lsls r5,r5,#25
+ 2140 0a6c 45EAD215 	 orr r5,r5,r2,lsr#7
+ 2141              	.LVL270:
+ 2142              	 .loc 1 255 13 is_stmt 1 view .LVU767
+ 256:keccakf1600.c ****             BCo = ROL(Emu, 8);
+ 2143              	 .loc 1 256 13 view .LVU768
+ 255:keccakf1600.c ****             BCo = ROL(Emu, 8);
+ 2144              	 .loc 1 255 17 is_stmt 0 view .LVU769
+ 2145 0a70 089C     	 ldr r4,[sp,#32]
+ 2146 0a72 209A     	 ldr r2,[sp,#128]
+ 246:keccakf1600.c ****             Agu =   BCu ^((~BCa)&  BCe );
+ 2147              	 .loc 1 246 17 view .LVU770
+ 2148 0a74 CDF868E0 	 str lr,[sp,#104]
+ 2149              	.LVL271:
+ 255:keccakf1600.c ****             BCo = ROL(Emu, 8);
+ 2150              	 .loc 1 255 17 view .LVU771
+ 2151 0a78 6240     	 eors r2,r2,r4
+ 2152 0a7a 219C     	 ldr r4,[sp,#132]
+ 2153              	 .loc 1 256 17 view .LVU772
+ 2154 0a7c 4FEA022E 	 lsl lr,r2,#8
+ 255:keccakf1600.c ****             BCo = ROL(Emu, 8);
+ 2155              	 .loc 1 255 17 view .LVU773
+ 2156 0a80 7C40     	 eors r4,r4,r7
+ 2157              	 .loc 1 256 17 view .LVU774
+ 2158 0a82 4EEA146E 	 orr lr,lr,r4,lsr#24
+ 2159 0a86 2402     	 lsls r4,r4,#8
+ 2160 0a88 44EA1264 	 orr r4,r4,r2,lsr#24
+ 2161              	.LVL272:
+ 257:keccakf1600.c ****             Esa ^= Da;
+ 2162              	 .loc 1 257 13 is_stmt 1 view .LVU775
+ 258:keccakf1600.c ****             BCu = ROL(Esa, 18);
+ 2163              	 .loc 1 258 13 view .LVU776
+ 257:keccakf1600.c ****             Esa ^= Da;
+ 2164              	 .loc 1 257 17 is_stmt 0 view .LVU777
+ 2165 0a8c 019F     	 ldr r7,[sp,#4]
+ 2166 0a8e 269A     	 ldr r2,[sp,#152]
+ 2167 0a90 82EA0709 	 eor r9,r2,r7
+ 2168 0a94 029F     	 ldr r7,[sp,#8]
+ 2169 0a96 279A     	 ldr r2,[sp,#156]
+ 2170 0a98 7A40     	 eors r2,r2,r7
+ 2171              	 .loc 1 258 17 view .LVU778
+ 2172 0a9a 4FEA8947 	 lsl r7,r9,#18
+ 2173 0a9e 47EA9237 	 orr r7,r7,r2,lsr#14
+ 2174 0aa2 9204     	 lsls r2,r2,#18
+ 2175 0aa4 42EA9932 	 orr r2,r2,r9,lsr#14
+ 2176              	.LVL273:
+ 259:keccakf1600.c ****             Aka =   BCa ^((~BCe)&  BCi );
+ 2177              	 .loc 1 259 13 is_stmt 1 view .LVU779
+ 2178              	 .loc 1 259 33 is_stmt 0 view .LVU780
+ 2179 0aa8 28EA060A 	 bic r10,r8,r6
+ 2180 0aac 25EA0309 	 bic r9,r5,r3
+ 2181              	 .loc 1 259 17 view .LVU781
+ 2182 0ab0 8AEA0C0A 	 eor r10,r10,ip
+ 2183 0ab4 89EA0109 	 eor r9,r9,r1
+ 2184 0ab8 CDF878A0 	 str r10,[sp,#120]
+ 2185              	.LVL274:
+ 2186              	 .loc 1 259 17 view .LVU782
+ 2187 0abc CDF87C90 	 str r9,[sp,#124]
+ 2188              	.LVL275:
+ 260:keccakf1600.c ****             Ake =   BCe ^((~BCi)&  BCo );
+ 2189              	 .loc 1 260 13 is_stmt 1 view .LVU783
+ 2190              	 .loc 1 260 33 is_stmt 0 view .LVU784
+ 2191 0ac0 24EA0509 	 bic r9,r4,r5
+ 2192              	.LVL276:
+ 2193              	 .loc 1 260 17 view .LVU785
+ 2194 0ac4 89EA0309 	 eor r9,r9,r3
+ 2195 0ac8 CDF88490 	 str r9,[sp,#132]
+ 2196              	.LVL277:
+ 261:keccakf1600.c ****             Aki =   BCi ^((~BCo)&  BCu );
+ 2197              	 .loc 1 261 13 is_stmt 1 view .LVU786
+ 262:keccakf1600.c ****             Ako =   BCo ^((~BCu)&  BCa );
+ 263:keccakf1600.c ****             Aku =   BCu ^((~BCa)&  BCe );
+ 2198              	 .loc 1 263 33 is_stmt 0 view .LVU787
+ 2199 0acc 23EA0103 	 bic r3,r3,r1
+ 2200              	.LVL278:
+ 261:keccakf1600.c ****             Aki =   BCi ^((~BCo)&  BCu );
+ 2201              	 .loc 1 261 33 view .LVU788
+ 2202 0ad0 22EA0409 	 bic r9,r2,r4
+ 2203              	.LVL279:
+ 260:keccakf1600.c ****             Aki =   BCi ^((~BCo)&  BCu );
+ 2204              	 .loc 1 260 33 view .LVU789
+ 2205 0ad4 2EEA080A 	 bic r10,lr,r8
+ 2206              	.LVL280:
+ 261:keccakf1600.c ****             Aki =   BCi ^((~BCo)&  BCu );
+ 2207              	 .loc 1 261 17 view .LVU790
+ 2208 0ad8 89EA0505 	 eor r5,r9,r5
+ 2209              	.LVL281:
+ 2210              	 .loc 1 263 17 view .LVU791
+ 2211 0adc 5340     	 eors r3,r3,r2
+ 260:keccakf1600.c ****             Aki =   BCi ^((~BCo)&  BCu );
+ 2212              	 .loc 1 260 17 view .LVU792
+ 2213 0ade 8AEA060A 	 eor r10,r10,r6
+ 261:keccakf1600.c ****             Aki =   BCi ^((~BCo)&  BCu );
+ 2214              	 .loc 1 261 17 view .LVU793
+ 2215 0ae2 2395     	 str r5,[sp,#140]
+ 2216              	.LVL282:
+ 262:keccakf1600.c ****             Ako =   BCo ^((~BCu)&  BCa );
+ 2217              	 .loc 1 262 13 is_stmt 1 view .LVU794
+ 2218              	 .loc 1 263 33 is_stmt 0 view .LVU795
+ 2219 0ae4 26EA0C06 	 bic r6,r6,ip
+ 262:keccakf1600.c ****             Ako =   BCo ^((~BCu)&  BCa );
+ 2220              	 .loc 1 262 33 view .LVU796
+ 2221 0ae8 21EA0205 	 bic r5,r1,r2
+ 2222              	.LVL283:
+ 2223              	 .loc 1 263 17 view .LVU797
+ 2224 0aec 2793     	 str r3,[sp,#156]
+ 2225              	.LVL284:
+ 264:keccakf1600.c **** 
+ 265:keccakf1600.c ****             Ebu ^= Du;
+ 2226              	 .loc 1 265 17 view .LVU798
+ 2227 0aee 089A     	 ldr r2,[sp,#32]
+ 2228              	.LVL285:
+ 2229              	 .loc 1 265 17 view .LVU799
+ 2230 0af0 2E9B     	 ldr r3,[sp,#184]
+ 260:keccakf1600.c ****             Aki =   BCi ^((~BCo)&  BCu );
+ 2231              	 .loc 1 260 17 view .LVU800
+ 2232 0af2 CDF880A0 	 str r10,[sp,#128]
+ 2233              	.LVL286:
+ 263:keccakf1600.c **** 
+ 2234              	 .loc 1 263 17 view .LVU801
+ 2235 0af6 86EA0701 	 eor r1,r6,r7
+ 2236              	.LVL287:
+ 261:keccakf1600.c ****             Ako =   BCo ^((~BCu)&  BCa );
+ 2237              	 .loc 1 261 33 view .LVU802
+ 2238 0afa 27EA0E0A 	 bic r10,r7,lr
+ 2239              	 .loc 1 265 17 view .LVU803
+ 2240 0afe 5340     	 eors r3,r3,r2
+ 263:keccakf1600.c **** 
+ 2241              	 .loc 1 263 17 view .LVU804
+ 2242 0b00 2691     	 str r1,[sp,#152]
+ 2243              	 .loc 1 265 17 view .LVU805
+ 2244 0b02 2F9A     	 ldr r2,[sp,#188]
+ 2245 0b04 0999     	 ldr r1,[sp,#36]
+ 261:keccakf1600.c ****             Ako =   BCo ^((~BCu)&  BCa );
+ 2246              	 .loc 1 261 17 view .LVU806
+ 2247 0b06 8AEA0808 	 eor r8,r10,r8
+ 2248              	.LVL288:
+ 2249              	 .loc 1 265 17 view .LVU807
+ 2250 0b0a 5140     	 eors r1,r1,r2
+ 261:keccakf1600.c ****             Ako =   BCo ^((~BCu)&  BCa );
+ 2251              	 .loc 1 261 17 view .LVU808
+ 2252 0b0c CDF88880 	 str r8,[sp,#136]
+ 2253              	.LVL289:
+ 262:keccakf1600.c ****             Aku =   BCu ^((~BCa)&  BCe );
+ 2254              	 .loc 1 262 33 view .LVU809
+ 2255 0b10 2CEA0708 	 bic r8,ip,r7
+ 266:keccakf1600.c ****             BCa = ROL(Ebu, 27);
+ 2256              	 .loc 1 266 17 view .LVU810
+ 2257 0b14 4FEAC36C 	 lsl ip,r3,#27
+ 2258              	 .loc 1 266 17 view .LVU811
+ 2259 0b18 4CEA511C 	 orr ip,ip,r1,lsr#5
+ 2260 0b1c C906     	 lsls r1,r1,#27
+ 2261 0b1e 41EA5311 	 orr r1,r1,r3,lsr#5
+ 267:keccakf1600.c ****             Ega ^= Da;
+ 2262              	 .loc 1 267 17 view .LVU812
+ 2263 0b22 019A     	 ldr r2,[sp,#4]
+ 2264 0b24 2A9B     	 ldr r3,[sp,#168]
+ 268:keccakf1600.c ****             BCe = ROL(Ega, 36);
+ 269:keccakf1600.c ****             Eke ^= De;
+ 270:keccakf1600.c ****             BCi = ROL(Eke, 10);
+ 271:keccakf1600.c ****             Emi ^= Di;
+ 2265              	 .loc 1 271 17 view .LVU813
+ 2266 0b26 059F     	 ldr r7,[sp,#20]
+ 262:keccakf1600.c ****             Aku =   BCu ^((~BCa)&  BCe );
+ 2267              	 .loc 1 262 17 view .LVU814
+ 2268 0b28 6C40     	 eors r4,r4,r5
+ 2269              	.LVL290:
+ 267:keccakf1600.c ****             Ega ^= Da;
+ 2270              	 .loc 1 267 17 view .LVU815
+ 2271 0b2a 5A40     	 eors r2,r2,r3
+ 262:keccakf1600.c ****             Aku =   BCu ^((~BCa)&  BCe );
+ 2272              	 .loc 1 262 17 view .LVU816
+ 2273 0b2c 2594     	 str r4,[sp,#148]
+ 2274              	.LVL291:
+ 263:keccakf1600.c **** 
+ 2275              	 .loc 1 263 13 is_stmt 1 view .LVU817
+ 265:keccakf1600.c ****             BCa = ROL(Ebu, 27);
+ 2276              	 .loc 1 265 13 view .LVU818
+ 266:keccakf1600.c ****             Ega ^= Da;
+ 2277              	 .loc 1 266 13 view .LVU819
+ 267:keccakf1600.c ****             BCe = ROL(Ega, 36);
+ 2278              	 .loc 1 267 13 view .LVU820
+ 268:keccakf1600.c ****             Eke ^= De;
+ 2279              	 .loc 1 268 13 view .LVU821
+ 267:keccakf1600.c ****             BCe = ROL(Ega, 36);
+ 2280              	 .loc 1 267 17 is_stmt 0 view .LVU822
+ 2281 0b2e 2B9B     	 ldr r3,[sp,#172]
+ 2282              	.LVL292:
+ 267:keccakf1600.c ****             BCe = ROL(Ega, 36);
+ 2283              	 .loc 1 267 17 view .LVU823
+ 2284 0b30 029C     	 ldr r4,[sp,#8]
+ 2285              	.LVL293:
+ 269:keccakf1600.c ****             BCi = ROL(Eke, 10);
+ 2286              	 .loc 1 269 17 view .LVU824
+ 2287 0b32 049D     	 ldr r5,[sp,#16]
+ 267:keccakf1600.c ****             BCe = ROL(Ega, 36);
+ 2288              	 .loc 1 267 17 view .LVU825
+ 2289 0b34 6340     	 eors r3,r3,r4
+ 268:keccakf1600.c ****             Eke ^= De;
+ 2290              	 .loc 1 268 17 view .LVU826
+ 2291 0b36 160F     	 lsrs r6,r2,#28
+ 2292 0b38 46EA0316 	 orr r6,r6,r3,lsl#4
+ 2293 0b3c 1B0F     	 lsrs r3,r3,#28
+ 2294 0b3e 43EA0213 	 orr r3,r3,r2,lsl#4
+ 2295              	.LVL294:
+ 269:keccakf1600.c ****             BCi = ROL(Eke, 10);
+ 2296              	 .loc 1 269 13 is_stmt 1 view .LVU827
+ 270:keccakf1600.c ****             Emi ^= Di;
+ 2297              	 .loc 1 270 13 view .LVU828
+ 269:keccakf1600.c ****             BCi = ROL(Eke, 10);
+ 2298              	 .loc 1 269 17 is_stmt 0 view .LVU829
+ 2299 0b42 039C     	 ldr r4,[sp,#12]
+ 2300 0b44 309A     	 ldr r2,[sp,#192]
+ 2301 0b46 6240     	 eors r2,r2,r4
+ 2302 0b48 319C     	 ldr r4,[sp,#196]
+ 262:keccakf1600.c ****             Aku =   BCu ^((~BCa)&  BCe );
+ 2303              	 .loc 1 262 17 view .LVU830
+ 2304 0b4a 88EA0E0E 	 eor lr,r8,lr
+ 269:keccakf1600.c ****             BCi = ROL(Eke, 10);
+ 2305              	 .loc 1 269 17 view .LVU831
+ 2306 0b4e 6540     	 eors r5,r5,r4
+ 270:keccakf1600.c ****             Emi ^= Di;
+ 2307              	 .loc 1 270 17 view .LVU832
+ 2308 0b50 4FEA8228 	 lsl r8,r2,#10
+ 2309 0b54 48EA9558 	 orr r8,r8,r5,lsr#22
+ 2310 0b58 AD02     	 lsls r5,r5,#10
+ 2311 0b5a 45EA9255 	 orr r5,r5,r2,lsr#22
+ 2312              	.LVL295:
+ 2313              	 .loc 1 271 13 is_stmt 1 view .LVU833
+ 272:keccakf1600.c ****             BCo = ROL(Emi, 15);
+ 2314              	 .loc 1 272 13 view .LVU834
+ 271:keccakf1600.c ****             BCo = ROL(Emi, 15);
+ 2315              	 .loc 1 271 17 is_stmt 0 view .LVU835
+ 2316 0b5e 2C9A     	 ldr r2,[sp,#176]
+ 2317 0b60 2D9C     	 ldr r4,[sp,#180]
+ 262:keccakf1600.c ****             Aku =   BCu ^((~BCa)&  BCe );
+ 2318              	 .loc 1 262 17 view .LVU836
+ 2319 0b62 CDF890E0 	 str lr,[sp,#144]
+ 2320              	.LVL296:
+ 271:keccakf1600.c ****             BCo = ROL(Emi, 15);
+ 2321              	 .loc 1 271 17 view .LVU837
+ 2322 0b66 82EA0B02 	 eor r2,r2,fp
+ 2323 0b6a 7C40     	 eors r4,r4,r7
+ 2324              	 .loc 1 272 17 view .LVU838
+ 2325 0b6c 4FEAC23E 	 lsl lr,r2,#15
+ 2326 0b70 4EEA544E 	 orr lr,lr,r4,lsr#17
+ 2327 0b74 E403     	 lsls r4,r4,#15
+ 2328 0b76 44EA5244 	 orr r4,r4,r2,lsr#17
+ 2329              	.LVL297:
+ 273:keccakf1600.c ****             Eso ^= Do;
+ 2330              	 .loc 1 273 13 is_stmt 1 view .LVU839
+ 274:keccakf1600.c ****             BCu = ROL(Eso, 56);
+ 2331              	 .loc 1 274 13 view .LVU840
+ 273:keccakf1600.c ****             Eso ^= Do;
+ 2332              	 .loc 1 273 17 is_stmt 0 view .LVU841
+ 2333 0b7a 069F     	 ldr r7,[sp,#24]
+ 2334 0b7c 289A     	 ldr r2,[sp,#160]
+ 2335 0b7e 82EA0709 	 eor r9,r2,r7
+ 2336 0b82 299A     	 ldr r2,[sp,#164]
+ 2337 0b84 079F     	 ldr r7,[sp,#28]
+ 2338 0b86 7A40     	 eors r2,r2,r7
+ 2339              	 .loc 1 274 17 view .LVU842
+ 2340 0b88 4FEA1927 	 lsr r7,r9,#8
+ 2341 0b8c 47EA0267 	 orr r7,r7,r2,lsl#24
+ 2342 0b90 120A     	 lsrs r2,r2,#8
+ 2343 0b92 42EA0962 	 orr r2,r2,r9,lsl#24
+ 2344              	.LVL298:
+ 275:keccakf1600.c ****             Ama =   BCa ^((~BCe)&  BCi );
+ 2345              	 .loc 1 275 13 is_stmt 1 view .LVU843
+ 2346              	 .loc 1 275 33 is_stmt 0 view .LVU844
+ 2347 0b96 28EA060A 	 bic r10,r8,r6
+ 2348 0b9a 25EA0309 	 bic r9,r5,r3
+ 2349              	 .loc 1 275 17 view .LVU845
+ 2350 0b9e 8AEA0C0A 	 eor r10,r10,ip
+ 2351 0ba2 89EA0109 	 eor r9,r9,r1
+ 2352 0ba6 CDF8A0A0 	 str r10,[sp,#160]
+ 2353              	.LVL299:
+ 2354              	 .loc 1 275 17 view .LVU846
+ 2355 0baa CDF8A490 	 str r9,[sp,#164]
+ 2356              	.LVL300:
+ 276:keccakf1600.c ****             Ame =   BCe ^((~BCi)&  BCo );
+ 2357              	 .loc 1 276 13 is_stmt 1 view .LVU847
+ 2358              	 .loc 1 276 33 is_stmt 0 view .LVU848
+ 2359 0bae 2EEA080A 	 bic r10,lr,r8
+ 2360              	.LVL301:
+ 2361              	 .loc 1 276 33 view .LVU849
+ 2362 0bb2 24EA0509 	 bic r9,r4,r5
+ 2363              	.LVL302:
+ 2364              	 .loc 1 276 17 view .LVU850
+ 2365 0bb6 8AEA060A 	 eor r10,r10,r6
+ 2366 0bba 89EA0309 	 eor r9,r9,r3
+ 2367 0bbe CDF8A8A0 	 str r10,[sp,#168]
+ 2368              	.LVL303:
+ 2369              	 .loc 1 276 17 view .LVU851
+ 2370 0bc2 CDF8AC90 	 str r9,[sp,#172]
+ 2371              	.LVL304:
+ 277:keccakf1600.c ****             Ami =   BCi ^((~BCo)&  BCu );
+ 2372              	 .loc 1 277 13 is_stmt 1 view .LVU852
+ 2373              	 .loc 1 277 33 is_stmt 0 view .LVU853
+ 2374 0bc6 27EA0E0A 	 bic r10,r7,lr
+ 2375              	.LVL305:
+ 2376              	 .loc 1 277 33 view .LVU854
+ 2377 0bca 22EA0409 	 bic r9,r2,r4
+ 2378              	.LVL306:
+ 278:keccakf1600.c ****             Amo =   BCo ^((~BCu)&  BCa );
+ 279:keccakf1600.c ****             Amu =   BCu ^((~BCa)&  BCe );
+ 2379              	 .loc 1 279 33 view .LVU855
+ 2380 0bce 23EA0103 	 bic r3,r3,r1
+ 2381              	.LVL307:
+ 277:keccakf1600.c ****             Ami =   BCi ^((~BCo)&  BCu );
+ 2382              	 .loc 1 277 17 view .LVU856
+ 2383 0bd2 8AEA0808 	 eor r8,r10,r8
+ 2384              	.LVL308:
+ 277:keccakf1600.c ****             Ami =   BCi ^((~BCo)&  BCu );
+ 2385              	 .loc 1 277 17 view .LVU857
+ 2386 0bd6 89EA0505 	 eor r5,r9,r5
+ 2387              	.LVL309:
+ 2388              	 .loc 1 279 33 view .LVU858
+ 2389 0bda 26EA0C06 	 bic r6,r6,ip
+ 2390              	 .loc 1 279 17 view .LVU859
+ 2391 0bde 5340     	 eors r3,r3,r2
+ 277:keccakf1600.c ****             Ami =   BCi ^((~BCo)&  BCu );
+ 2392              	 .loc 1 277 17 view .LVU860
+ 2393 0be0 CDF8B080 	 str r8,[sp,#176]
+ 2394              	.LVL310:
+ 277:keccakf1600.c ****             Ami =   BCi ^((~BCo)&  BCu );
+ 2395              	 .loc 1 277 17 view .LVU861
+ 2396 0be4 2D95     	 str r5,[sp,#180]
+ 2397              	.LVL311:
+ 278:keccakf1600.c ****             Amo =   BCo ^((~BCu)&  BCa );
+ 2398              	 .loc 1 278 13 is_stmt 1 view .LVU862
+ 278:keccakf1600.c ****             Amo =   BCo ^((~BCu)&  BCa );
+ 2399              	 .loc 1 278 33 is_stmt 0 view .LVU863
+ 2400 0be6 21EA0205 	 bic r5,r1,r2
+ 2401              	.LVL312:
+ 2402              	 .loc 1 279 17 view .LVU864
+ 2403 0bea 3193     	 str r3,[sp,#196]
+ 2404              	.LVL313:
+ 2405              	 .loc 1 279 17 view .LVU865
+ 2406 0bec 86EA0701 	 eor r1,r6,r7
+ 2407              	.LVL314:
+ 280:keccakf1600.c **** 
+ 281:keccakf1600.c ****             Ebi ^= Di;
+ 2408              	 .loc 1 281 17 view .LVU866
+ 2409 0bf0 3A9B     	 ldr r3,[sp,#232]
+ 2410 0bf2 3B9A     	 ldr r2,[sp,#236]
+ 2411              	.LVL315:
+ 279:keccakf1600.c **** 
+ 2412              	 .loc 1 279 17 view .LVU867
+ 2413 0bf4 3091     	 str r1,[sp,#192]
+ 2414              	 .loc 1 281 17 view .LVU868
+ 2415 0bf6 0599     	 ldr r1,[sp,#20]
+ 2416 0bf8 83EA0B03 	 eor r3,r3,fp
+ 278:keccakf1600.c ****             Amo =   BCo ^((~BCu)&  BCa );
+ 2417              	 .loc 1 278 33 view .LVU869
+ 2418 0bfc 2CEA0708 	 bic r8,ip,r7
+ 2419              	.LVL316:
+ 2420              	 .loc 1 281 17 view .LVU870
+ 2421 0c00 5140     	 eors r1,r1,r2
+ 282:keccakf1600.c ****             BCa = ROL(Ebi, 62);
+ 2422              	 .loc 1 282 17 view .LVU871
+ 2423 0c02 4FEA930C 	 lsr ip,r3,#2
+ 2424              	.LVL317:
+ 2425              	 .loc 1 282 17 view .LVU872
+ 2426 0c06 4CEA817C 	 orr ip,ip,r1,lsl#30
+ 2427 0c0a 8908     	 lsrs r1,r1,#2
+ 2428 0c0c 41EA8371 	 orr r1,r1,r3,lsl#30
+ 283:keccakf1600.c ****             Ego ^= Do;
+ 2429              	 .loc 1 283 17 view .LVU873
+ 2430 0c10 069A     	 ldr r2,[sp,#24]
+ 2431 0c12 369B     	 ldr r3,[sp,#216]
+ 284:keccakf1600.c ****             BCe = ROL(Ego, 55);
+ 285:keccakf1600.c ****             Eku ^= Du;
+ 286:keccakf1600.c ****             BCi = ROL(Eku, 39);
+ 287:keccakf1600.c ****             Ema ^= Da;
+ 2432              	 .loc 1 287 17 view .LVU874
+ 2433 0c14 029F     	 ldr r7,[sp,#8]
+ 278:keccakf1600.c ****             Amu =   BCu ^((~BCa)&  BCe );
+ 2434              	 .loc 1 278 17 view .LVU875
+ 2435 0c16 6C40     	 eors r4,r4,r5
+ 2436              	.LVL318:
+ 283:keccakf1600.c ****             Ego ^= Do;
+ 2437              	 .loc 1 283 17 view .LVU876
+ 2438 0c18 5A40     	 eors r2,r2,r3
+ 278:keccakf1600.c ****             Amu =   BCu ^((~BCa)&  BCe );
+ 2439              	 .loc 1 278 17 view .LVU877
+ 2440 0c1a 2F94     	 str r4,[sp,#188]
+ 2441              	.LVL319:
+ 279:keccakf1600.c **** 
+ 2442              	 .loc 1 279 13 is_stmt 1 view .LVU878
+ 281:keccakf1600.c ****             BCa = ROL(Ebi, 62);
+ 2443              	 .loc 1 281 13 view .LVU879
+ 282:keccakf1600.c ****             Ego ^= Do;
+ 2444              	 .loc 1 282 13 view .LVU880
+ 283:keccakf1600.c ****             BCe = ROL(Ego, 55);
+ 2445              	 .loc 1 283 13 view .LVU881
+ 284:keccakf1600.c ****             Eku ^= Du;
+ 2446              	 .loc 1 284 13 view .LVU882
+ 283:keccakf1600.c ****             BCe = ROL(Ego, 55);
+ 2447              	 .loc 1 283 17 is_stmt 0 view .LVU883
+ 2448 0c1c 379B     	 ldr r3,[sp,#220]
+ 2449 0c1e 079C     	 ldr r4,[sp,#28]
+ 2450              	.LVL320:
+ 285:keccakf1600.c ****             BCi = ROL(Eku, 39);
+ 2451              	 .loc 1 285 17 view .LVU884
+ 2452 0c20 099D     	 ldr r5,[sp,#36]
+ 283:keccakf1600.c ****             BCe = ROL(Ego, 55);
+ 2453              	 .loc 1 283 17 view .LVU885
+ 2454 0c22 6340     	 eors r3,r3,r4
+ 284:keccakf1600.c ****             Eku ^= Du;
+ 2455              	 .loc 1 284 17 view .LVU886
+ 2456 0c24 560A     	 lsrs r6,r2,#9
+ 2457 0c26 46EAC356 	 orr r6,r6,r3,lsl#23
+ 2458 0c2a 5B0A     	 lsrs r3,r3,#9
+ 2459 0c2c 43EAC253 	 orr r3,r3,r2,lsl#23
+ 2460              	.LVL321:
+ 285:keccakf1600.c ****             BCi = ROL(Eku, 39);
+ 2461              	 .loc 1 285 13 is_stmt 1 view .LVU887
+ 286:keccakf1600.c ****             Ema ^= Da;
+ 2462              	 .loc 1 286 13 view .LVU888
+ 285:keccakf1600.c ****             BCi = ROL(Eku, 39);
+ 2463              	 .loc 1 285 17 is_stmt 0 view .LVU889
+ 2464 0c30 089C     	 ldr r4,[sp,#32]
+ 2465 0c32 329A     	 ldr r2,[sp,#200]
+ 2466 0c34 6240     	 eors r2,r2,r4
+ 2467 0c36 339C     	 ldr r4,[sp,#204]
+ 278:keccakf1600.c ****             Amu =   BCu ^((~BCa)&  BCe );
+ 2468              	 .loc 1 278 17 view .LVU890
+ 2469 0c38 88EA0E0E 	 eor lr,r8,lr
+ 285:keccakf1600.c ****             BCi = ROL(Eku, 39);
+ 2470              	 .loc 1 285 17 view .LVU891
+ 2471 0c3c 6540     	 eors r5,r5,r4
+ 286:keccakf1600.c ****             Ema ^= Da;
+ 2472              	 .loc 1 286 17 view .LVU892
+ 2473 0c3e 4FEA5268 	 lsr r8,r2,#25
+ 2474 0c42 48EAC518 	 orr r8,r8,r5,lsl#7
+ 2475 0c46 6D0E     	 lsrs r5,r5,#25
+ 2476 0c48 45EAC215 	 orr r5,r5,r2,lsl#7
+ 2477              	.LVL322:
+ 2478              	 .loc 1 287 13 is_stmt 1 view .LVU893
+ 288:keccakf1600.c ****             BCo = ROL(Ema, 41);
+ 2479              	 .loc 1 288 13 view .LVU894
+ 287:keccakf1600.c ****             BCo = ROL(Ema, 41);
+ 2480              	 .loc 1 287 17 is_stmt 0 view .LVU895
+ 2481 0c4c 019C     	 ldr r4,[sp,#4]
+ 2482 0c4e 389A     	 ldr r2,[sp,#224]
+ 278:keccakf1600.c ****             Amu =   BCu ^((~BCa)&  BCe );
+ 2483              	 .loc 1 278 17 view .LVU896
+ 2484 0c50 CDF8B8E0 	 str lr,[sp,#184]
+ 2485              	.LVL323:
+ 287:keccakf1600.c ****             BCo = ROL(Ema, 41);
+ 2486              	 .loc 1 287 17 view .LVU897
+ 2487 0c54 6240     	 eors r2,r2,r4
+ 2488 0c56 399C     	 ldr r4,[sp,#228]
+ 2489              	 .loc 1 288 17 view .LVU898
+ 2490 0c58 4FEAD25E 	 lsr lr,r2,#23
+ 287:keccakf1600.c ****             BCo = ROL(Ema, 41);
+ 2491              	 .loc 1 287 17 view .LVU899
+ 2492 0c5c 7C40     	 eors r4,r4,r7
+ 2493              	 .loc 1 288 17 view .LVU900
+ 2494 0c5e 4EEA442E 	 orr lr,lr,r4,lsl#9
+ 2495 0c62 E40D     	 lsrs r4,r4,#23
+ 2496 0c64 44EA4224 	 orr r4,r4,r2,lsl#9
+ 2497              	.LVL324:
+ 289:keccakf1600.c ****             Ese ^= De;
+ 2498              	 .loc 1 289 13 is_stmt 1 view .LVU901
+ 290:keccakf1600.c ****             BCu = ROL(Ese, 2);
+ 2499              	 .loc 1 290 13 view .LVU902
+ 289:keccakf1600.c ****             Ese ^= De;
+ 2500              	 .loc 1 289 17 is_stmt 0 view .LVU903
+ 2501 0c68 039F     	 ldr r7,[sp,#12]
+ 2502 0c6a 349A     	 ldr r2,[sp,#208]
+ 2503 0c6c 82EA0709 	 eor r9,r2,r7
+ 2504 0c70 359A     	 ldr r2,[sp,#212]
+ 2505 0c72 049F     	 ldr r7,[sp,#16]
+ 2506 0c74 7A40     	 eors r2,r2,r7
+ 2507              	 .loc 1 290 17 view .LVU904
+ 2508 0c76 4FEA8907 	 lsl r7,r9,#2
+ 2509 0c7a 47EA9277 	 orr r7,r7,r2,lsr#30
+ 2510 0c7e 9200     	 lsls r2,r2,#2
+ 2511 0c80 42EA9972 	 orr r2,r2,r9,lsr#30
+ 2512              	.LVL325:
+ 291:keccakf1600.c ****             Asa =   BCa ^((~BCe)&  BCi );
+ 2513              	 .loc 1 291 13 is_stmt 1 view .LVU905
+ 2514              	 .loc 1 291 33 is_stmt 0 view .LVU906
+ 2515 0c84 28EA060A 	 bic r10,r8,r6
+ 2516 0c88 25EA0309 	 bic r9,r5,r3
+ 2517              	 .loc 1 291 17 view .LVU907
+ 2518 0c8c 89EA0109 	 eor r9,r9,r1
+ 2519 0c90 8AEA0C0A 	 eor r10,r10,ip
+ 2520 0c94 CDF8C8A0 	 str r10,[sp,#200]
+ 2521              	.LVL326:
+ 2522              	 .loc 1 291 17 view .LVU908
+ 2523 0c98 CDF8CC90 	 str r9,[sp,#204]
+ 2524              	.LVL327:
+ 292:keccakf1600.c ****             Ase =   BCe ^((~BCi)&  BCo );
+ 2525              	 .loc 1 292 13 is_stmt 1 view .LVU909
+ 2526              	 .loc 1 292 33 is_stmt 0 view .LVU910
+ 2527 0c9c 2EEA080A 	 bic r10,lr,r8
+ 2528              	.LVL328:
+ 2529              	 .loc 1 292 33 view .LVU911
+ 2530 0ca0 24EA0509 	 bic r9,r4,r5
+ 2531              	.LVL329:
+ 2532              	 .loc 1 292 17 view .LVU912
+ 2533 0ca4 8AEA060A 	 eor r10,r10,r6
+ 2534 0ca8 89EA0309 	 eor r9,r9,r3
+ 2535 0cac CDF8D0A0 	 str r10,[sp,#208]
+ 2536              	.LVL330:
+ 2537              	 .loc 1 292 17 view .LVU913
+ 2538 0cb0 CDF8D490 	 str r9,[sp,#212]
+ 2539              	.LVL331:
+ 293:keccakf1600.c ****             Asi =   BCi ^((~BCo)&  BCu );
+ 2540              	 .loc 1 293 13 is_stmt 1 view .LVU914
+ 2541              	 .loc 1 293 33 is_stmt 0 view .LVU915
+ 2542 0cb4 27EA0E0A 	 bic r10,r7,lr
+ 2543              	.LVL332:
+ 2544              	 .loc 1 293 33 view .LVU916
+ 2545 0cb8 22EA0409 	 bic r9,r2,r4
+ 2546              	.LVL333:
+ 2547              	 .loc 1 293 17 view .LVU917
+ 2548 0cbc 8AEA0808 	 eor r8,r10,r8
+ 2549              	.LVL334:
+ 2550              	 .loc 1 293 17 view .LVU918
+ 2551 0cc0 89EA0505 	 eor r5,r9,r5
+ 2552 0cc4 CDF8D880 	 str r8,[sp,#216]
+ 2553              	.LVL335:
+ 2554              	 .loc 1 293 17 view .LVU919
+ 2555 0cc8 3795     	 str r5,[sp,#220]
+ 2556              	.LVL336:
+ 294:keccakf1600.c ****             Aso =   BCo ^((~BCu)&  BCa );
+ 2557              	 .loc 1 294 13 is_stmt 1 view .LVU920
+ 2558              	 .loc 1 294 33 is_stmt 0 view .LVU921
+ 2559 0cca 2CEA0708 	 bic r8,ip,r7
+ 2560              	.LVL337:
+ 2561              	 .loc 1 294 33 view .LVU922
+ 2562 0cce 21EA0205 	 bic r5,r1,r2
+ 2563              	.LVL338:
+ 295:keccakf1600.c ****             Asu =   BCu ^((~BCa)&  BCe );
+ 2564              	 .loc 1 295 33 view .LVU923
+ 2565 0cd2 26EA0C06 	 bic r6,r6,ip
+ 2566              	.LVL339:
+ 2567              	 .loc 1 295 33 view .LVU924
+ 2568 0cd6 23EA0103 	 bic r3,r3,r1
+ 294:keccakf1600.c ****             Aso =   BCo ^((~BCu)&  BCa );
+ 2569              	 .loc 1 294 17 view .LVU925
+ 2570 0cda 88EA0E0E 	 eor lr,r8,lr
+ 2571              	.LVL340:
+ 2572              	 .loc 1 295 17 view .LVU926
+ 2573 0cde 86EA0701 	 eor r1,r6,r7
+ 2574              	.LVL341:
+ 294:keccakf1600.c ****             Aso =   BCo ^((~BCu)&  BCa );
+ 2575              	 .loc 1 294 17 view .LVU927
+ 2576 0ce2 6C40     	 eors r4,r4,r5
+ 2577              	.LVL342:
+ 2578              	 .loc 1 295 17 view .LVU928
+ 2579 0ce4 3A91     	 str r1,[sp,#232]
+ 2580              	.LVL343:
+ 294:keccakf1600.c ****             Aso =   BCo ^((~BCu)&  BCa );
+ 2581              	 .loc 1 294 17 view .LVU929
+ 2582 0ce6 CDF8E0E0 	 str lr,[sp,#224]
+ 2583              	.LVL344:
+ 294:keccakf1600.c ****             Aso =   BCo ^((~BCu)&  BCa );
+ 2584              	 .loc 1 294 17 view .LVU930
+ 2585 0cea 3994     	 str r4,[sp,#228]
+ 2586              	.LVL345:
+ 2587              	 .loc 1 295 13 is_stmt 1 view .LVU931
+ 2588              	 .loc 1 295 17 is_stmt 0 view .LVU932
+ 2589 0cec 5340     	 eors r3,r3,r2
+ 2590              	.LVL346:
+ 105:keccakf1600.c ****         {
+ 2591              	 .loc 1 105 48 is_stmt 1 discriminator 3 view .LVU933
+ 105:keccakf1600.c ****         {
+ 2592              	 .loc 1 105 31 discriminator 1 view .LVU934
+ 2593 0cee 009A     	 ldr r2,[sp]
+ 2594              	.LVL347:
+ 105:keccakf1600.c ****         {
+ 2595              	 .loc 1 105 31 is_stmt 0 discriminator 1 view .LVU935
+ 2596 0cf0 1032     	 adds r2,r2,#16
+ 2597 0cf2 0092     	 str r2,[sp]
+ 2598 0cf4 0099     	 ldr r1,[sp]
+ 2599              	.LVL348:
+ 105:keccakf1600.c ****         {
+ 2600              	 .loc 1 105 31 discriminator 1 view .LVU936
+ 2601 0cf6 3C4A     	 ldr r2,.L13
+ 2602 0cf8 8A42     	 cmp r2,r1
+ 2603 0cfa 7FF4FFA9 	 bne .L8
+ 296:keccakf1600.c ****         }
+ 297:keccakf1600.c **** 
+ 298:keccakf1600.c ****         //copyToState(state, A)
+ 299:keccakf1600.c ****         state[ 0] = Aba;
+ 2604              	 .loc 1 299 9 is_stmt 1 view .LVU937
+ 2605              	 .loc 1 299 19 is_stmt 0 view .LVU938
+ 2606 0cfe 0A9A     	 ldr r2,[sp,#40]
+ 2607 0d00 0260     	 str r2,[r0]
+ 2608 0d02 0B9A     	 ldr r2,[sp,#44]
+ 2609 0d04 4260     	 str r2,[r0,#4]
+ 300:keccakf1600.c ****         state[ 1] = Abe;
+ 2610              	 .loc 1 300 9 is_stmt 1 view .LVU939
+ 2611              	 .loc 1 300 19 is_stmt 0 view .LVU940
+ 2612 0d06 0C9A     	 ldr r2,[sp,#48]
+ 2613 0d08 8260     	 str r2,[r0,#8]
+ 2614 0d0a 0D9A     	 ldr r2,[sp,#52]
+ 2615 0d0c C260     	 str r2,[r0,#12]
+ 301:keccakf1600.c ****         state[ 2] = Abi;
+ 2616              	 .loc 1 301 9 is_stmt 1 view .LVU941
+ 2617              	 .loc 1 301 19 is_stmt 0 view .LVU942
+ 2618 0d0e 0E9A     	 ldr r2,[sp,#56]
+ 2619 0d10 0261     	 str r2,[r0,#16]
+ 2620 0d12 0F9A     	 ldr r2,[sp,#60]
+ 2621 0d14 4261     	 str r2,[r0,#20]
+ 302:keccakf1600.c ****         state[ 3] = Abo;
+ 2622              	 .loc 1 302 9 is_stmt 1 view .LVU943
+ 2623              	 .loc 1 302 19 is_stmt 0 view .LVU944
+ 2624 0d16 109A     	 ldr r2,[sp,#64]
+ 2625 0d18 8261     	 str r2,[r0,#24]
+ 2626 0d1a 119A     	 ldr r2,[sp,#68]
+ 2627 0d1c C261     	 str r2,[r0,#28]
+ 303:keccakf1600.c ****         state[ 4] = Abu;
+ 2628              	 .loc 1 303 9 is_stmt 1 view .LVU945
+ 2629              	 .loc 1 303 19 is_stmt 0 view .LVU946
+ 2630 0d1e 129A     	 ldr r2,[sp,#72]
+ 2631 0d20 0262     	 str r2,[r0,#32]
+ 2632 0d22 139A     	 ldr r2,[sp,#76]
+ 2633 0d24 4262     	 str r2,[r0,#36]
+ 304:keccakf1600.c ****         state[ 5] = Aga;
+ 2634              	 .loc 1 304 9 is_stmt 1 view .LVU947
+ 2635              	 .loc 1 304 19 is_stmt 0 view .LVU948
+ 2636 0d26 149A     	 ldr r2,[sp,#80]
+ 2637 0d28 8262     	 str r2,[r0,#40]
+ 2638 0d2a 159A     	 ldr r2,[sp,#84]
+ 2639 0d2c C262     	 str r2,[r0,#44]
+ 305:keccakf1600.c ****         state[ 6] = Age;
+ 2640              	 .loc 1 305 9 is_stmt 1 view .LVU949
+ 2641              	 .loc 1 305 19 is_stmt 0 view .LVU950
+ 2642 0d2e 169A     	 ldr r2,[sp,#88]
+ 2643 0d30 0263     	 str r2,[r0,#48]
+ 2644 0d32 179A     	 ldr r2,[sp,#92]
+ 2645 0d34 4263     	 str r2,[r0,#52]
+ 306:keccakf1600.c ****         state[ 7] = Agi;
+ 2646              	 .loc 1 306 9 is_stmt 1 view .LVU951
+ 2647              	 .loc 1 306 19 is_stmt 0 view .LVU952
+ 2648 0d36 189A     	 ldr r2,[sp,#96]
+ 2649 0d38 8263     	 str r2,[r0,#56]
+ 2650 0d3a 199A     	 ldr r2,[sp,#100]
+ 2651 0d3c C263     	 str r2,[r0,#60]
+ 307:keccakf1600.c ****         state[ 8] = Ago;
+ 2652              	 .loc 1 307 9 is_stmt 1 view .LVU953
+ 2653              	 .loc 1 307 19 is_stmt 0 view .LVU954
+ 2654 0d3e 1A9A     	 ldr r2,[sp,#104]
+ 2655 0d40 0264     	 str r2,[r0,#64]
+ 2656 0d42 1B9A     	 ldr r2,[sp,#108]
+ 2657 0d44 4264     	 str r2,[r0,#68]
+ 308:keccakf1600.c ****         state[ 9] = Agu;
+ 2658              	 .loc 1 308 9 is_stmt 1 view .LVU955
+ 2659              	 .loc 1 308 19 is_stmt 0 view .LVU956
+ 2660 0d46 1C9A     	 ldr r2,[sp,#112]
+ 2661 0d48 8264     	 str r2,[r0,#72]
+ 2662 0d4a 1D9A     	 ldr r2,[sp,#116]
+ 2663 0d4c C264     	 str r2,[r0,#76]
+ 309:keccakf1600.c ****         state[10] = Aka;
+ 2664              	 .loc 1 309 9 is_stmt 1 view .LVU957
+ 2665              	 .loc 1 309 19 is_stmt 0 view .LVU958
+ 2666 0d4e 1E9A     	 ldr r2,[sp,#120]
+ 2667 0d50 0265     	 str r2,[r0,#80]
+ 2668 0d52 1F9A     	 ldr r2,[sp,#124]
+ 2669 0d54 4265     	 str r2,[r0,#84]
+ 310:keccakf1600.c ****         state[11] = Ake;
+ 2670              	 .loc 1 310 9 is_stmt 1 view .LVU959
+ 2671              	 .loc 1 310 19 is_stmt 0 view .LVU960
+ 2672 0d56 209A     	 ldr r2,[sp,#128]
+ 2673 0d58 8265     	 str r2,[r0,#88]
+ 2674 0d5a 219A     	 ldr r2,[sp,#132]
+ 2675 0d5c C265     	 str r2,[r0,#92]
+ 311:keccakf1600.c ****         state[12] = Aki;
+ 2676              	 .loc 1 311 9 is_stmt 1 view .LVU961
+ 2677              	 .loc 1 311 19 is_stmt 0 view .LVU962
+ 2678 0d5e 229A     	 ldr r2,[sp,#136]
+ 2679 0d60 0266     	 str r2,[r0,#96]
+ 2680 0d62 239A     	 ldr r2,[sp,#140]
+ 2681 0d64 4266     	 str r2,[r0,#100]
+ 312:keccakf1600.c ****         state[13] = Ako;
+ 2682              	 .loc 1 312 9 is_stmt 1 view .LVU963
+ 2683              	 .loc 1 312 19 is_stmt 0 view .LVU964
+ 2684 0d66 249A     	 ldr r2,[sp,#144]
+ 2685 0d68 8266     	 str r2,[r0,#104]
+ 2686 0d6a 259A     	 ldr r2,[sp,#148]
+ 2687 0d6c C266     	 str r2,[r0,#108]
+ 313:keccakf1600.c ****         state[14] = Aku;
+ 2688              	 .loc 1 313 9 is_stmt 1 view .LVU965
+ 2689              	 .loc 1 313 19 is_stmt 0 view .LVU966
+ 2690 0d6e 269A     	 ldr r2,[sp,#152]
+ 2691 0d70 0267     	 str r2,[r0,#112]
+ 2692 0d72 279A     	 ldr r2,[sp,#156]
+ 2693 0d74 4267     	 str r2,[r0,#116]
+ 314:keccakf1600.c ****         state[15] = Ama;
+ 2694              	 .loc 1 314 9 is_stmt 1 view .LVU967
+ 2695              	 .loc 1 314 19 is_stmt 0 view .LVU968
+ 2696 0d76 289A     	 ldr r2,[sp,#160]
+ 2697 0d78 8267     	 str r2,[r0,#120]
+ 2698 0d7a 299A     	 ldr r2,[sp,#164]
+ 2699 0d7c C267     	 str r2,[r0,#124]
+ 315:keccakf1600.c ****         state[16] = Ame;
+ 2700              	 .loc 1 315 9 is_stmt 1 view .LVU969
+ 2701              	 .loc 1 315 19 is_stmt 0 view .LVU970
+ 2702 0d7e 2A9A     	 ldr r2,[sp,#168]
+ 2703 0d80 C0F88020 	 str r2,[r0,#128]
+ 2704 0d84 2B9A     	 ldr r2,[sp,#172]
+ 2705 0d86 C0F88420 	 str r2,[r0,#132]
+ 316:keccakf1600.c ****         state[17] = Ami;
+ 2706              	 .loc 1 316 9 is_stmt 1 view .LVU971
+ 2707              	 .loc 1 316 19 is_stmt 0 view .LVU972
+ 2708 0d8a 2C9A     	 ldr r2,[sp,#176]
+ 2709 0d8c C0F88820 	 str r2,[r0,#136]
+ 2710 0d90 2D9A     	 ldr r2,[sp,#180]
+ 2711 0d92 C0F88C20 	 str r2,[r0,#140]
+ 317:keccakf1600.c ****         state[18] = Amo;
+ 2712              	 .loc 1 317 9 is_stmt 1 view .LVU973
+ 2713              	 .loc 1 317 19 is_stmt 0 view .LVU974
+ 2714 0d96 2E9A     	 ldr r2,[sp,#184]
+ 2715 0d98 C0F89020 	 str r2,[r0,#144]
+ 2716 0d9c 2F9A     	 ldr r2,[sp,#188]
+ 2717 0d9e C0F89420 	 str r2,[r0,#148]
+ 318:keccakf1600.c ****         state[19] = Amu;
+ 2718              	 .loc 1 318 9 is_stmt 1 view .LVU975
+ 2719              	 .loc 1 318 19 is_stmt 0 view .LVU976
+ 2720 0da2 309A     	 ldr r2,[sp,#192]
+ 2721 0da4 C0F89820 	 str r2,[r0,#152]
+ 2722 0da8 319A     	 ldr r2,[sp,#196]
+ 2723 0daa C0F89C20 	 str r2,[r0,#156]
+ 319:keccakf1600.c ****         state[20] = Asa;
+ 2724              	 .loc 1 319 9 is_stmt 1 view .LVU977
+ 2725              	 .loc 1 319 19 is_stmt 0 view .LVU978
+ 2726 0dae 329A     	 ldr r2,[sp,#200]
+ 2727 0db0 C0F8A020 	 str r2,[r0,#160]
+ 2728 0db4 339A     	 ldr r2,[sp,#204]
+ 2729 0db6 C0F8A420 	 str r2,[r0,#164]
+ 320:keccakf1600.c ****         state[21] = Ase;
+ 2730              	 .loc 1 320 9 is_stmt 1 view .LVU979
+ 2731              	 .loc 1 320 19 is_stmt 0 view .LVU980
+ 2732 0dba 349A     	 ldr r2,[sp,#208]
+ 2733 0dbc C0F8A820 	 str r2,[r0,#168]
+ 2734 0dc0 359A     	 ldr r2,[sp,#212]
+ 2735 0dc2 C0F8AC20 	 str r2,[r0,#172]
+ 321:keccakf1600.c ****         state[22] = Asi;
+ 2736              	 .loc 1 321 9 is_stmt 1 view .LVU981
+ 2737              	 .loc 1 321 19 is_stmt 0 view .LVU982
+ 2738 0dc6 369A     	 ldr r2,[sp,#216]
+ 2739 0dc8 C0F8B020 	 str r2,[r0,#176]
+ 2740 0dcc 379A     	 ldr r2,[sp,#220]
+ 2741 0dce C0F8B420 	 str r2,[r0,#180]
+ 322:keccakf1600.c ****         state[23] = Aso;
+ 2742              	 .loc 1 322 9 is_stmt 1 view .LVU983
+ 323:keccakf1600.c ****         state[24] = Asu;
+ 2743              	 .loc 1 323 19 is_stmt 0 view .LVU984
+ 2744 0dd2 3A9A     	 ldr r2,[sp,#232]
+ 322:keccakf1600.c ****         state[23] = Aso;
+ 2745              	 .loc 1 322 19 view .LVU985
+ 2746 0dd4 C0F8B8E0 	 str lr,[r0,#184]
+ 2747 0dd8 C0F8BC40 	 str r4,[r0,#188]
+ 2748              	 .loc 1 323 9 is_stmt 1 view .LVU986
+ 2749              	 .loc 1 323 19 is_stmt 0 view .LVU987
+ 2750 0ddc C0E93023 	 strd r2,r3,[r0,#192]
+ 324:keccakf1600.c **** 
+ 325:keccakf1600.c ****         #undef    round
+ 326:keccakf1600.c **** }
+ 2751              	 .loc 1 326 1 view .LVU988
+ 2752 0de0 3DB0     	 add sp,sp,#244
+ 2753              	.LCFI6:
+ 2754              	 .cfi_def_cfa_offset 36
+ 2755              	 
+ 2756 0de2 BDE8F08F 	 pop {r4,r5,r6,r7,r8,r9,r10,fp,pc}
+ 2757              	.LVL349:
+ 2758              	.L14:
+ 2759              	 .loc 1 326 1 view .LVU989
+ 2760 0de6 00BF     	 .align 2
+ 2761              	.L13:
+ 2762 0de8 C0000000 	 .word KeccakF_RoundConstants+192
+ 2763              	 .cfi_endproc
+ 2764              	.LFE2:
+ 2766              	 .section .rodata.KeccakF_RoundConstants,"a"
+ 2767              	 .align 3
+ 2770              	KeccakF_RoundConstants:
+ 2771 0000 01000000 	 .word 1
+ 2772 0004 00000000 	 .word 0
+ 2773 0008 82800000 	 .word 32898
+ 2774 000c 00000000 	 .word 0
+ 2775 0010 8A800000 	 .word 32906
+ 2776 0014 00000080 	 .word -2147483648
+ 2777 0018 00800080 	 .word -2147450880
+ 2778 001c 00000080 	 .word -2147483648
+ 2779 0020 8B800000 	 .word 32907
+ 2780 0024 00000000 	 .word 0
+ 2781 0028 01000080 	 .word -2147483647
+ 2782 002c 00000000 	 .word 0
+ 2783 0030 81800080 	 .word -2147450751
+ 2784 0034 00000080 	 .word -2147483648
+ 2785 0038 09800000 	 .word 32777
+ 2786 003c 00000080 	 .word -2147483648
+ 2787 0040 8A000000 	 .word 138
+ 2788 0044 00000000 	 .word 0
+ 2789 0048 88000000 	 .word 136
+ 2790 004c 00000000 	 .word 0
+ 2791 0050 09800080 	 .word -2147450871
+ 2792 0054 00000000 	 .word 0
+ 2793 0058 0A000080 	 .word -2147483638
+ 2794 005c 00000000 	 .word 0
+ 2795 0060 8B800080 	 .word -2147450741
+ 2796 0064 00000000 	 .word 0
+ 2797 0068 8B000000 	 .word 139
+ 2798 006c 00000080 	 .word -2147483648
+ 2799 0070 89800000 	 .word 32905
+ 2800 0074 00000080 	 .word -2147483648
+ 2801 0078 03800000 	 .word 32771
+ 2802 007c 00000080 	 .word -2147483648
+ 2803 0080 02800000 	 .word 32770
+ 2804 0084 00000080 	 .word -2147483648
+ 2805 0088 80000000 	 .word 128
+ 2806 008c 00000080 	 .word -2147483648
+ 2807 0090 0A800000 	 .word 32778
+ 2808 0094 00000000 	 .word 0
+ 2809 0098 0A000080 	 .word -2147483638
+ 2810 009c 00000080 	 .word -2147483648
+ 2811 00a0 81800080 	 .word -2147450751
+ 2812 00a4 00000080 	 .word -2147483648
+ 2813 00a8 80800000 	 .word 32896
+ 2814 00ac 00000080 	 .word -2147483648
+ 2815 00b0 01000080 	 .word -2147483647
+ 2816 00b4 00000000 	 .word 0
+ 2817 00b8 08800080 	 .word -2147450872
+ 2818 00bc 00000080 	 .word -2147483648
+ 2819              	 .text
+ 2820              	.Letext0:
+ 2821              	 .file 2 "/usr/lib/gcc/arm-none-eabi/14.2.1/include/stdint.h"
+DEFINED SYMBOLS
+                            *ABS*:00000000 keccakf1600.c
+    {standard input}:19     .text.KeccakF1600_StateExtractBytes:00000000 $t
+    {standard input}:25     .text.KeccakF1600_StateExtractBytes:00000000 KeccakF1600_StateExtractBytes
+    {standard input}:88     .text.KeccakF1600_StateXORBytes:00000000 $t
+    {standard input}:94     .text.KeccakF1600_StateXORBytes:00000000 KeccakF1600_StateXORBytes
+    {standard input}:169    .text.KeccakF1600_StatePermute:00000000 $t
+    {standard input}:175    .text.KeccakF1600_StatePermute:00000000 KeccakF1600_StatePermute
+    {standard input}:441    .text.KeccakF1600_StatePermute:000000f8 $d
+    {standard input}:2770   .rodata.KeccakF_RoundConstants:00000000 KeccakF_RoundConstants
+    {standard input}:447    .text.KeccakF1600_StatePermute:000000fc $t
+    {standard input}:2762   .text.KeccakF1600_StatePermute:00000de8 $d
+    {standard input}:2767   .rodata.KeccakF_RoundConstants:00000000 $d
+                           .group:00000000 wm4.0.2b10ec159abbf65f4ef33f6bb625bef4
+                           .group:00000000 wm4.stdint.h.29.6d480f4ba0f60596e88234283d42444f
+                           .group:00000000 wm4._newlib_version.h.4.0eb654b64686e2bd29646258853f6c22
+                           .group:00000000 wm4.newlib.h.27.07bf1b8b16da454ae07478107717878b
+                           .group:00000000 wm4.ieeefp.h.77.b6f5ce903562917fbd9193ee87d4fa47
+                           .group:00000000 wm4.features.h.22.03467e2205ec9ffbc20524d97cdbdf6a
+                           .group:00000000 wm4.config.h.224.10ee1ad185d877c6e334e6581faab44d
+                           .group:00000000 wm4._ansi.h.31.de524f58584151836e90d8620a16f8e8
+                           .group:00000000 wm4.assert.h.11.7fe9eb241be6b0fee772a1e693b81ae3
+
+NO UNDEFINED SYMBOLS

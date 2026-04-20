@@ -1,0 +1,1618 @@
+   1              	 .cpu cortex-m4
+   2              	 .arch armv7e-m
+   3              	 .fpu softvfp
+   4              	 .eabi_attribute 20,1
+   5              	 .eabi_attribute 21,1
+   6              	 .eabi_attribute 23,3
+   7              	 .eabi_attribute 24,1
+   8              	 .eabi_attribute 25,1
+   9              	 .eabi_attribute 26,1
+  10              	 .eabi_attribute 30,4
+  11              	 .eabi_attribute 34,1
+  12              	 .eabi_attribute 18,4
+  13              	 .file "sam4s_hal.c"
+  14              	 .text
+  15              	.Ltext0:
+  16              	 .cfi_sections .debug_frame
+  17              	 .file 1 ".././hal//sam4s/sam4s_hal.c"
+  18              	 .section .text.platform_init,"ax",%progbits
+  19              	 .align 1
+  20              	 .global platform_init
+  21              	 .syntax unified
+  22              	 .thumb
+  23              	 .thumb_func
+  25              	platform_init:
+  26              	.LFB165:
+   1:.././hal//sam4s/sam4s_hal.c **** #include "sam4s_hal.h"
+   2:.././hal//sam4s/sam4s_hal.c **** #include "genclk.h"
+   3:.././hal//sam4s/sam4s_hal.c **** #include "osc.h"
+   4:.././hal//sam4s/sam4s_hal.c **** #include "pio.h"
+   5:.././hal//sam4s/sam4s_hal.c **** #include "uart.h"
+   6:.././hal//sam4s/sam4s_hal.c **** #include "sysclk.h"
+   7:.././hal//sam4s/sam4s_hal.c **** #include "gpio.h"
+   8:.././hal//sam4s/sam4s_hal.c **** 
+   9:.././hal//sam4s/sam4s_hal.c **** void platform_init(void)
+  10:.././hal//sam4s/sam4s_hal.c **** {
+  27              	 .loc 1 10 1 view-0
+  28              	 .cfi_startproc
+  29              	 
+  30              	 
+  11:.././hal//sam4s/sam4s_hal.c **** 	WDT->WDT_MR = WDT_MR_WDDIS;
+  31              	 .loc 1 11 2 view .LVU1
+  32              	 .loc 1 11 14 is_stmt 0 view .LVU2
+  33 0000 184B     	 ldr r3,.L5
+  34 0002 4FF40042 	 mov r2,#32768
+  10:.././hal//sam4s/sam4s_hal.c **** 	WDT->WDT_MR = WDT_MR_WDDIS;
+  35              	 .loc 1 10 1 view .LVU3
+  36 0006 70B5     	 push {r4,r5,r6,lr}
+  37              	.LCFI0:
+  38              	 .cfi_def_cfa_offset 16
+  39              	 .cfi_offset 4,-16
+  40              	 .cfi_offset 5,-12
+  41              	 .cfi_offset 6,-8
+  42              	 .cfi_offset 14,-4
+  43              	.LBB28:
+  44              	.LBB29:
+  45              	 .file 2 ".././hal//sam4s/inc/sam4s/sysclk.h"
+   1:.././hal//sam4s/inc/sam4s/sysclk.h **** /**
+   2:.././hal//sam4s/inc/sam4s/sysclk.h ****  * \file
+   3:.././hal//sam4s/inc/sam4s/sysclk.h ****  *
+   4:.././hal//sam4s/inc/sam4s/sysclk.h ****  * \brief Chip-specific system clock management functions.
+   5:.././hal//sam4s/inc/sam4s/sysclk.h ****  *
+   6:.././hal//sam4s/inc/sam4s/sysclk.h ****  * Copyright (c) 2011-2018 Microchip Technology Inc. and its subsidiaries.
+   7:.././hal//sam4s/inc/sam4s/sysclk.h ****  *
+   8:.././hal//sam4s/inc/sam4s/sysclk.h ****  * \asf_license_start
+   9:.././hal//sam4s/inc/sam4s/sysclk.h ****  *
+  10:.././hal//sam4s/inc/sam4s/sysclk.h ****  * \page License
+  11:.././hal//sam4s/inc/sam4s/sysclk.h ****  *
+  12:.././hal//sam4s/inc/sam4s/sysclk.h ****  * Subject to your compliance with these terms, you may use Microchip
+  13:.././hal//sam4s/inc/sam4s/sysclk.h ****  * software and any derivatives exclusively with Microchip products.
+  14:.././hal//sam4s/inc/sam4s/sysclk.h ****  * It is your responsibility to comply with third party license terms applicable
+  15:.././hal//sam4s/inc/sam4s/sysclk.h ****  * to your use of third party software (including open source software) that
+  16:.././hal//sam4s/inc/sam4s/sysclk.h ****  * may accompany Microchip software.
+  17:.././hal//sam4s/inc/sam4s/sysclk.h ****  *
+  18:.././hal//sam4s/inc/sam4s/sysclk.h ****  * THIS SOFTWARE IS SUPPLIED BY MICROCHIP "AS IS". NO WARRANTIES,
+  19:.././hal//sam4s/inc/sam4s/sysclk.h ****  * WHETHER EXPRESS, IMPLIED OR STATUTORY, APPLY TO THIS SOFTWARE,
+  20:.././hal//sam4s/inc/sam4s/sysclk.h ****  * INCLUDING ANY IMPLIED WARRANTIES OF NON-INFRINGEMENT, MERCHANTABILITY,
+  21:.././hal//sam4s/inc/sam4s/sysclk.h ****  * AND FITNESS FOR A PARTICULAR PURPOSE. IN NO EVENT WILL MICROCHIP BE
+  22:.././hal//sam4s/inc/sam4s/sysclk.h ****  * LIABLE FOR ANY INDIRECT, SPECIAL, PUNITIVE, INCIDENTAL OR CONSEQUENTIAL
+  23:.././hal//sam4s/inc/sam4s/sysclk.h ****  * LOSS, DAMAGE, COST OR EXPENSE OF ANY KIND WHATSOEVER RELATED TO THE
+  24:.././hal//sam4s/inc/sam4s/sysclk.h ****  * SOFTWARE, HOWEVER CAUSED, EVEN IF MICROCHIP HAS BEEN ADVISED OF THE
+  25:.././hal//sam4s/inc/sam4s/sysclk.h ****  * POSSIBILITY OR THE DAMAGES ARE FORESEEABLE.  TO THE FULLEST EXTENT
+  26:.././hal//sam4s/inc/sam4s/sysclk.h ****  * ALLOWED BY LAW, MICROCHIP'S TOTAL LIABILITY ON ALL CLAIMS IN ANY WAY
+  27:.././hal//sam4s/inc/sam4s/sysclk.h ****  * RELATED TO THIS SOFTWARE WILL NOT EXCEED THE AMOUNT OF FEES, IF ANY,
+  28:.././hal//sam4s/inc/sam4s/sysclk.h ****  * THAT YOU HAVE PAID DIRECTLY TO MICROCHIP FOR THIS SOFTWARE.
+  29:.././hal//sam4s/inc/sam4s/sysclk.h ****  *
+  30:.././hal//sam4s/inc/sam4s/sysclk.h ****  * \asf_license_stop
+  31:.././hal//sam4s/inc/sam4s/sysclk.h ****  *
+  32:.././hal//sam4s/inc/sam4s/sysclk.h ****  */
+  33:.././hal//sam4s/inc/sam4s/sysclk.h **** /*
+  34:.././hal//sam4s/inc/sam4s/sysclk.h ****  * Support and FAQ: visit <a href="https://www.microchip.com/support/">Microchip Support</a>
+  35:.././hal//sam4s/inc/sam4s/sysclk.h ****  */
+  36:.././hal//sam4s/inc/sam4s/sysclk.h **** 
+  37:.././hal//sam4s/inc/sam4s/sysclk.h **** #ifndef CHIP_SYSCLK_H_INCLUDED
+  38:.././hal//sam4s/inc/sam4s/sysclk.h **** #define CHIP_SYSCLK_H_INCLUDED
+  39:.././hal//sam4s/inc/sam4s/sysclk.h **** 
+  40:.././hal//sam4s/inc/sam4s/sysclk.h **** #include <osc.h>
+  41:.././hal//sam4s/inc/sam4s/sysclk.h **** #include <pll.h>
+  42:.././hal//sam4s/inc/sam4s/sysclk.h **** 
+  43:.././hal//sam4s/inc/sam4s/sysclk.h **** /**
+  44:.././hal//sam4s/inc/sam4s/sysclk.h ****  * \page sysclk_quickstart Quick Start Guide for the System Clock Management service (SAM4S)
+  45:.././hal//sam4s/inc/sam4s/sysclk.h ****  *
+  46:.././hal//sam4s/inc/sam4s/sysclk.h ****  * This is the quick start guide for the \ref sysclk_group "System Clock Management"
+  47:.././hal//sam4s/inc/sam4s/sysclk.h ****  * service, with step-by-step instructions on how to configure and use the service for
+  48:.././hal//sam4s/inc/sam4s/sysclk.h ****  * specific use cases.
+  49:.././hal//sam4s/inc/sam4s/sysclk.h ****  *
+  50:.././hal//sam4s/inc/sam4s/sysclk.h ****  * \section sysclk_quickstart_usecases System Clock Management use cases
+  51:.././hal//sam4s/inc/sam4s/sysclk.h ****  * - \ref sysclk_quickstart_basic
+  52:.././hal//sam4s/inc/sam4s/sysclk.h ****  * - \ref sysclk_quickstart_use_case_2
+  53:.././hal//sam4s/inc/sam4s/sysclk.h ****  *
+  54:.././hal//sam4s/inc/sam4s/sysclk.h ****  * \section sysclk_quickstart_basic Basic usage of the System Clock Management service
+  55:.././hal//sam4s/inc/sam4s/sysclk.h ****  * This section will present a basic use case for the System Clock Management service.
+  56:.././hal//sam4s/inc/sam4s/sysclk.h ****  * This use case will configure the main system clock to 120MHz, using an internal PLL
+  57:.././hal//sam4s/inc/sam4s/sysclk.h ****  * module to multiply the frequency of a crystal attached to the microcontroller.
+  58:.././hal//sam4s/inc/sam4s/sysclk.h ****  *
+  59:.././hal//sam4s/inc/sam4s/sysclk.h ****  * \subsection sysclk_quickstart_use_case_1_prereq Prerequisites
+  60:.././hal//sam4s/inc/sam4s/sysclk.h ****  *  - None
+  61:.././hal//sam4s/inc/sam4s/sysclk.h ****  *
+  62:.././hal//sam4s/inc/sam4s/sysclk.h ****  * \subsection sysclk_quickstart_use_case_1_setup_steps Initialization code
+  63:.././hal//sam4s/inc/sam4s/sysclk.h ****  * Add to the application initialization code:
+  64:.././hal//sam4s/inc/sam4s/sysclk.h ****  * \code
+  65:.././hal//sam4s/inc/sam4s/sysclk.h **** 	sysclk_init();
+  66:.././hal//sam4s/inc/sam4s/sysclk.h **** \endcode
+  67:.././hal//sam4s/inc/sam4s/sysclk.h ****  *
+  68:.././hal//sam4s/inc/sam4s/sysclk.h ****  * \subsection sysclk_quickstart_use_case_1_setup_steps_workflow Workflow
+  69:.././hal//sam4s/inc/sam4s/sysclk.h ****  * -# Configure the system clocks according to the settings in conf_clock.h:
+  70:.././hal//sam4s/inc/sam4s/sysclk.h ****  *    \code sysclk_init(); \endcode
+  71:.././hal//sam4s/inc/sam4s/sysclk.h ****  *
+  72:.././hal//sam4s/inc/sam4s/sysclk.h ****  * \subsection sysclk_quickstart_use_case_1_example_code Example code
+  73:.././hal//sam4s/inc/sam4s/sysclk.h ****  *   Add or uncomment the following in your conf_clock.h header file, commenting out all other
+  74:.././hal//sam4s/inc/sam4s/sysclk.h ****  *   definitions of the same symbol(s):
+  75:.././hal//sam4s/inc/sam4s/sysclk.h ****  *   \code
+  76:.././hal//sam4s/inc/sam4s/sysclk.h **** 	   #define CONFIG_SYSCLK_SOURCE        SYSCLK_SRC_PLLACK
+  77:.././hal//sam4s/inc/sam4s/sysclk.h **** 
+  78:.././hal//sam4s/inc/sam4s/sysclk.h **** 	   // Fpll0 = (Fclk * PLL_mul) / PLL_div
+  79:.././hal//sam4s/inc/sam4s/sysclk.h **** 	   #define CONFIG_PLL0_SOURCE          PLL_SRC_MAINCK_XTAL
+  80:.././hal//sam4s/inc/sam4s/sysclk.h **** 	   #define CONFIG_PLL0_MUL             (120000000UL / BOARD_FREQ_MAINCK_XTAL)
+  81:.././hal//sam4s/inc/sam4s/sysclk.h **** 	   #define CONFIG_PLL0_DIV             1
+  82:.././hal//sam4s/inc/sam4s/sysclk.h **** 
+  83:.././hal//sam4s/inc/sam4s/sysclk.h **** 	   // Fbus = Fsys / BUS_div
+  84:.././hal//sam4s/inc/sam4s/sysclk.h **** 	   #define CONFIG_SYSCLK_PRES          SYSCLK_PRES_1
+  85:.././hal//sam4s/inc/sam4s/sysclk.h **** \endcode
+  86:.././hal//sam4s/inc/sam4s/sysclk.h ****  *
+  87:.././hal//sam4s/inc/sam4s/sysclk.h ****  * \subsection sysclk_quickstart_use_case_1_example_workflow Workflow
+  88:.././hal//sam4s/inc/sam4s/sysclk.h ****  *  -# Configure the main system clock to use the output of the PLL module as its source:
+  89:.././hal//sam4s/inc/sam4s/sysclk.h ****  *   \code #define CONFIG_SYSCLK_SOURCE          SYSCLK_SRC_PLLACK \endcode
+  90:.././hal//sam4s/inc/sam4s/sysclk.h ****  *  -# Configure the PLL module to use the fast external fast crystal oscillator as its source:
+  91:.././hal//sam4s/inc/sam4s/sysclk.h ****  *   \code #define CONFIG_PLL0_SOURCE            PLL_SRC_MAINCK_XTAL \endcode
+  92:.././hal//sam4s/inc/sam4s/sysclk.h ****  *  -# Configure the PLL module to multiply the external fast crystal oscillator frequency up to 12
+  93:.././hal//sam4s/inc/sam4s/sysclk.h ****  *   \code
+  94:.././hal//sam4s/inc/sam4s/sysclk.h **** 	#define CONFIG_PLL0_MUL             (120000000UL / BOARD_FREQ_MAINCK_XTAL)
+  95:.././hal//sam4s/inc/sam4s/sysclk.h **** 	#define CONFIG_PLL0_DIV             1
+  96:.././hal//sam4s/inc/sam4s/sysclk.h **** \endcode
+  97:.././hal//sam4s/inc/sam4s/sysclk.h ****  *   \note For user boards, \c BOARD_FREQ_MAINCK_XTAL should be defined in the board \c conf_board.
+  98:.././hal//sam4s/inc/sam4s/sysclk.h ****  *         file as the frequency of the fast crystal attached to the microcontroller.
+  99:.././hal//sam4s/inc/sam4s/sysclk.h ****  *  -# Configure the main clock to run at the full 120MHz, disable scaling of the main system clock
+ 100:.././hal//sam4s/inc/sam4s/sysclk.h ****  *    \code
+ 101:.././hal//sam4s/inc/sam4s/sysclk.h **** 	#define CONFIG_SYSCLK_PRES         SYSCLK_PRES_1
+ 102:.././hal//sam4s/inc/sam4s/sysclk.h **** \endcode
+ 103:.././hal//sam4s/inc/sam4s/sysclk.h ****  *    \note Some dividers are powers of two, while others are integer division factors. Refer to th
+ 104:.././hal//sam4s/inc/sam4s/sysclk.h ****  *          formulas in the conf_clock.h template commented above each division define.
+ 105:.././hal//sam4s/inc/sam4s/sysclk.h ****  */
+ 106:.././hal//sam4s/inc/sam4s/sysclk.h **** 
+ 107:.././hal//sam4s/inc/sam4s/sysclk.h **** /**
+ 108:.././hal//sam4s/inc/sam4s/sysclk.h ****  * \page sysclk_quickstart_use_case_2 Advanced use case - Peripheral Bus Clock Management (SAM4S)
+ 109:.././hal//sam4s/inc/sam4s/sysclk.h ****  *
+ 110:.././hal//sam4s/inc/sam4s/sysclk.h ****  * \section sysclk_quickstart_use_case_2 Advanced use case - Peripheral Bus Clock Management
+ 111:.././hal//sam4s/inc/sam4s/sysclk.h ****  * This section will present a more advanced use case for the System Clock Management service.
+ 112:.././hal//sam4s/inc/sam4s/sysclk.h ****  * This use case will configure the main system clock to 120MHz, using an internal PLL
+ 113:.././hal//sam4s/inc/sam4s/sysclk.h ****  * module to multiply the frequency of a crystal attached to the microcontroller. The USB clock
+ 114:.././hal//sam4s/inc/sam4s/sysclk.h ****  * will be configured via a separate PLL module.
+ 115:.././hal//sam4s/inc/sam4s/sysclk.h ****  *
+ 116:.././hal//sam4s/inc/sam4s/sysclk.h ****  * \subsection sysclk_quickstart_use_case_2_prereq Prerequisites
+ 117:.././hal//sam4s/inc/sam4s/sysclk.h ****  *  - None
+ 118:.././hal//sam4s/inc/sam4s/sysclk.h ****  *
+ 119:.././hal//sam4s/inc/sam4s/sysclk.h ****  * \subsection sysclk_quickstart_use_case_2_setup_steps Initialization code
+ 120:.././hal//sam4s/inc/sam4s/sysclk.h ****  * Add to the application initialization code:
+ 121:.././hal//sam4s/inc/sam4s/sysclk.h ****  * \code
+ 122:.././hal//sam4s/inc/sam4s/sysclk.h **** 	sysclk_init();
+ 123:.././hal//sam4s/inc/sam4s/sysclk.h **** \endcode
+ 124:.././hal//sam4s/inc/sam4s/sysclk.h ****  *
+ 125:.././hal//sam4s/inc/sam4s/sysclk.h ****  * \subsection sysclk_quickstart_use_case_2_setup_steps_workflow Workflow
+ 126:.././hal//sam4s/inc/sam4s/sysclk.h ****  * -# Configure the system clocks according to the settings in conf_clock.h:
+ 127:.././hal//sam4s/inc/sam4s/sysclk.h ****  *    \code sysclk_init(); \endcode
+ 128:.././hal//sam4s/inc/sam4s/sysclk.h ****  *
+ 129:.././hal//sam4s/inc/sam4s/sysclk.h ****  * \subsection sysclk_quickstart_use_case_2_example_code Example code
+ 130:.././hal//sam4s/inc/sam4s/sysclk.h ****  *   Add or uncomment the following in your conf_clock.h header file, commenting out all other
+ 131:.././hal//sam4s/inc/sam4s/sysclk.h ****  *   definitions of the same symbol(s):
+ 132:.././hal//sam4s/inc/sam4s/sysclk.h ****  *   \code
+ 133:.././hal//sam4s/inc/sam4s/sysclk.h **** 	   #define CONFIG_SYSCLK_SOURCE        SYSCLK_SRC_PLLACK
+ 134:.././hal//sam4s/inc/sam4s/sysclk.h **** 
+ 135:.././hal//sam4s/inc/sam4s/sysclk.h **** 	   // Fpll0 = (Fclk * PLL_mul) / PLL_div
+ 136:.././hal//sam4s/inc/sam4s/sysclk.h **** 	   #define CONFIG_PLL0_SOURCE          PLL_SRC_MAINCK_XTAL
+ 137:.././hal//sam4s/inc/sam4s/sysclk.h **** 	   #define CONFIG_PLL0_MUL             (120000000UL / BOARD_FREQ_MAINCK_XTAL)
+ 138:.././hal//sam4s/inc/sam4s/sysclk.h **** 	   #define CONFIG_PLL0_DIV             1
+ 139:.././hal//sam4s/inc/sam4s/sysclk.h **** 
+ 140:.././hal//sam4s/inc/sam4s/sysclk.h **** 	   // Fbus = Fsys / BUS_div
+ 141:.././hal//sam4s/inc/sam4s/sysclk.h **** 	   #define CONFIG_SYSCLK_PRES          SYSCLK_PRES_1
+ 142:.././hal//sam4s/inc/sam4s/sysclk.h **** 
+ 143:.././hal//sam4s/inc/sam4s/sysclk.h **** 	   // Fusb = Fsys / USB_div
+ 144:.././hal//sam4s/inc/sam4s/sysclk.h **** 	   #define CONFIG_USBCLK_SOURCE        USBCLK_SRC_PLL1
+ 145:.././hal//sam4s/inc/sam4s/sysclk.h **** 	   #define CONFIG_USBCLK_DIV           1
+ 146:.././hal//sam4s/inc/sam4s/sysclk.h **** 
+ 147:.././hal//sam4s/inc/sam4s/sysclk.h **** 	   // Fpll1 = (Fclk * PLL_mul) / PLL_div
+ 148:.././hal//sam4s/inc/sam4s/sysclk.h **** 	   #define CONFIG_PLL1_SOURCE          PLL_SRC_MAINCK_XTAL
+ 149:.././hal//sam4s/inc/sam4s/sysclk.h **** 	   #define CONFIG_PLL1_MUL             (48000000UL / BOARD_FREQ_MAINCK_XTAL)
+ 150:.././hal//sam4s/inc/sam4s/sysclk.h **** 	   #define CONFIG_PLL1_DIV             1
+ 151:.././hal//sam4s/inc/sam4s/sysclk.h **** \endcode
+ 152:.././hal//sam4s/inc/sam4s/sysclk.h ****  *
+ 153:.././hal//sam4s/inc/sam4s/sysclk.h ****  * \subsection sysclk_quickstart_use_case_2_example_workflow Workflow
+ 154:.././hal//sam4s/inc/sam4s/sysclk.h ****  *  -# Configure the main system clock to use the output of the PLL0 module as its source:
+ 155:.././hal//sam4s/inc/sam4s/sysclk.h ****  *   \code #define CONFIG_SYSCLK_SOURCE          SYSCLK_SRC_PLLACK \endcode
+ 156:.././hal//sam4s/inc/sam4s/sysclk.h ****  *  -# Configure the PLL0 module to use the fast external fast crystal oscillator as its source:
+ 157:.././hal//sam4s/inc/sam4s/sysclk.h ****  *   \code #define CONFIG_PLL0_SOURCE            PLL_SRC_MAINCK_XTAL \endcode
+ 158:.././hal//sam4s/inc/sam4s/sysclk.h ****  *  -# Configure the PLL0 module to multiply the external fast crystal oscillator frequency up to 1
+ 159:.././hal//sam4s/inc/sam4s/sysclk.h ****  *   \code
+ 160:.././hal//sam4s/inc/sam4s/sysclk.h **** 	#define CONFIG_PLL0_MUL             (120000000UL / BOARD_FREQ_MAINCK_XTAL)
+ 161:.././hal//sam4s/inc/sam4s/sysclk.h **** 	#define CONFIG_PLL0_DIV             1
+ 162:.././hal//sam4s/inc/sam4s/sysclk.h **** \endcode
+ 163:.././hal//sam4s/inc/sam4s/sysclk.h ****  *   \note For user boards, \c BOARD_FREQ_MAINCK_XTAL should be defined in the board \c conf_board.
+ 164:.././hal//sam4s/inc/sam4s/sysclk.h ****  *         file as the frequency of the fast crystal attached to the microcontroller.
+ 165:.././hal//sam4s/inc/sam4s/sysclk.h ****  *  -# Configure the main clock to run at the full 120MHz, disable scaling of the main system clock
+ 166:.././hal//sam4s/inc/sam4s/sysclk.h ****  *    \code
+ 167:.././hal//sam4s/inc/sam4s/sysclk.h **** 	#define CONFIG_SYSCLK_PRES         SYSCLK_PRES_1
+ 168:.././hal//sam4s/inc/sam4s/sysclk.h **** \endcode
+ 169:.././hal//sam4s/inc/sam4s/sysclk.h ****  *    \note Some dividers are powers of two, while others are integer division factors. Refer to th
+ 170:.././hal//sam4s/inc/sam4s/sysclk.h ****  *          formulas in the conf_clock.h template commented above each division define.
+ 171:.././hal//sam4s/inc/sam4s/sysclk.h ****  *  -# Configure the USB module clock to use the output of the PLL1 module as its source:
+ 172:.././hal//sam4s/inc/sam4s/sysclk.h ****  *   \code #define CONFIG_SYSCLK_SOURCE          USBCLK_SRC_PLL1 \endcode
+ 173:.././hal//sam4s/inc/sam4s/sysclk.h ****  *  -# Configure the PLL1 module to use the fast external fast crystal oscillator as its source:
+ 174:.././hal//sam4s/inc/sam4s/sysclk.h ****  *   \code #define CONFIG_PLL1_SOURCE            PLL_SRC_MAINCK_XTAL \endcode
+ 175:.././hal//sam4s/inc/sam4s/sysclk.h ****  *  -# Configure the PLL1 module to multiply the external fast crystal oscillator frequency up to 4
+ 176:.././hal//sam4s/inc/sam4s/sysclk.h ****  *   \code
+ 177:.././hal//sam4s/inc/sam4s/sysclk.h **** 	#define CONFIG_PLL1_MUL             (48000000UL / BOARD_FREQ_MAINCK_XTAL)
+ 178:.././hal//sam4s/inc/sam4s/sysclk.h **** 	#define CONFIG_PLL1_DIV             1
+ 179:.././hal//sam4s/inc/sam4s/sysclk.h **** \endcode
+ 180:.././hal//sam4s/inc/sam4s/sysclk.h ****  */
+ 181:.././hal//sam4s/inc/sam4s/sysclk.h **** 
+ 182:.././hal//sam4s/inc/sam4s/sysclk.h **** /// @cond 0
+ 183:.././hal//sam4s/inc/sam4s/sysclk.h **** /**INDENT-OFF**/
+ 184:.././hal//sam4s/inc/sam4s/sysclk.h **** #ifdef __cplusplus
+ 185:.././hal//sam4s/inc/sam4s/sysclk.h **** extern "C" {
+ 186:.././hal//sam4s/inc/sam4s/sysclk.h **** #endif
+ 187:.././hal//sam4s/inc/sam4s/sysclk.h **** /**INDENT-ON**/
+ 188:.././hal//sam4s/inc/sam4s/sysclk.h **** /// @endcond
+ 189:.././hal//sam4s/inc/sam4s/sysclk.h **** 
+ 190:.././hal//sam4s/inc/sam4s/sysclk.h **** /**
+ 191:.././hal//sam4s/inc/sam4s/sysclk.h ****  * \weakgroup sysclk_group
+ 192:.././hal//sam4s/inc/sam4s/sysclk.h ****  * @{
+ 193:.././hal//sam4s/inc/sam4s/sysclk.h ****  */
+ 194:.././hal//sam4s/inc/sam4s/sysclk.h **** 
+ 195:.././hal//sam4s/inc/sam4s/sysclk.h **** //! \name Configuration Symbols
+ 196:.././hal//sam4s/inc/sam4s/sysclk.h **** //@{
+ 197:.././hal//sam4s/inc/sam4s/sysclk.h **** /**
+ 198:.././hal//sam4s/inc/sam4s/sysclk.h ****  * \def CONFIG_SYSCLK_SOURCE
+ 199:.././hal//sam4s/inc/sam4s/sysclk.h ****  * \brief Initial/static main system clock source
+ 200:.././hal//sam4s/inc/sam4s/sysclk.h ****  *
+ 201:.././hal//sam4s/inc/sam4s/sysclk.h ****  * The main system clock will be configured to use this clock during
+ 202:.././hal//sam4s/inc/sam4s/sysclk.h ****  * initialization.
+ 203:.././hal//sam4s/inc/sam4s/sysclk.h ****  */
+ 204:.././hal//sam4s/inc/sam4s/sysclk.h **** #ifndef CONFIG_SYSCLK_SOURCE
+ 205:.././hal//sam4s/inc/sam4s/sysclk.h **** # define CONFIG_SYSCLK_SOURCE   SYSCLK_SRC_MAINCK_4M_RC
+ 206:.././hal//sam4s/inc/sam4s/sysclk.h **** #endif
+ 207:.././hal//sam4s/inc/sam4s/sysclk.h **** /**
+ 208:.././hal//sam4s/inc/sam4s/sysclk.h ****  * \def CONFIG_SYSCLK_PRES
+ 209:.././hal//sam4s/inc/sam4s/sysclk.h ****  * \brief Initial CPU clock divider (mck)
+ 210:.././hal//sam4s/inc/sam4s/sysclk.h ****  *
+ 211:.././hal//sam4s/inc/sam4s/sysclk.h ****  * The MCK will run at
+ 212:.././hal//sam4s/inc/sam4s/sysclk.h ****  * \f[
+ 213:.././hal//sam4s/inc/sam4s/sysclk.h ****  *   f_{MCK} = \frac{f_{sys}}{\mathrm{CONFIG\_SYSCLK\_PRES}}\,\mbox{Hz}
+ 214:.././hal//sam4s/inc/sam4s/sysclk.h ****  * \f]
+ 215:.././hal//sam4s/inc/sam4s/sysclk.h ****  * after initialization.
+ 216:.././hal//sam4s/inc/sam4s/sysclk.h ****  */
+ 217:.././hal//sam4s/inc/sam4s/sysclk.h **** #ifndef CONFIG_SYSCLK_PRES
+ 218:.././hal//sam4s/inc/sam4s/sysclk.h **** # define CONFIG_SYSCLK_PRES  0
+ 219:.././hal//sam4s/inc/sam4s/sysclk.h **** #endif
+ 220:.././hal//sam4s/inc/sam4s/sysclk.h **** 
+ 221:.././hal//sam4s/inc/sam4s/sysclk.h **** //@}
+ 222:.././hal//sam4s/inc/sam4s/sysclk.h **** 
+ 223:.././hal//sam4s/inc/sam4s/sysclk.h **** //! \name Master Clock Sources (MCK)
+ 224:.././hal//sam4s/inc/sam4s/sysclk.h **** //@{
+ 225:.././hal//sam4s/inc/sam4s/sysclk.h **** #define SYSCLK_SRC_SLCK_RC              0       //!< Internal 32kHz RC oscillator as master source 
+ 226:.././hal//sam4s/inc/sam4s/sysclk.h **** #define SYSCLK_SRC_SLCK_XTAL            1       //!< External 32kHz crystal oscillator as master so
+ 227:.././hal//sam4s/inc/sam4s/sysclk.h **** #define SYSCLK_SRC_SLCK_BYPASS          2       //!< External 32kHz bypass oscillator as master sou
+ 228:.././hal//sam4s/inc/sam4s/sysclk.h **** #define SYSCLK_SRC_MAINCK_4M_RC         3       //!< Internal 4MHz RC oscillator as master source c
+ 229:.././hal//sam4s/inc/sam4s/sysclk.h **** #define SYSCLK_SRC_MAINCK_8M_RC         4       //!< Internal 8MHz RC oscillator as master source c
+ 230:.././hal//sam4s/inc/sam4s/sysclk.h **** #define SYSCLK_SRC_MAINCK_12M_RC        5       //!< Internal 12MHz RC oscillator as master source 
+ 231:.././hal//sam4s/inc/sam4s/sysclk.h **** #define SYSCLK_SRC_MAINCK_XTAL          6       //!< External crystal oscillator as master source c
+ 232:.././hal//sam4s/inc/sam4s/sysclk.h **** #define SYSCLK_SRC_MAINCK_BYPASS        7       //!< External bypass oscillator as master source cl
+ 233:.././hal//sam4s/inc/sam4s/sysclk.h **** #define SYSCLK_SRC_PLLACK               8       //!< Use PLLACK as master source clock
+ 234:.././hal//sam4s/inc/sam4s/sysclk.h **** #define SYSCLK_SRC_PLLBCK               9       //!< Use PLLBCK as master source clock
+ 235:.././hal//sam4s/inc/sam4s/sysclk.h **** //@}
+ 236:.././hal//sam4s/inc/sam4s/sysclk.h **** 
+ 237:.././hal//sam4s/inc/sam4s/sysclk.h **** //! \name Master Clock Prescalers (MCK)
+ 238:.././hal//sam4s/inc/sam4s/sysclk.h **** //@{
+ 239:.././hal//sam4s/inc/sam4s/sysclk.h **** #define SYSCLK_PRES_1           PMC_MCKR_PRES_CLK_1     //!< Set master clock prescaler to 1
+ 240:.././hal//sam4s/inc/sam4s/sysclk.h **** #define SYSCLK_PRES_2           PMC_MCKR_PRES_CLK_2     //!< Set master clock prescaler to 2
+ 241:.././hal//sam4s/inc/sam4s/sysclk.h **** #define SYSCLK_PRES_4           PMC_MCKR_PRES_CLK_4     //!< Set master clock prescaler to 4
+ 242:.././hal//sam4s/inc/sam4s/sysclk.h **** #define SYSCLK_PRES_8           PMC_MCKR_PRES_CLK_8     //!< Set master clock prescaler to 8
+ 243:.././hal//sam4s/inc/sam4s/sysclk.h **** #define SYSCLK_PRES_16          PMC_MCKR_PRES_CLK_16    //!< Set master clock prescaler to 16
+ 244:.././hal//sam4s/inc/sam4s/sysclk.h **** #define SYSCLK_PRES_32          PMC_MCKR_PRES_CLK_32    //!< Set master clock prescaler to 32
+ 245:.././hal//sam4s/inc/sam4s/sysclk.h **** #define SYSCLK_PRES_64          PMC_MCKR_PRES_CLK_64    //!< Set master clock prescaler to 64
+ 246:.././hal//sam4s/inc/sam4s/sysclk.h **** #define SYSCLK_PRES_3           PMC_MCKR_PRES_CLK_3     //!< Set master clock prescaler to 3
+ 247:.././hal//sam4s/inc/sam4s/sysclk.h **** //@}
+ 248:.././hal//sam4s/inc/sam4s/sysclk.h **** 
+ 249:.././hal//sam4s/inc/sam4s/sysclk.h **** //! \name USB Clock Sources
+ 250:.././hal//sam4s/inc/sam4s/sysclk.h **** //@{
+ 251:.././hal//sam4s/inc/sam4s/sysclk.h **** #define USBCLK_SRC_PLL0       0     //!< Use PLLA
+ 252:.././hal//sam4s/inc/sam4s/sysclk.h **** #define USBCLK_SRC_PLL1       1     //!< Use PLLB
+ 253:.././hal//sam4s/inc/sam4s/sysclk.h **** //@}
+ 254:.././hal//sam4s/inc/sam4s/sysclk.h **** 
+ 255:.././hal//sam4s/inc/sam4s/sysclk.h **** /**
+ 256:.././hal//sam4s/inc/sam4s/sysclk.h ****  * \def CONFIG_USBCLK_SOURCE
+ 257:.././hal//sam4s/inc/sam4s/sysclk.h ****  * \brief Configuration symbol for the USB generic clock source
+ 258:.././hal//sam4s/inc/sam4s/sysclk.h ****  *
+ 259:.././hal//sam4s/inc/sam4s/sysclk.h ****  * Sets the clock source to use for the USB. The source must also be properly
+ 260:.././hal//sam4s/inc/sam4s/sysclk.h ****  * configured.
+ 261:.././hal//sam4s/inc/sam4s/sysclk.h ****  *
+ 262:.././hal//sam4s/inc/sam4s/sysclk.h ****  * Define this to one of the \c USBCLK_SRC_xxx settings. Leave it undefined if
+ 263:.././hal//sam4s/inc/sam4s/sysclk.h ****  * USB is not required.
+ 264:.././hal//sam4s/inc/sam4s/sysclk.h ****  */
+ 265:.././hal//sam4s/inc/sam4s/sysclk.h ****  #ifdef __DOXYGEN__
+ 266:.././hal//sam4s/inc/sam4s/sysclk.h **** # define CONFIG_USBCLK_SOURCE
+ 267:.././hal//sam4s/inc/sam4s/sysclk.h **** #endif
+ 268:.././hal//sam4s/inc/sam4s/sysclk.h **** 
+ 269:.././hal//sam4s/inc/sam4s/sysclk.h **** /**
+ 270:.././hal//sam4s/inc/sam4s/sysclk.h ****  * \def CONFIG_USBCLK_DIV
+ 271:.././hal//sam4s/inc/sam4s/sysclk.h ****  * \brief Configuration symbol for the USB generic clock divider setting
+ 272:.././hal//sam4s/inc/sam4s/sysclk.h ****  *
+ 273:.././hal//sam4s/inc/sam4s/sysclk.h ****  * Sets the clock division for the USB generic clock. If a USB clock source is
+ 274:.././hal//sam4s/inc/sam4s/sysclk.h ****  * selected with CONFIG_USBCLK_SOURCE, this configuration symbol must also be
+ 275:.././hal//sam4s/inc/sam4s/sysclk.h ****  * defined.
+ 276:.././hal//sam4s/inc/sam4s/sysclk.h ****  */
+ 277:.././hal//sam4s/inc/sam4s/sysclk.h **** #ifdef __DOXYGEN__
+ 278:.././hal//sam4s/inc/sam4s/sysclk.h **** # define CONFIG_USBCLK_DIV
+ 279:.././hal//sam4s/inc/sam4s/sysclk.h **** #endif
+ 280:.././hal//sam4s/inc/sam4s/sysclk.h **** 
+ 281:.././hal//sam4s/inc/sam4s/sysclk.h **** /**
+ 282:.././hal//sam4s/inc/sam4s/sysclk.h ****  * \name Querying the system clock
+ 283:.././hal//sam4s/inc/sam4s/sysclk.h ****  *
+ 284:.././hal//sam4s/inc/sam4s/sysclk.h ****  * The following functions may be used to query the current frequency of
+ 285:.././hal//sam4s/inc/sam4s/sysclk.h ****  * the system clock and the CPU and bus clocks derived from it.
+ 286:.././hal//sam4s/inc/sam4s/sysclk.h ****  * sysclk_get_main_hz() and sysclk_get_cpu_hz() can be assumed to be
+ 287:.././hal//sam4s/inc/sam4s/sysclk.h ****  * available on all platforms, although some platforms may define
+ 288:.././hal//sam4s/inc/sam4s/sysclk.h ****  * additional accessors for various chip-internal bus clocks. These are
+ 289:.././hal//sam4s/inc/sam4s/sysclk.h ****  * usually not intended to be queried directly by generic code.
+ 290:.././hal//sam4s/inc/sam4s/sysclk.h ****  */
+ 291:.././hal//sam4s/inc/sam4s/sysclk.h **** //@{
+ 292:.././hal//sam4s/inc/sam4s/sysclk.h **** 
+ 293:.././hal//sam4s/inc/sam4s/sysclk.h **** /**
+ 294:.././hal//sam4s/inc/sam4s/sysclk.h ****  * \brief Return the current rate in Hz of the main system clock
+ 295:.././hal//sam4s/inc/sam4s/sysclk.h ****  *
+ 296:.././hal//sam4s/inc/sam4s/sysclk.h ****  * \todo This function assumes that the main clock source never changes
+ 297:.././hal//sam4s/inc/sam4s/sysclk.h ****  * once it's been set up, and that PLL0 always runs at the compile-time
+ 298:.././hal//sam4s/inc/sam4s/sysclk.h ****  * configured default rate. While this is probably the most common
+ 299:.././hal//sam4s/inc/sam4s/sysclk.h ****  * configuration, which we want to support as a special case for
+ 300:.././hal//sam4s/inc/sam4s/sysclk.h ****  * performance reasons, we will at some point need to support more
+ 301:.././hal//sam4s/inc/sam4s/sysclk.h ****  * dynamic setups as well.
+ 302:.././hal//sam4s/inc/sam4s/sysclk.h ****  */
+ 303:.././hal//sam4s/inc/sam4s/sysclk.h **** #if (defined CONFIG_SYSCLK_DEFAULT_RETURNS_SLOW_OSC)
+ 304:.././hal//sam4s/inc/sam4s/sysclk.h **** extern uint32_t sysclk_initialized;
+ 305:.././hal//sam4s/inc/sam4s/sysclk.h **** #endif
+ 306:.././hal//sam4s/inc/sam4s/sysclk.h **** static inline uint32_t sysclk_get_main_hz(void)
+ 307:.././hal//sam4s/inc/sam4s/sysclk.h **** {
+ 308:.././hal//sam4s/inc/sam4s/sysclk.h **** #if (defined CONFIG_SYSCLK_DEFAULT_RETURNS_SLOW_OSC)
+ 309:.././hal//sam4s/inc/sam4s/sysclk.h **** 	if (!sysclk_initialized ) {
+ 310:.././hal//sam4s/inc/sam4s/sysclk.h **** 		return OSC_MAINCK_4M_RC_HZ;
+ 311:.././hal//sam4s/inc/sam4s/sysclk.h **** 	}
+ 312:.././hal//sam4s/inc/sam4s/sysclk.h **** #endif
+ 313:.././hal//sam4s/inc/sam4s/sysclk.h **** 
+ 314:.././hal//sam4s/inc/sam4s/sysclk.h **** 	/* Config system clock setting */
+ 315:.././hal//sam4s/inc/sam4s/sysclk.h **** 	if (CONFIG_SYSCLK_SOURCE == SYSCLK_SRC_SLCK_RC) {
+ 316:.././hal//sam4s/inc/sam4s/sysclk.h **** 		return OSC_SLCK_32K_RC_HZ;
+ 317:.././hal//sam4s/inc/sam4s/sysclk.h **** 	} else if (CONFIG_SYSCLK_SOURCE == SYSCLK_SRC_SLCK_XTAL) {
+ 318:.././hal//sam4s/inc/sam4s/sysclk.h **** 		return OSC_SLCK_32K_XTAL_HZ;
+ 319:.././hal//sam4s/inc/sam4s/sysclk.h **** 	} else if (CONFIG_SYSCLK_SOURCE == SYSCLK_SRC_SLCK_BYPASS) {
+ 320:.././hal//sam4s/inc/sam4s/sysclk.h **** 		return OSC_SLCK_32K_BYPASS_HZ;
+ 321:.././hal//sam4s/inc/sam4s/sysclk.h **** 	} else if (CONFIG_SYSCLK_SOURCE == SYSCLK_SRC_MAINCK_4M_RC) {
+ 322:.././hal//sam4s/inc/sam4s/sysclk.h **** 		return OSC_MAINCK_4M_RC_HZ;
+ 323:.././hal//sam4s/inc/sam4s/sysclk.h **** 	} else if (CONFIG_SYSCLK_SOURCE == SYSCLK_SRC_MAINCK_8M_RC) {
+ 324:.././hal//sam4s/inc/sam4s/sysclk.h **** 		return OSC_MAINCK_8M_RC_HZ;
+ 325:.././hal//sam4s/inc/sam4s/sysclk.h **** 	} else if (CONFIG_SYSCLK_SOURCE == SYSCLK_SRC_MAINCK_12M_RC) {
+ 326:.././hal//sam4s/inc/sam4s/sysclk.h **** 		return OSC_MAINCK_12M_RC_HZ;
+ 327:.././hal//sam4s/inc/sam4s/sysclk.h **** 	} else if (CONFIG_SYSCLK_SOURCE == SYSCLK_SRC_MAINCK_XTAL) {
+ 328:.././hal//sam4s/inc/sam4s/sysclk.h **** 		return OSC_MAINCK_XTAL_HZ;
+ 329:.././hal//sam4s/inc/sam4s/sysclk.h **** 	} else if (CONFIG_SYSCLK_SOURCE == SYSCLK_SRC_MAINCK_BYPASS) {
+ 330:.././hal//sam4s/inc/sam4s/sysclk.h **** 		return OSC_MAINCK_BYPASS_HZ;
+ 331:.././hal//sam4s/inc/sam4s/sysclk.h **** 	}
+ 332:.././hal//sam4s/inc/sam4s/sysclk.h **** #ifdef CONFIG_PLL0_SOURCE
+ 333:.././hal//sam4s/inc/sam4s/sysclk.h **** 	else if (CONFIG_SYSCLK_SOURCE == SYSCLK_SRC_PLLACK) {
+ 334:.././hal//sam4s/inc/sam4s/sysclk.h **** 		return pll_get_default_rate(0);
+ 335:.././hal//sam4s/inc/sam4s/sysclk.h **** 	}
+ 336:.././hal//sam4s/inc/sam4s/sysclk.h **** #endif
+ 337:.././hal//sam4s/inc/sam4s/sysclk.h **** 
+ 338:.././hal//sam4s/inc/sam4s/sysclk.h **** #ifdef CONFIG_PLL1_SOURCE
+ 339:.././hal//sam4s/inc/sam4s/sysclk.h **** 	else if (CONFIG_SYSCLK_SOURCE == SYSCLK_SRC_PLLBCK) {
+ 340:.././hal//sam4s/inc/sam4s/sysclk.h **** 		return pll_get_default_rate(1);
+ 341:.././hal//sam4s/inc/sam4s/sysclk.h **** 	}
+ 342:.././hal//sam4s/inc/sam4s/sysclk.h **** #endif
+ 343:.././hal//sam4s/inc/sam4s/sysclk.h **** 
+ 344:.././hal//sam4s/inc/sam4s/sysclk.h **** 	else {
+ 345:.././hal//sam4s/inc/sam4s/sysclk.h **** 		/* unhandled_case(CONFIG_SYSCLK_SOURCE); */
+ 346:.././hal//sam4s/inc/sam4s/sysclk.h **** 		return 0;
+ 347:.././hal//sam4s/inc/sam4s/sysclk.h **** 	}
+ 348:.././hal//sam4s/inc/sam4s/sysclk.h **** }
+ 349:.././hal//sam4s/inc/sam4s/sysclk.h **** 
+ 350:.././hal//sam4s/inc/sam4s/sysclk.h **** /**
+ 351:.././hal//sam4s/inc/sam4s/sysclk.h ****  * \brief Return the current rate in Hz of the CPU clock
+ 352:.././hal//sam4s/inc/sam4s/sysclk.h ****  *
+ 353:.././hal//sam4s/inc/sam4s/sysclk.h ****  * \todo This function assumes that the CPU always runs at the system
+ 354:.././hal//sam4s/inc/sam4s/sysclk.h ****  * clock frequency. We want to support at least two more scenarios:
+ 355:.././hal//sam4s/inc/sam4s/sysclk.h ****  * Fixed CPU/bus clock dividers (config symbols) and dynamic CPU/bus
+ 356:.././hal//sam4s/inc/sam4s/sysclk.h ****  * clock dividers (which may change at run time). Ditto for all the bus
+ 357:.././hal//sam4s/inc/sam4s/sysclk.h ****  * clocks.
+ 358:.././hal//sam4s/inc/sam4s/sysclk.h ****  *
+ 359:.././hal//sam4s/inc/sam4s/sysclk.h ****  * \return Frequency of the CPU clock, in Hz.
+ 360:.././hal//sam4s/inc/sam4s/sysclk.h ****  */
+ 361:.././hal//sam4s/inc/sam4s/sysclk.h **** static inline uint32_t sysclk_get_cpu_hz(void)
+ 362:.././hal//sam4s/inc/sam4s/sysclk.h **** {
+ 363:.././hal//sam4s/inc/sam4s/sysclk.h **** 	/* CONFIG_SYSCLK_PRES is the register value for setting the expected */
+ 364:.././hal//sam4s/inc/sam4s/sysclk.h **** 	/* prescaler, not an immediate value. */
+ 365:.././hal//sam4s/inc/sam4s/sysclk.h **** 	return sysclk_get_main_hz() /
+ 366:.././hal//sam4s/inc/sam4s/sysclk.h **** 		((CONFIG_SYSCLK_PRES == SYSCLK_PRES_3) ? 3 :
+ 367:.././hal//sam4s/inc/sam4s/sysclk.h **** 			(1 << (CONFIG_SYSCLK_PRES >> PMC_MCKR_PRES_Pos)));
+ 368:.././hal//sam4s/inc/sam4s/sysclk.h **** }
+ 369:.././hal//sam4s/inc/sam4s/sysclk.h **** 
+ 370:.././hal//sam4s/inc/sam4s/sysclk.h **** /**
+ 371:.././hal//sam4s/inc/sam4s/sysclk.h ****  * \brief Retrieves the current rate in Hz of the peripheral clocks.
+ 372:.././hal//sam4s/inc/sam4s/sysclk.h ****  *
+ 373:.././hal//sam4s/inc/sam4s/sysclk.h ****  * \return Frequency of the peripheral clocks, in Hz.
+ 374:.././hal//sam4s/inc/sam4s/sysclk.h ****  */
+ 375:.././hal//sam4s/inc/sam4s/sysclk.h **** static inline uint32_t sysclk_get_peripheral_hz(void)
+ 376:.././hal//sam4s/inc/sam4s/sysclk.h **** {
+ 377:.././hal//sam4s/inc/sam4s/sysclk.h **** 	/* CONFIG_SYSCLK_PRES is the register value for setting the expected */
+ 378:.././hal//sam4s/inc/sam4s/sysclk.h **** 	/* prescaler, not an immediate value. */
+ 379:.././hal//sam4s/inc/sam4s/sysclk.h **** 	return sysclk_get_main_hz() /
+ 380:.././hal//sam4s/inc/sam4s/sysclk.h **** 		((CONFIG_SYSCLK_PRES == SYSCLK_PRES_3) ? 3 :
+ 381:.././hal//sam4s/inc/sam4s/sysclk.h **** 			(1 << (CONFIG_SYSCLK_PRES >> PMC_MCKR_PRES_Pos)));
+ 382:.././hal//sam4s/inc/sam4s/sysclk.h **** }
+ 383:.././hal//sam4s/inc/sam4s/sysclk.h **** 
+ 384:.././hal//sam4s/inc/sam4s/sysclk.h **** /**
+ 385:.././hal//sam4s/inc/sam4s/sysclk.h ****  * \brief Retrieves the current rate in Hz of the Peripheral Bus clock attached
+ 386:.././hal//sam4s/inc/sam4s/sysclk.h ****  *        to the specified peripheral.
+ 387:.././hal//sam4s/inc/sam4s/sysclk.h ****  *
+ 388:.././hal//sam4s/inc/sam4s/sysclk.h ****  * \param module Pointer to the module's base address.
+ 389:.././hal//sam4s/inc/sam4s/sysclk.h ****  *
+ 390:.././hal//sam4s/inc/sam4s/sysclk.h ****  * \return Frequency of the bus attached to the specified peripheral, in Hz.
+ 391:.././hal//sam4s/inc/sam4s/sysclk.h ****  */
+ 392:.././hal//sam4s/inc/sam4s/sysclk.h **** static inline uint32_t sysclk_get_peripheral_bus_hz(const volatile void *module)
+ 393:.././hal//sam4s/inc/sam4s/sysclk.h **** {
+ 394:.././hal//sam4s/inc/sam4s/sysclk.h **** 	UNUSED(module);
+ 395:.././hal//sam4s/inc/sam4s/sysclk.h **** 	return sysclk_get_peripheral_hz();
+ 396:.././hal//sam4s/inc/sam4s/sysclk.h **** }
+ 397:.././hal//sam4s/inc/sam4s/sysclk.h **** //@}
+ 398:.././hal//sam4s/inc/sam4s/sysclk.h **** 
+ 399:.././hal//sam4s/inc/sam4s/sysclk.h **** //! \name Enabling and disabling synchronous clocks
+ 400:.././hal//sam4s/inc/sam4s/sysclk.h **** //@{
+ 401:.././hal//sam4s/inc/sam4s/sysclk.h **** 
+ 402:.././hal//sam4s/inc/sam4s/sysclk.h **** /**
+ 403:.././hal//sam4s/inc/sam4s/sysclk.h ****  * \brief Enable a peripheral's clock.
+ 404:.././hal//sam4s/inc/sam4s/sysclk.h ****  *
+ 405:.././hal//sam4s/inc/sam4s/sysclk.h ****  * \param ul_id Id (number) of the peripheral clock.
+ 406:.././hal//sam4s/inc/sam4s/sysclk.h ****  */
+ 407:.././hal//sam4s/inc/sam4s/sysclk.h **** static inline void sysclk_enable_peripheral_clock(uint32_t ul_id)
+ 408:.././hal//sam4s/inc/sam4s/sysclk.h **** {
+ 409:.././hal//sam4s/inc/sam4s/sysclk.h **** 	pmc_enable_periph_clk(ul_id);
+  46              	 .loc 2 409 2 view .LVU4
+  47 0008 0020     	 movs r0,#0
+  48              	.LBE29:
+  49              	.LBE28:
+  50              	 .loc 1 11 14 view .LVU5
+  51 000a 5A65     	 str r2,[r3,#84]
+  12:.././hal//sam4s/sam4s_hal.c ****     sysclk_enable_peripheral_clock(ID_SUPC);
+  52              	 .loc 1 12 5 is_stmt 1 view .LVU6
+  53              	.LVL0:
+  54              	.LBB32:
+  55              	.LBI28:
+ 407:.././hal//sam4s/inc/sam4s/sysclk.h **** {
+  56              	 .loc 2 407 20 view .LVU7
+  57              	.LBB30:
+  58              	 .loc 2 409 2 view .LVU8
+  59 000c 164C     	 ldr r4,.L5+4
+  60              	.LBE30:
+  61              	.LBE32:
+  13:.././hal//sam4s/sam4s_hal.c ****     sysclk_enable_peripheral_clock(ID_RSTC);
+  14:.././hal//sam4s/sam4s_hal.c ****     sysclk_enable_peripheral_clock(ID_PMC);
+  15:.././hal//sam4s/sam4s_hal.c ****     pmc_set_writeprotect(0);
+  16:.././hal//sam4s/sam4s_hal.c ****     system_init_flash(CHIP_FREQ_CPU_MAX);
+  62              	 .loc 1 16 5 is_stmt 0 view .LVU9
+  63 000e 174D     	 ldr r5,.L5+8
+  64              	.LBB33:
+  65              	.LBB34:
+  66              	.LBB35:
+  67              	.LBB36:
+  68              	 .file 3 ".././hal//sam4s/inc/sam4s/osc.h"
+   1:.././hal//sam4s/inc/sam4s/osc.h **** /**
+   2:.././hal//sam4s/inc/sam4s/osc.h ****  * \file
+   3:.././hal//sam4s/inc/sam4s/osc.h ****  *
+   4:.././hal//sam4s/inc/sam4s/osc.h ****  * \brief Chip-specific oscillator management functions.
+   5:.././hal//sam4s/inc/sam4s/osc.h ****  *
+   6:.././hal//sam4s/inc/sam4s/osc.h ****  * Copyright (c) 2011-2018 Microchip Technology Inc. and its subsidiaries.
+   7:.././hal//sam4s/inc/sam4s/osc.h ****  *
+   8:.././hal//sam4s/inc/sam4s/osc.h ****  * \asf_license_start
+   9:.././hal//sam4s/inc/sam4s/osc.h ****  *
+  10:.././hal//sam4s/inc/sam4s/osc.h ****  * \page License
+  11:.././hal//sam4s/inc/sam4s/osc.h ****  *
+  12:.././hal//sam4s/inc/sam4s/osc.h ****  * Subject to your compliance with these terms, you may use Microchip
+  13:.././hal//sam4s/inc/sam4s/osc.h ****  * software and any derivatives exclusively with Microchip products.
+  14:.././hal//sam4s/inc/sam4s/osc.h ****  * It is your responsibility to comply with third party license terms applicable
+  15:.././hal//sam4s/inc/sam4s/osc.h ****  * to your use of third party software (including open source software) that
+  16:.././hal//sam4s/inc/sam4s/osc.h ****  * may accompany Microchip software.
+  17:.././hal//sam4s/inc/sam4s/osc.h ****  *
+  18:.././hal//sam4s/inc/sam4s/osc.h ****  * THIS SOFTWARE IS SUPPLIED BY MICROCHIP "AS IS". NO WARRANTIES,
+  19:.././hal//sam4s/inc/sam4s/osc.h ****  * WHETHER EXPRESS, IMPLIED OR STATUTORY, APPLY TO THIS SOFTWARE,
+  20:.././hal//sam4s/inc/sam4s/osc.h ****  * INCLUDING ANY IMPLIED WARRANTIES OF NON-INFRINGEMENT, MERCHANTABILITY,
+  21:.././hal//sam4s/inc/sam4s/osc.h ****  * AND FITNESS FOR A PARTICULAR PURPOSE. IN NO EVENT WILL MICROCHIP BE
+  22:.././hal//sam4s/inc/sam4s/osc.h ****  * LIABLE FOR ANY INDIRECT, SPECIAL, PUNITIVE, INCIDENTAL OR CONSEQUENTIAL
+  23:.././hal//sam4s/inc/sam4s/osc.h ****  * LOSS, DAMAGE, COST OR EXPENSE OF ANY KIND WHATSOEVER RELATED TO THE
+  24:.././hal//sam4s/inc/sam4s/osc.h ****  * SOFTWARE, HOWEVER CAUSED, EVEN IF MICROCHIP HAS BEEN ADVISED OF THE
+  25:.././hal//sam4s/inc/sam4s/osc.h ****  * POSSIBILITY OR THE DAMAGES ARE FORESEEABLE.  TO THE FULLEST EXTENT
+  26:.././hal//sam4s/inc/sam4s/osc.h ****  * ALLOWED BY LAW, MICROCHIP'S TOTAL LIABILITY ON ALL CLAIMS IN ANY WAY
+  27:.././hal//sam4s/inc/sam4s/osc.h ****  * RELATED TO THIS SOFTWARE WILL NOT EXCEED THE AMOUNT OF FEES, IF ANY,
+  28:.././hal//sam4s/inc/sam4s/osc.h ****  * THAT YOU HAVE PAID DIRECTLY TO MICROCHIP FOR THIS SOFTWARE.
+  29:.././hal//sam4s/inc/sam4s/osc.h ****  *
+  30:.././hal//sam4s/inc/sam4s/osc.h ****  * \asf_license_stop
+  31:.././hal//sam4s/inc/sam4s/osc.h ****  *
+  32:.././hal//sam4s/inc/sam4s/osc.h ****  */
+  33:.././hal//sam4s/inc/sam4s/osc.h **** /*
+  34:.././hal//sam4s/inc/sam4s/osc.h ****  * Support and FAQ: visit <a href="https://www.microchip.com/support/">Microchip Support</a>
+  35:.././hal//sam4s/inc/sam4s/osc.h ****  */
+  36:.././hal//sam4s/inc/sam4s/osc.h **** 
+  37:.././hal//sam4s/inc/sam4s/osc.h **** #ifndef CHIP_OSC_H_INCLUDED
+  38:.././hal//sam4s/inc/sam4s/osc.h **** #define CHIP_OSC_H_INCLUDED
+  39:.././hal//sam4s/inc/sam4s/osc.h **** 
+  40:.././hal//sam4s/inc/sam4s/osc.h **** #include "board.h"
+  41:.././hal//sam4s/inc/sam4s/osc.h **** #include "pmc.h"
+  42:.././hal//sam4s/inc/sam4s/osc.h **** 
+  43:.././hal//sam4s/inc/sam4s/osc.h **** /// @cond 0
+  44:.././hal//sam4s/inc/sam4s/osc.h **** /**INDENT-OFF**/
+  45:.././hal//sam4s/inc/sam4s/osc.h **** #ifdef __cplusplus
+  46:.././hal//sam4s/inc/sam4s/osc.h **** extern "C" {
+  47:.././hal//sam4s/inc/sam4s/osc.h **** #endif
+  48:.././hal//sam4s/inc/sam4s/osc.h **** /**INDENT-ON**/
+  49:.././hal//sam4s/inc/sam4s/osc.h **** /// @endcond
+  50:.././hal//sam4s/inc/sam4s/osc.h **** 
+  51:.././hal//sam4s/inc/sam4s/osc.h **** /*
+  52:.././hal//sam4s/inc/sam4s/osc.h ****  * Below BOARD_XXX macros are related to the specific board, and
+  53:.././hal//sam4s/inc/sam4s/osc.h ****  * should be defined by the board code, otherwise default value are used.
+  54:.././hal//sam4s/inc/sam4s/osc.h ****  */
+  55:.././hal//sam4s/inc/sam4s/osc.h **** #if !defined(BOARD_FREQ_SLCK_XTAL)
+  56:.././hal//sam4s/inc/sam4s/osc.h **** #  warning The board slow clock xtal frequency has not been defined.
+  57:.././hal//sam4s/inc/sam4s/osc.h **** #  define BOARD_FREQ_SLCK_XTAL      (32768UL)
+  58:.././hal//sam4s/inc/sam4s/osc.h **** #endif
+  59:.././hal//sam4s/inc/sam4s/osc.h **** 
+  60:.././hal//sam4s/inc/sam4s/osc.h **** #if !defined(BOARD_FREQ_SLCK_BYPASS)
+  61:.././hal//sam4s/inc/sam4s/osc.h **** #  warning The board slow clock bypass frequency has not been defined.
+  62:.././hal//sam4s/inc/sam4s/osc.h **** #  define BOARD_FREQ_SLCK_BYPASS    (32768UL)
+  63:.././hal//sam4s/inc/sam4s/osc.h **** #endif
+  64:.././hal//sam4s/inc/sam4s/osc.h **** 
+  65:.././hal//sam4s/inc/sam4s/osc.h **** #if !defined(BOARD_FREQ_MAINCK_XTAL)
+  66:.././hal//sam4s/inc/sam4s/osc.h **** #  warning The board main clock xtal frequency has not been defined.
+  67:.././hal//sam4s/inc/sam4s/osc.h **** #  define BOARD_FREQ_MAINCK_XTAL    (12000000UL)
+  68:.././hal//sam4s/inc/sam4s/osc.h **** #endif
+  69:.././hal//sam4s/inc/sam4s/osc.h **** 
+  70:.././hal//sam4s/inc/sam4s/osc.h **** #if !defined(BOARD_FREQ_MAINCK_BYPASS)
+  71:.././hal//sam4s/inc/sam4s/osc.h **** #  warning The board main clock bypass frequency has not been defined.
+  72:.././hal//sam4s/inc/sam4s/osc.h **** #  define BOARD_FREQ_MAINCK_BYPASS  (12000000UL)
+  73:.././hal//sam4s/inc/sam4s/osc.h **** #endif
+  74:.././hal//sam4s/inc/sam4s/osc.h **** 
+  75:.././hal//sam4s/inc/sam4s/osc.h **** #if !defined(BOARD_OSC_STARTUP_US)
+  76:.././hal//sam4s/inc/sam4s/osc.h **** #  warning The board main clock xtal startup time has not been defined.
+  77:.././hal//sam4s/inc/sam4s/osc.h **** #  define BOARD_OSC_STARTUP_US      (15625UL)
+  78:.././hal//sam4s/inc/sam4s/osc.h **** #endif
+  79:.././hal//sam4s/inc/sam4s/osc.h **** 
+  80:.././hal//sam4s/inc/sam4s/osc.h **** /**
+  81:.././hal//sam4s/inc/sam4s/osc.h ****  * \weakgroup osc_group
+  82:.././hal//sam4s/inc/sam4s/osc.h ****  * @{
+  83:.././hal//sam4s/inc/sam4s/osc.h ****  */
+  84:.././hal//sam4s/inc/sam4s/osc.h **** 
+  85:.././hal//sam4s/inc/sam4s/osc.h **** //! \name Oscillator identifiers
+  86:.././hal//sam4s/inc/sam4s/osc.h **** //@{
+  87:.././hal//sam4s/inc/sam4s/osc.h **** #define OSC_SLCK_32K_RC             0    //!< Internal 32kHz RC oscillator.
+  88:.././hal//sam4s/inc/sam4s/osc.h **** #define OSC_SLCK_32K_XTAL           1    //!< External 32kHz crystal oscillator.
+  89:.././hal//sam4s/inc/sam4s/osc.h **** #define OSC_SLCK_32K_BYPASS         2    //!< External 32kHz bypass oscillator.
+  90:.././hal//sam4s/inc/sam4s/osc.h **** #define OSC_MAINCK_4M_RC            3    //!< Internal 4MHz RC oscillator.
+  91:.././hal//sam4s/inc/sam4s/osc.h **** #define OSC_MAINCK_8M_RC            4    //!< Internal 8MHz RC oscillator.
+  92:.././hal//sam4s/inc/sam4s/osc.h **** #define OSC_MAINCK_12M_RC           5    //!< Internal 12MHz RC oscillator.
+  93:.././hal//sam4s/inc/sam4s/osc.h **** #define OSC_MAINCK_XTAL             6    //!< External crystal oscillator.
+  94:.././hal//sam4s/inc/sam4s/osc.h **** #define OSC_MAINCK_BYPASS           7    //!< External bypass oscillator.
+  95:.././hal//sam4s/inc/sam4s/osc.h **** //@}
+  96:.././hal//sam4s/inc/sam4s/osc.h **** 
+  97:.././hal//sam4s/inc/sam4s/osc.h **** //! \name Oscillator clock speed in hertz
+  98:.././hal//sam4s/inc/sam4s/osc.h **** //@{
+  99:.././hal//sam4s/inc/sam4s/osc.h **** #define OSC_SLCK_32K_RC_HZ          CHIP_FREQ_SLCK_RC               //!< Internal 32kHz RC oscillat
+ 100:.././hal//sam4s/inc/sam4s/osc.h **** #define OSC_SLCK_32K_XTAL_HZ        BOARD_FREQ_SLCK_XTAL            //!< External 32kHz crystal osc
+ 101:.././hal//sam4s/inc/sam4s/osc.h **** #define OSC_SLCK_32K_BYPASS_HZ      BOARD_FREQ_SLCK_BYPASS          //!< External 32kHz bypass osci
+ 102:.././hal//sam4s/inc/sam4s/osc.h **** #define OSC_MAINCK_4M_RC_HZ         CHIP_FREQ_MAINCK_RC_4MHZ        //!< Internal 4MHz RC oscillato
+ 103:.././hal//sam4s/inc/sam4s/osc.h **** #define OSC_MAINCK_8M_RC_HZ         CHIP_FREQ_MAINCK_RC_8MHZ        //!< Internal 8MHz RC oscillato
+ 104:.././hal//sam4s/inc/sam4s/osc.h **** #define OSC_MAINCK_12M_RC_HZ        CHIP_FREQ_MAINCK_RC_12MHZ       //!< Internal 12MHz RC oscillat
+ 105:.././hal//sam4s/inc/sam4s/osc.h **** #define OSC_MAINCK_XTAL_HZ          BOARD_FREQ_MAINCK_XTAL          //!< External crystal oscillato
+ 106:.././hal//sam4s/inc/sam4s/osc.h **** #define OSC_MAINCK_BYPASS_HZ        BOARD_FREQ_MAINCK_BYPASS        //!< External bypass oscillator
+ 107:.././hal//sam4s/inc/sam4s/osc.h **** //@}
+ 108:.././hal//sam4s/inc/sam4s/osc.h **** 
+ 109:.././hal//sam4s/inc/sam4s/osc.h **** static inline void osc_enable(uint32_t ul_id)
+ 110:.././hal//sam4s/inc/sam4s/osc.h **** {
+ 111:.././hal//sam4s/inc/sam4s/osc.h **** 	switch (ul_id) {
+ 112:.././hal//sam4s/inc/sam4s/osc.h **** 	case OSC_SLCK_32K_RC:
+ 113:.././hal//sam4s/inc/sam4s/osc.h **** 		break;
+ 114:.././hal//sam4s/inc/sam4s/osc.h **** 
+ 115:.././hal//sam4s/inc/sam4s/osc.h **** 	case OSC_SLCK_32K_XTAL:
+ 116:.././hal//sam4s/inc/sam4s/osc.h **** 		pmc_switch_sclk_to_32kxtal(PMC_OSC_XTAL);
+ 117:.././hal//sam4s/inc/sam4s/osc.h **** 		break;
+ 118:.././hal//sam4s/inc/sam4s/osc.h **** 
+ 119:.././hal//sam4s/inc/sam4s/osc.h **** 	case OSC_SLCK_32K_BYPASS:
+ 120:.././hal//sam4s/inc/sam4s/osc.h **** 		pmc_switch_sclk_to_32kxtal(PMC_OSC_BYPASS);
+ 121:.././hal//sam4s/inc/sam4s/osc.h **** 		break;
+ 122:.././hal//sam4s/inc/sam4s/osc.h **** 
+ 123:.././hal//sam4s/inc/sam4s/osc.h **** 
+ 124:.././hal//sam4s/inc/sam4s/osc.h **** 	case OSC_MAINCK_4M_RC:
+ 125:.././hal//sam4s/inc/sam4s/osc.h **** 		pmc_switch_mainck_to_fastrc(CKGR_MOR_MOSCRCF_4_MHz);
+ 126:.././hal//sam4s/inc/sam4s/osc.h **** 		break;
+ 127:.././hal//sam4s/inc/sam4s/osc.h **** 
+ 128:.././hal//sam4s/inc/sam4s/osc.h **** 	case OSC_MAINCK_8M_RC:
+ 129:.././hal//sam4s/inc/sam4s/osc.h **** 		pmc_switch_mainck_to_fastrc(CKGR_MOR_MOSCRCF_8_MHz);
+ 130:.././hal//sam4s/inc/sam4s/osc.h **** 		break;
+ 131:.././hal//sam4s/inc/sam4s/osc.h **** 
+ 132:.././hal//sam4s/inc/sam4s/osc.h **** 	case OSC_MAINCK_12M_RC:
+ 133:.././hal//sam4s/inc/sam4s/osc.h **** 		pmc_switch_mainck_to_fastrc(CKGR_MOR_MOSCRCF_12_MHz);
+ 134:.././hal//sam4s/inc/sam4s/osc.h **** 		break;
+ 135:.././hal//sam4s/inc/sam4s/osc.h **** 
+ 136:.././hal//sam4s/inc/sam4s/osc.h **** 
+ 137:.././hal//sam4s/inc/sam4s/osc.h **** 	case OSC_MAINCK_XTAL:
+ 138:.././hal//sam4s/inc/sam4s/osc.h **** 		pmc_switch_mainck_to_xtal(PMC_OSC_XTAL,
+ 139:.././hal//sam4s/inc/sam4s/osc.h **** 			pmc_us_to_moscxtst(BOARD_OSC_STARTUP_US,
+ 140:.././hal//sam4s/inc/sam4s/osc.h **** 				OSC_SLCK_32K_RC_HZ));
+ 141:.././hal//sam4s/inc/sam4s/osc.h **** 		break;
+ 142:.././hal//sam4s/inc/sam4s/osc.h **** 
+ 143:.././hal//sam4s/inc/sam4s/osc.h **** 	case OSC_MAINCK_BYPASS:
+ 144:.././hal//sam4s/inc/sam4s/osc.h **** 		pmc_switch_mainck_to_xtal(PMC_OSC_BYPASS,
+ 145:.././hal//sam4s/inc/sam4s/osc.h **** 			pmc_us_to_moscxtst(BOARD_OSC_STARTUP_US,
+ 146:.././hal//sam4s/inc/sam4s/osc.h **** 				OSC_SLCK_32K_RC_HZ));
+ 147:.././hal//sam4s/inc/sam4s/osc.h **** 		break;
+ 148:.././hal//sam4s/inc/sam4s/osc.h **** 	}
+ 149:.././hal//sam4s/inc/sam4s/osc.h **** }
+ 150:.././hal//sam4s/inc/sam4s/osc.h **** 
+ 151:.././hal//sam4s/inc/sam4s/osc.h **** static inline void osc_disable(uint32_t ul_id)
+ 152:.././hal//sam4s/inc/sam4s/osc.h **** {
+ 153:.././hal//sam4s/inc/sam4s/osc.h **** 	switch (ul_id) {
+ 154:.././hal//sam4s/inc/sam4s/osc.h **** 	case OSC_SLCK_32K_RC:
+ 155:.././hal//sam4s/inc/sam4s/osc.h **** 	case OSC_SLCK_32K_XTAL:
+ 156:.././hal//sam4s/inc/sam4s/osc.h **** 	case OSC_SLCK_32K_BYPASS:
+ 157:.././hal//sam4s/inc/sam4s/osc.h **** 		break;
+ 158:.././hal//sam4s/inc/sam4s/osc.h **** 
+ 159:.././hal//sam4s/inc/sam4s/osc.h **** 	case OSC_MAINCK_4M_RC:
+ 160:.././hal//sam4s/inc/sam4s/osc.h **** 	case OSC_MAINCK_8M_RC:
+ 161:.././hal//sam4s/inc/sam4s/osc.h **** 	case OSC_MAINCK_12M_RC:
+ 162:.././hal//sam4s/inc/sam4s/osc.h **** 		pmc_osc_disable_fastrc();
+ 163:.././hal//sam4s/inc/sam4s/osc.h **** 		break;
+ 164:.././hal//sam4s/inc/sam4s/osc.h **** 
+ 165:.././hal//sam4s/inc/sam4s/osc.h **** 	case OSC_MAINCK_XTAL:
+ 166:.././hal//sam4s/inc/sam4s/osc.h **** 		pmc_osc_disable_xtal(PMC_OSC_XTAL);
+ 167:.././hal//sam4s/inc/sam4s/osc.h **** 		break;
+ 168:.././hal//sam4s/inc/sam4s/osc.h **** 
+ 169:.././hal//sam4s/inc/sam4s/osc.h **** 	case OSC_MAINCK_BYPASS:
+ 170:.././hal//sam4s/inc/sam4s/osc.h **** 		pmc_osc_disable_xtal(PMC_OSC_BYPASS);
+ 171:.././hal//sam4s/inc/sam4s/osc.h **** 		break;
+ 172:.././hal//sam4s/inc/sam4s/osc.h **** 	}
+ 173:.././hal//sam4s/inc/sam4s/osc.h **** }
+ 174:.././hal//sam4s/inc/sam4s/osc.h **** 
+ 175:.././hal//sam4s/inc/sam4s/osc.h **** static inline bool osc_is_ready(uint32_t ul_id)
+ 176:.././hal//sam4s/inc/sam4s/osc.h **** {
+ 177:.././hal//sam4s/inc/sam4s/osc.h **** 	switch (ul_id) {
+ 178:.././hal//sam4s/inc/sam4s/osc.h **** 	case OSC_SLCK_32K_RC:
+ 179:.././hal//sam4s/inc/sam4s/osc.h **** 		return 1;
+ 180:.././hal//sam4s/inc/sam4s/osc.h **** 
+ 181:.././hal//sam4s/inc/sam4s/osc.h **** 	case OSC_SLCK_32K_XTAL:
+ 182:.././hal//sam4s/inc/sam4s/osc.h **** 	case OSC_SLCK_32K_BYPASS:
+ 183:.././hal//sam4s/inc/sam4s/osc.h **** 		return pmc_osc_is_ready_32kxtal();
+ 184:.././hal//sam4s/inc/sam4s/osc.h **** 
+ 185:.././hal//sam4s/inc/sam4s/osc.h **** 	case OSC_MAINCK_4M_RC:
+ 186:.././hal//sam4s/inc/sam4s/osc.h **** 	case OSC_MAINCK_8M_RC:
+ 187:.././hal//sam4s/inc/sam4s/osc.h **** 	case OSC_MAINCK_12M_RC:
+ 188:.././hal//sam4s/inc/sam4s/osc.h **** 	case OSC_MAINCK_XTAL:
+ 189:.././hal//sam4s/inc/sam4s/osc.h **** 	case OSC_MAINCK_BYPASS:
+ 190:.././hal//sam4s/inc/sam4s/osc.h **** 		return pmc_osc_is_ready_mainck();
+  69              	 .loc 3 190 10 view .LVU10
+  70 0010 174E     	 ldr r6,.L5+12
+  71              	.LBE36:
+  72              	.LBE35:
+  73              	.LBE34:
+  74              	.LBE33:
+  75              	.LBB40:
+  76              	.LBB31:
+  77              	 .loc 2 409 2 view .LVU11
+  78 0012 A047     	 blx r4
+  79              	.LVL1:
+  80              	 .loc 2 409 2 view .LVU12
+  81              	.LBE31:
+  82              	.LBE40:
+  13:.././hal//sam4s/sam4s_hal.c ****     sysclk_enable_peripheral_clock(ID_RSTC);
+  83              	 .loc 1 13 5 is_stmt 1 view .LVU13
+  84              	.LBB41:
+  85              	.LBI41:
+ 407:.././hal//sam4s/inc/sam4s/sysclk.h **** {
+  86              	 .loc 2 407 20 view .LVU14
+  87              	.LBB42:
+  88              	 .loc 2 409 2 view .LVU15
+  89 0014 0120     	 movs r0,#1
+  90 0016 A047     	 blx r4
+  91              	.LVL2:
+  92              	 .loc 2 409 2 is_stmt 0 view .LVU16
+  93              	.LBE42:
+  94              	.LBE41:
+  14:.././hal//sam4s/sam4s_hal.c ****     pmc_set_writeprotect(0);
+  95              	 .loc 1 14 5 is_stmt 1 view .LVU17
+  96              	.LBB43:
+  97              	.LBI43:
+ 407:.././hal//sam4s/inc/sam4s/sysclk.h **** {
+  98              	 .loc 2 407 20 view .LVU18
+  99              	.LBB44:
+ 100              	 .loc 2 409 2 view .LVU19
+ 101 0018 0520     	 movs r0,#5
+ 102 001a A047     	 blx r4
+ 103              	.LVL3:
+ 104              	 .loc 2 409 2 is_stmt 0 view .LVU20
+ 105              	.LBE44:
+ 106              	.LBE43:
+  15:.././hal//sam4s/sam4s_hal.c ****     system_init_flash(CHIP_FREQ_CPU_MAX);
+ 107              	 .loc 1 15 5 is_stmt 1 view .LVU21
+ 108 001c 154B     	 ldr r3,.L5+16
+ 109 001e 0020     	 movs r0,#0
+ 110 0020 9847     	 blx r3
+ 111              	.LVL4:
+ 112              	 .loc 1 16 5 view .LVU22
+ 113 0022 1548     	 ldr r0,.L5+20
+ 114 0024 A847     	 blx r5
+ 115              	.LVL5:
+  17:.././hal//sam4s/sam4s_hal.c ****     pmc_switch_mck_to_sclk(SYSCLK_PRES_1);
+ 116              	 .loc 1 17 5 view .LVU23
+ 117 0026 154B     	 ldr r3,.L5+24
+ 118 0028 0020     	 movs r0,#0
+ 119 002a 9847     	 blx r3
+ 120              	.LVL6:
+  18:.././hal//sam4s/sam4s_hal.c ****     osc_enable(OSC_MAINCK_BYPASS);
+ 121              	 .loc 1 18 5 view .LVU24
+ 122              	.LBB45:
+ 123              	.LBI45:
+ 109:.././hal//sam4s/inc/sam4s/osc.h **** {
+ 124              	 .loc 3 109 20 view .LVU25
+ 125              	.LBB46:
+ 111:.././hal//sam4s/inc/sam4s/osc.h **** 	case OSC_SLCK_32K_RC:
+ 126              	 .loc 3 111 2 view .LVU26
+ 144:.././hal//sam4s/inc/sam4s/osc.h **** 			pmc_us_to_moscxtst(BOARD_OSC_STARTUP_US,
+ 127              	 .loc 3 144 3 view .LVU27
+ 128 002c 144B     	 ldr r3,.L5+28
+ 129 002e 3E21     	 movs r1,#62
+ 130 0030 0120     	 movs r0,#1
+ 131 0032 9847     	 blx r3
+ 132              	.LVL7:
+ 147:.././hal//sam4s/inc/sam4s/osc.h **** 	}
+ 133              	 .loc 3 147 3 view .LVU28
+ 147:.././hal//sam4s/inc/sam4s/osc.h **** 	}
+ 134              	 .loc 3 147 3 is_stmt 0 view .LVU29
+ 135              	.LBE46:
+ 136              	.LBE45:
+  19:.././hal//sam4s/sam4s_hal.c ****     osc_wait_ready(OSC_MAINCK_BYPASS);
+ 137              	 .loc 1 19 5 is_stmt 1 view .LVU30
+ 138              	.LBB47:
+ 139              	.LBI33:
+ 140              	 .file 4 ".././hal//sam4s/inc/osc.h"
+   1:.././hal//sam4s/inc/osc.h **** /**
+   2:.././hal//sam4s/inc/osc.h ****  * \file
+   3:.././hal//sam4s/inc/osc.h ****  *
+   4:.././hal//sam4s/inc/osc.h ****  * \brief Oscillator management
+   5:.././hal//sam4s/inc/osc.h ****  *
+   6:.././hal//sam4s/inc/osc.h ****  * Copyright (c) 2010-2018 Microchip Technology Inc. and its subsidiaries.
+   7:.././hal//sam4s/inc/osc.h ****  *
+   8:.././hal//sam4s/inc/osc.h ****  * \asf_license_start
+   9:.././hal//sam4s/inc/osc.h ****  *
+  10:.././hal//sam4s/inc/osc.h ****  * \page License
+  11:.././hal//sam4s/inc/osc.h ****  *
+  12:.././hal//sam4s/inc/osc.h ****  * Subject to your compliance with these terms, you may use Microchip
+  13:.././hal//sam4s/inc/osc.h ****  * software and any derivatives exclusively with Microchip products.
+  14:.././hal//sam4s/inc/osc.h ****  * It is your responsibility to comply with third party license terms applicable
+  15:.././hal//sam4s/inc/osc.h ****  * to your use of third party software (including open source software) that
+  16:.././hal//sam4s/inc/osc.h ****  * may accompany Microchip software.
+  17:.././hal//sam4s/inc/osc.h ****  *
+  18:.././hal//sam4s/inc/osc.h ****  * THIS SOFTWARE IS SUPPLIED BY MICROCHIP "AS IS". NO WARRANTIES,
+  19:.././hal//sam4s/inc/osc.h ****  * WHETHER EXPRESS, IMPLIED OR STATUTORY, APPLY TO THIS SOFTWARE,
+  20:.././hal//sam4s/inc/osc.h ****  * INCLUDING ANY IMPLIED WARRANTIES OF NON-INFRINGEMENT, MERCHANTABILITY,
+  21:.././hal//sam4s/inc/osc.h ****  * AND FITNESS FOR A PARTICULAR PURPOSE. IN NO EVENT WILL MICROCHIP BE
+  22:.././hal//sam4s/inc/osc.h ****  * LIABLE FOR ANY INDIRECT, SPECIAL, PUNITIVE, INCIDENTAL OR CONSEQUENTIAL
+  23:.././hal//sam4s/inc/osc.h ****  * LOSS, DAMAGE, COST OR EXPENSE OF ANY KIND WHATSOEVER RELATED TO THE
+  24:.././hal//sam4s/inc/osc.h ****  * SOFTWARE, HOWEVER CAUSED, EVEN IF MICROCHIP HAS BEEN ADVISED OF THE
+  25:.././hal//sam4s/inc/osc.h ****  * POSSIBILITY OR THE DAMAGES ARE FORESEEABLE.  TO THE FULLEST EXTENT
+  26:.././hal//sam4s/inc/osc.h ****  * ALLOWED BY LAW, MICROCHIP'S TOTAL LIABILITY ON ALL CLAIMS IN ANY WAY
+  27:.././hal//sam4s/inc/osc.h ****  * RELATED TO THIS SOFTWARE WILL NOT EXCEED THE AMOUNT OF FEES, IF ANY,
+  28:.././hal//sam4s/inc/osc.h ****  * THAT YOU HAVE PAID DIRECTLY TO MICROCHIP FOR THIS SOFTWARE.
+  29:.././hal//sam4s/inc/osc.h ****  *
+  30:.././hal//sam4s/inc/osc.h ****  * \asf_license_stop
+  31:.././hal//sam4s/inc/osc.h ****  *
+  32:.././hal//sam4s/inc/osc.h ****  */
+  33:.././hal//sam4s/inc/osc.h **** /*
+  34:.././hal//sam4s/inc/osc.h ****  * Support and FAQ: visit <a href="https://www.microchip.com/support/">Microchip Support</a>
+  35:.././hal//sam4s/inc/osc.h ****  */
+  36:.././hal//sam4s/inc/osc.h **** #ifndef OSC_H_INCLUDED
+  37:.././hal//sam4s/inc/osc.h **** #define OSC_H_INCLUDED
+  38:.././hal//sam4s/inc/osc.h **** 
+  39:.././hal//sam4s/inc/osc.h **** #include "parts.h"
+  40:.././hal//sam4s/inc/osc.h **** #include "conf_clock.h"
+  41:.././hal//sam4s/inc/osc.h **** 
+  42:.././hal//sam4s/inc/osc.h **** #if SAM3S
+  43:.././hal//sam4s/inc/osc.h **** # include "sam3s/osc.h"
+  44:.././hal//sam4s/inc/osc.h **** #elif SAM3XA
+  45:.././hal//sam4s/inc/osc.h **** # include "sam3x/osc.h"
+  46:.././hal//sam4s/inc/osc.h **** #elif SAM3U
+  47:.././hal//sam4s/inc/osc.h **** # include "sam3u/osc.h"
+  48:.././hal//sam4s/inc/osc.h **** #elif SAM3N
+  49:.././hal//sam4s/inc/osc.h **** # include "sam3n/osc.h"
+  50:.././hal//sam4s/inc/osc.h **** #elif SAM4S
+  51:.././hal//sam4s/inc/osc.h **** # include "sam4s/osc.h"
+  52:.././hal//sam4s/inc/osc.h **** #elif SAM4E
+  53:.././hal//sam4s/inc/osc.h **** # include "sam4e/osc.h"
+  54:.././hal//sam4s/inc/osc.h **** #elif SAM4C
+  55:.././hal//sam4s/inc/osc.h **** # include "sam4c/osc.h"
+  56:.././hal//sam4s/inc/osc.h **** #elif SAM4CM
+  57:.././hal//sam4s/inc/osc.h **** # include "sam4cm/osc.h"
+  58:.././hal//sam4s/inc/osc.h **** #elif SAM4CP
+  59:.././hal//sam4s/inc/osc.h **** # include "sam4cp/osc.h"
+  60:.././hal//sam4s/inc/osc.h **** #elif SAM4L
+  61:.././hal//sam4s/inc/osc.h **** # include "sam4l/osc.h"
+  62:.././hal//sam4s/inc/osc.h **** #elif SAM4N
+  63:.././hal//sam4s/inc/osc.h **** # include "sam4n/osc.h"
+  64:.././hal//sam4s/inc/osc.h **** #elif SAMG
+  65:.././hal//sam4s/inc/osc.h **** # include "samg/osc.h"
+  66:.././hal//sam4s/inc/osc.h **** #elif SAMV71
+  67:.././hal//sam4s/inc/osc.h **** # include "samv71/osc.h"
+  68:.././hal//sam4s/inc/osc.h **** #elif SAMV70
+  69:.././hal//sam4s/inc/osc.h **** # include "samv70/osc.h"
+  70:.././hal//sam4s/inc/osc.h **** #elif SAME70
+  71:.././hal//sam4s/inc/osc.h **** # include "same70/osc.h"
+  72:.././hal//sam4s/inc/osc.h **** #elif SAMS70
+  73:.././hal//sam4s/inc/osc.h **** # include "sams70/osc.h"
+  74:.././hal//sam4s/inc/osc.h **** #elif (UC3A0 || UC3A1)
+  75:.././hal//sam4s/inc/osc.h **** # include "uc3a0_a1/osc.h"
+  76:.././hal//sam4s/inc/osc.h **** #elif UC3A3
+  77:.././hal//sam4s/inc/osc.h **** # include "uc3a3_a4/osc.h"
+  78:.././hal//sam4s/inc/osc.h **** #elif UC3B
+  79:.././hal//sam4s/inc/osc.h **** # include "uc3b0_b1/osc.h"
+  80:.././hal//sam4s/inc/osc.h **** #elif UC3C
+  81:.././hal//sam4s/inc/osc.h **** # include "uc3c/osc.h"
+  82:.././hal//sam4s/inc/osc.h **** #elif UC3D
+  83:.././hal//sam4s/inc/osc.h **** # include "uc3d/osc.h"
+  84:.././hal//sam4s/inc/osc.h **** #elif UC3L
+  85:.././hal//sam4s/inc/osc.h **** # include "uc3l/osc.h"
+  86:.././hal//sam4s/inc/osc.h **** #elif XMEGA
+  87:.././hal//sam4s/inc/osc.h **** # include "xmega/osc.h"
+  88:.././hal//sam4s/inc/osc.h **** #else
+  89:.././hal//sam4s/inc/osc.h **** # error Unsupported chip type
+  90:.././hal//sam4s/inc/osc.h **** #endif
+  91:.././hal//sam4s/inc/osc.h **** 
+  92:.././hal//sam4s/inc/osc.h **** /**
+  93:.././hal//sam4s/inc/osc.h ****  * \ingroup clk_group
+  94:.././hal//sam4s/inc/osc.h ****  * \defgroup osc_group Oscillator Management
+  95:.././hal//sam4s/inc/osc.h ****  *
+  96:.././hal//sam4s/inc/osc.h ****  * This group contains functions and definitions related to configuring
+  97:.././hal//sam4s/inc/osc.h ****  * and enabling/disabling on-chip oscillators. Internal RC-oscillators,
+  98:.././hal//sam4s/inc/osc.h ****  * external crystal oscillators and external clock generators are
+  99:.././hal//sam4s/inc/osc.h ****  * supported by this module. What all of these have in common is that
+ 100:.././hal//sam4s/inc/osc.h ****  * they swing at a fixed, nominal frequency which is normally not
+ 101:.././hal//sam4s/inc/osc.h ****  * adjustable.
+ 102:.././hal//sam4s/inc/osc.h ****  *
+ 103:.././hal//sam4s/inc/osc.h ****  * \par Example: Enabling an oscillator
+ 104:.././hal//sam4s/inc/osc.h ****  *
+ 105:.././hal//sam4s/inc/osc.h ****  * The following example demonstrates how to enable the external
+ 106:.././hal//sam4s/inc/osc.h ****  * oscillator on XMEGA A and wait for it to be ready to use. The
+ 107:.././hal//sam4s/inc/osc.h ****  * oscillator identifiers are platform-specific, so while the same
+ 108:.././hal//sam4s/inc/osc.h ****  * procedure is used on all platforms, the parameter to osc_enable()
+ 109:.././hal//sam4s/inc/osc.h ****  * will be different from device to device.
+ 110:.././hal//sam4s/inc/osc.h ****  * \code
+ 111:.././hal//sam4s/inc/osc.h **** 	osc_enable(OSC_ID_XOSC);
+ 112:.././hal//sam4s/inc/osc.h **** 	osc_wait_ready(OSC_ID_XOSC); \endcode
+ 113:.././hal//sam4s/inc/osc.h ****  *
+ 114:.././hal//sam4s/inc/osc.h ****  * \section osc_group_board Board-specific Definitions
+ 115:.././hal//sam4s/inc/osc.h ****  * If external oscillators are used, the board code must provide the
+ 116:.././hal//sam4s/inc/osc.h ****  * following definitions for each of those:
+ 117:.././hal//sam4s/inc/osc.h ****  *   - \b BOARD_<osc name>_HZ: The nominal frequency of the oscillator.
+ 118:.././hal//sam4s/inc/osc.h ****  *   - \b BOARD_<osc name>_STARTUP_US: The startup time of the
+ 119:.././hal//sam4s/inc/osc.h ****  *     oscillator in microseconds.
+ 120:.././hal//sam4s/inc/osc.h ****  *   - \b BOARD_<osc name>_TYPE: The type of oscillator connected, i.e.
+ 121:.././hal//sam4s/inc/osc.h ****  *     whether it's a crystal or external clock, and sometimes what kind
+ 122:.././hal//sam4s/inc/osc.h ****  *     of crystal it is. The meaning of this value is platform-specific.
+ 123:.././hal//sam4s/inc/osc.h ****  *
+ 124:.././hal//sam4s/inc/osc.h ****  * @{
+ 125:.././hal//sam4s/inc/osc.h ****  */
+ 126:.././hal//sam4s/inc/osc.h **** 
+ 127:.././hal//sam4s/inc/osc.h **** //! \name Oscillator Management
+ 128:.././hal//sam4s/inc/osc.h **** //@{
+ 129:.././hal//sam4s/inc/osc.h **** /**
+ 130:.././hal//sam4s/inc/osc.h ****  * \fn void osc_enable(uint8_t id)
+ 131:.././hal//sam4s/inc/osc.h ****  * \brief Enable oscillator \a id
+ 132:.././hal//sam4s/inc/osc.h ****  *
+ 133:.././hal//sam4s/inc/osc.h ****  * The startup time and mode value is automatically determined based on
+ 134:.././hal//sam4s/inc/osc.h ****  * definitions in the board code.
+ 135:.././hal//sam4s/inc/osc.h ****  */
+ 136:.././hal//sam4s/inc/osc.h **** /**
+ 137:.././hal//sam4s/inc/osc.h ****  * \fn void osc_disable(uint8_t id)
+ 138:.././hal//sam4s/inc/osc.h ****  * \brief Disable oscillator \a id
+ 139:.././hal//sam4s/inc/osc.h ****  */
+ 140:.././hal//sam4s/inc/osc.h **** /**
+ 141:.././hal//sam4s/inc/osc.h ****  * \fn osc_is_ready(uint8_t id)
+ 142:.././hal//sam4s/inc/osc.h ****  * \brief Determine whether oscillator \a id is ready.
+ 143:.././hal//sam4s/inc/osc.h ****  * \retval true Oscillator \a id is running and ready to use as a clock
+ 144:.././hal//sam4s/inc/osc.h ****  * source.
+ 145:.././hal//sam4s/inc/osc.h ****  * \retval false Oscillator \a id is not running.
+ 146:.././hal//sam4s/inc/osc.h ****  */
+ 147:.././hal//sam4s/inc/osc.h **** /**
+ 148:.././hal//sam4s/inc/osc.h ****  * \fn uint32_t osc_get_rate(uint8_t id)
+ 149:.././hal//sam4s/inc/osc.h ****  * \brief Return the frequency of oscillator \a id in Hz
+ 150:.././hal//sam4s/inc/osc.h ****  */
+ 151:.././hal//sam4s/inc/osc.h **** 
+ 152:.././hal//sam4s/inc/osc.h **** #ifndef __ASSEMBLY__
+ 153:.././hal//sam4s/inc/osc.h **** 
+ 154:.././hal//sam4s/inc/osc.h **** /**
+ 155:.././hal//sam4s/inc/osc.h ****  * \brief Wait until the oscillator identified by \a id is ready
+ 156:.././hal//sam4s/inc/osc.h ****  *
+ 157:.././hal//sam4s/inc/osc.h ****  * This function will busy-wait for the oscillator identified by \a id
+ 158:.././hal//sam4s/inc/osc.h ****  * to become stable and ready to use as a clock source.
+ 159:.././hal//sam4s/inc/osc.h ****  *
+ 160:.././hal//sam4s/inc/osc.h ****  * \param id A number identifying the oscillator to wait for.
+ 161:.././hal//sam4s/inc/osc.h ****  */
+ 162:.././hal//sam4s/inc/osc.h **** static inline void osc_wait_ready(uint8_t id)
+ 141              	 .loc 4 162 20 view .LVU31
+ 142              	.LBB39:
+ 163:.././hal//sam4s/inc/osc.h **** {
+ 164:.././hal//sam4s/inc/osc.h **** 	while (!osc_is_ready(id)) {
+ 143              	 .loc 4 164 2 view .LVU32
+ 144              	.L2:
+ 165:.././hal//sam4s/inc/osc.h **** 		/* Do nothing */
+ 166:.././hal//sam4s/inc/osc.h **** 	}
+ 145              	 .loc 4 166 2 view .LVU33
+ 164:.././hal//sam4s/inc/osc.h **** 		/* Do nothing */
+ 146              	 .loc 4 164 9 discriminator 1 view .LVU34
+ 147              	.LBB38:
+ 148              	.LBI35:
+ 175:.././hal//sam4s/inc/sam4s/osc.h **** {
+ 149              	 .loc 3 175 20 view .LVU35
+ 150              	.LBB37:
+ 177:.././hal//sam4s/inc/sam4s/osc.h **** 	case OSC_SLCK_32K_RC:
+ 151              	 .loc 3 177 2 view .LVU36
+ 152              	 .loc 3 190 3 view .LVU37
+ 153              	 .loc 3 190 10 is_stmt 0 view .LVU38
+ 154 0034 B047     	 blx r6
+ 155              	.LVL8:
+ 156              	 .loc 3 190 10 view .LVU39
+ 157              	.LBE37:
+ 158              	.LBE38:
+ 164:.././hal//sam4s/inc/osc.h **** 		/* Do nothing */
+ 159              	 .loc 4 164 9 discriminator 1 view .LVU40
+ 160 0036 0028     	 cmp r0,#0
+ 161 0038 FCD0     	 beq .L2
+ 162              	.LVL9:
+ 164:.././hal//sam4s/inc/osc.h **** 		/* Do nothing */
+ 163              	 .loc 4 164 9 discriminator 1 view .LVU41
+ 164              	.LBE39:
+ 165              	.LBE47:
+  20:.././hal//sam4s/sam4s_hal.c ****     pmc_switch_mck_to_mainck(SYSCLK_PRES_1);
+ 166              	 .loc 1 20 5 is_stmt 1 view .LVU42
+ 167 003a 124B     	 ldr r3,.L5+32
+ 168 003c 0020     	 movs r0,#0
+ 169 003e 9847     	 blx r3
+ 170              	.LVL10:
+  21:.././hal//sam4s/sam4s_hal.c ****     SystemCoreClockUpdate();
+ 171              	 .loc 1 21 5 view .LVU43
+ 172 0040 114B     	 ldr r3,.L5+36
+ 173 0042 9847     	 blx r3
+ 174              	.LVL11:
+  22:.././hal//sam4s/sam4s_hal.c ****     system_init_flash(7.37E6);
+ 175              	 .loc 1 22 5 view .LVU44
+ 176 0044 1148     	 ldr r0,.L5+40
+ 177 0046 A847     	 blx r5
+ 178              	.LVL12:
+  23:.././hal//sam4s/sam4s_hal.c ****     EFC0->EEFC_FMR &= ~(0b100 << 24); // disable code loop optimizations (causes trace desyncs)
+ 179              	 .loc 1 23 5 view .LVU45
+ 180              	 .loc 1 23 9 is_stmt 0 view .LVU46
+ 181 0048 114A     	 ldr r2,.L5+44
+ 182 004a 1368     	 ldr r3,[r2]
+ 183              	 .loc 1 23 20 view .LVU47
+ 184 004c 23F08063 	 bic r3,r3,#67108864
+ 185 0050 1360     	 str r3,[r2]
+  24:.././hal//sam4s/sam4s_hal.c ****     // EFC0->EEFC_FMR &= ~(0b001 << 16); // disable code loop optimizations (causes trace desyncs)
+  25:.././hal//sam4s/sam4s_hal.c **** 
+  26:.././hal//sam4s/sam4s_hal.c ****     sysclk_enable_peripheral_clock(ID_PIOA);
+ 186              	 .loc 1 26 5 is_stmt 1 view .LVU48
+ 187              	.LVL13:
+ 188              	.LBB48:
+ 189              	.LBI48:
+ 407:.././hal//sam4s/inc/sam4s/sysclk.h **** {
+ 190              	 .loc 2 407 20 view .LVU49
+ 191              	.LBB49:
+ 192              	 .loc 2 409 2 view .LVU50
+ 193 0052 0B20     	 movs r0,#11
+ 194 0054 A047     	 blx r4
+ 195              	.LVL14:
+ 196              	 .loc 2 409 2 is_stmt 0 view .LVU51
+ 197              	.LBE49:
+ 198              	.LBE48:
+  27:.././hal//sam4s/sam4s_hal.c ****     gpio_configure_pin(PIO_PA15_IDX, PIO_OUTPUT_1 | PIO_DEFAULT);
+ 199              	 .loc 1 27 5 is_stmt 1 view .LVU52
+  28:.././hal//sam4s/sam4s_hal.c ****     // while (1) {
+  29:.././hal//sam4s/sam4s_hal.c ****     //     gpio_configure_pin(PIO_PA16_IDX, PIO_OUTPUT_0 | PIO_DEFAULT);
+  30:.././hal//sam4s/sam4s_hal.c ****     //     for (volatile uint32_t i = 0; i < 100000; i++) {
+  31:.././hal//sam4s/sam4s_hal.c ****     //     }
+  32:.././hal//sam4s/sam4s_hal.c ****     //     gpio_configure_pin(PIO_PA16_IDX, PIO_OUTPUT_1 | PIO_DEFAULT);
+  33:.././hal//sam4s/sam4s_hal.c ****     //     for (volatile uint32_t i = 0; i < 100000; i++) {
+  34:.././hal//sam4s/sam4s_hal.c ****     //     }
+  35:.././hal//sam4s/sam4s_hal.c ****     // }
+  36:.././hal//sam4s/sam4s_hal.c ****     // gpio_configure_pin(PIO_PA10_IDX, PIO_PERIPH_A | PIO_DEFAULT);
+  37:.././hal//sam4s/sam4s_hal.c **** }
+ 200              	 .loc 1 37 1 is_stmt 0 view .LVU53
+ 201 0056 BDE87040 	 pop {r4,r5,r6,lr}
+ 202              	.LCFI1:
+ 203              	 .cfi_restore 14
+ 204              	 .cfi_restore 6
+ 205              	 .cfi_restore 5
+ 206              	 .cfi_restore 4
+ 207              	 .cfi_def_cfa_offset 0
+  27:.././hal//sam4s/sam4s_hal.c ****     gpio_configure_pin(PIO_PA15_IDX, PIO_OUTPUT_1 | PIO_DEFAULT);
+ 208              	 .loc 1 27 5 view .LVU54
+ 209 005a 0E4B     	 ldr r3,.L5+48
+ 210 005c 4FF06051 	 mov r1,#939524096
+ 211 0060 0F20     	 movs r0,#15
+ 212 0062 1847     	 bx r3
+ 213              	.LVL15:
+ 214              	.L6:
+ 215              	 .align 2
+ 216              	.L5:
+ 217 0064 00140E40 	 .word 1074664448
+ 218 0068 00000000 	 .word pmc_enable_periph_clk
+ 219 006c 00000000 	 .word system_init_flash
+ 220 0070 00000000 	 .word pmc_osc_is_ready_mainck
+ 221 0074 00000000 	 .word pmc_set_writeprotect
+ 222 0078 000E2707 	 .word 120000000
+ 223 007c 00000000 	 .word pmc_switch_mck_to_sclk
+ 224 0080 00000000 	 .word pmc_switch_mainck_to_xtal
+ 225 0084 00000000 	 .word pmc_switch_mck_to_mainck
+ 226 0088 00000000 	 .word SystemCoreClockUpdate
+ 227 008c 10757000 	 .word 7370000
+ 228 0090 000A0E40 	 .word 1074661888
+ 229 0094 00000000 	 .word pio_configure_pin
+ 230              	 .cfi_endproc
+ 231              	.LFE165:
+ 233              	 .section .text.init_uart,"ax",%progbits
+ 234              	 .align 1
+ 235              	 .global init_uart
+ 236              	 .syntax unified
+ 237              	 .thumb
+ 238              	 .thumb_func
+ 240              	init_uart:
+ 241              	.LFB166:
+  38:.././hal//sam4s/sam4s_hal.c **** 
+  39:.././hal//sam4s/sam4s_hal.c **** void init_uart(void)
+  40:.././hal//sam4s/sam4s_hal.c **** {
+ 242              	 .loc 1 40 1 is_stmt 1 view-0
+ 243              	 .cfi_startproc
+ 244              	 
+ 245              	 
+  41:.././hal//sam4s/sam4s_hal.c ****     // todo: just set these registers manually, doing so is simple and avoids asf rounding errors
+  42:.././hal//sam4s/sam4s_hal.c ****     sam_uart_opt_t uopts;
+ 246              	 .loc 1 42 5 view .LVU56
+  43:.././hal//sam4s/sam4s_hal.c ****     #if SS_VER == SS_VER_2_1
+  44:.././hal//sam4s/sam4s_hal.c ****         uopts.ul_baudrate = 230400;
+ 247              	 .loc 1 44 9 view .LVU57
+  40:.././hal//sam4s/sam4s_hal.c ****     // todo: just set these registers manually, doing so is simple and avoids asf rounding errors
+ 248              	 .loc 1 40 1 is_stmt 0 view .LVU58
+ 249 0000 1FB5     	 push {r0,r1,r2,r3,r4,lr}
+ 250              	.LCFI2:
+ 251              	 .cfi_def_cfa_offset 24
+ 252              	 .cfi_offset 4,-8
+ 253              	 .cfi_offset 14,-4
+  45:.././hal//sam4s/sam4s_hal.c ****     #else
+  46:.././hal//sam4s/sam4s_hal.c ****         uopts.ul_baudrate = 38400;
+  47:.././hal//sam4s/sam4s_hal.c ****     #endif
+  48:.././hal//sam4s/sam4s_hal.c ****     uopts.ul_mck = 7.45E6; //overestimate clock a little to avoid large baud error from calc roundi
+ 254              	 .loc 1 48 18 view .LVU59
+ 255 0002 0F4B     	 ldr r3,.L8
+  49:.././hal//sam4s/sam4s_hal.c **** 
+  50:.././hal//sam4s/sam4s_hal.c ****     uopts.ul_mode = (0x00 << 14) | (0x04 << 9);
+  51:.././hal//sam4s/sam4s_hal.c **** 
+  52:.././hal//sam4s/sam4s_hal.c ****     sysclk_enable_peripheral_clock(ID_UART0);
+  53:.././hal//sam4s/sam4s_hal.c **** 
+  54:.././hal//sam4s/sam4s_hal.c **** 
+  55:.././hal//sam4s/sam4s_hal.c ****     uart_init(UART0, &uopts);
+  56:.././hal//sam4s/sam4s_hal.c ****     uart_enable_rx(UART0);
+  57:.././hal//sam4s/sam4s_hal.c ****     uart_enable_tx(UART0);
+  58:.././hal//sam4s/sam4s_hal.c ****     gpio_configure_pin(PIO_PA9_IDX, PIO_PERIPH_A | PIO_DEFAULT | PIO_PULLUP);
+ 256              	 .loc 1 58 5 view .LVU60
+ 257 0004 0F4C     	 ldr r4,.L8+4
+  48:.././hal//sam4s/sam4s_hal.c **** 
+ 258              	 .loc 1 48 18 view .LVU61
+ 259 0006 4FF46132 	 mov r2,#230400
+ 260 000a CDE90132 	 strd r3,r2,[sp,#4]
+  50:.././hal//sam4s/sam4s_hal.c **** 
+ 261              	 .loc 1 50 5 is_stmt 1 view .LVU62
+  50:.././hal//sam4s/sam4s_hal.c **** 
+ 262              	 .loc 1 50 19 is_stmt 0 view .LVU63
+ 263 000e 4FF40063 	 mov r3,#2048
+ 264 0012 0393     	 str r3,[sp,#12]
+  52:.././hal//sam4s/sam4s_hal.c **** 
+ 265              	 .loc 1 52 5 is_stmt 1 view .LVU64
+ 266              	.LVL16:
+ 267              	.LBB50:
+ 268              	.LBI50:
+ 407:.././hal//sam4s/inc/sam4s/sysclk.h **** {
+ 269              	 .loc 2 407 20 view .LVU65
+ 270              	.LBB51:
+ 271              	 .loc 2 409 2 view .LVU66
+ 272 0014 0820     	 movs r0,#8
+ 273 0016 0C4B     	 ldr r3,.L8+8
+ 274 0018 9847     	 blx r3
+ 275              	.LVL17:
+ 276              	 .loc 2 409 2 is_stmt 0 view .LVU67
+ 277              	.LBE51:
+ 278              	.LBE50:
+  55:.././hal//sam4s/sam4s_hal.c ****     uart_enable_rx(UART0);
+ 279              	 .loc 1 55 5 is_stmt 1 view .LVU68
+ 280 001a 01A9     	 add r1,sp,#4
+ 281 001c 0B4B     	 ldr r3,.L8+12
+ 282 001e 0C48     	 ldr r0,.L8+16
+ 283 0020 9847     	 blx r3
+ 284              	.LVL18:
+  56:.././hal//sam4s/sam4s_hal.c ****     uart_enable_tx(UART0);
+ 285              	 .loc 1 56 5 view .LVU69
+ 286 0022 0B48     	 ldr r0,.L8+16
+ 287 0024 0B4B     	 ldr r3,.L8+20
+ 288 0026 9847     	 blx r3
+ 289              	.LVL19:
+  57:.././hal//sam4s/sam4s_hal.c ****     gpio_configure_pin(PIO_PA9_IDX, PIO_PERIPH_A | PIO_DEFAULT | PIO_PULLUP);
+ 290              	 .loc 1 57 5 view .LVU70
+ 291 0028 0B4B     	 ldr r3,.L8+24
+ 292 002a 0948     	 ldr r0,.L8+16
+ 293 002c 9847     	 blx r3
+ 294              	.LVL20:
+ 295              	 .loc 1 58 5 view .LVU71
+ 296 002e 0B49     	 ldr r1,.L8+28
+ 297 0030 0920     	 movs r0,#9
+ 298 0032 A047     	 blx r4
+ 299              	.LVL21:
+  59:.././hal//sam4s/sam4s_hal.c ****     gpio_configure_pin(PIO_PA10_IDX, PIO_PERIPH_A | PIO_DEFAULT);
+ 300              	 .loc 1 59 5 view .LVU72
+ 301 0034 4FF00061 	 mov r1,#134217728
+ 302 0038 0A20     	 movs r0,#10
+ 303 003a A047     	 blx r4
+ 304              	.LVL22:
+  60:.././hal//sam4s/sam4s_hal.c **** }
+ 305              	 .loc 1 60 1 is_stmt 0 view .LVU73
+ 306 003c 04B0     	 add sp,sp,#16
+ 307              	.LCFI3:
+ 308              	 .cfi_def_cfa_offset 8
+ 309              	 
+ 310 003e 10BD     	 pop {r4,pc}
+ 311              	.L9:
+ 312              	 .align 2
+ 313              	.L8:
+ 314 0040 90AD7100 	 .word 7450000
+ 315 0044 00000000 	 .word pio_configure_pin
+ 316 0048 00000000 	 .word pmc_enable_periph_clk
+ 317 004c 00000000 	 .word uart_init
+ 318 0050 00060E40 	 .word 1074660864
+ 319 0054 00000000 	 .word uart_enable_rx
+ 320 0058 00000000 	 .word uart_enable_tx
+ 321 005c 01000008 	 .word 134217729
+ 322              	 .cfi_endproc
+ 323              	.LFE166:
+ 325              	 .section .text.putch,"ax",%progbits
+ 326              	 .align 1
+ 327              	 .global putch
+ 328              	 .syntax unified
+ 329              	 .thumb
+ 330              	 .thumb_func
+ 332              	putch:
+ 333              	.LVL23:
+ 334              	.LFB167:
+  61:.././hal//sam4s/sam4s_hal.c **** 
+  62:.././hal//sam4s/sam4s_hal.c **** void putch(char c)
+  63:.././hal//sam4s/sam4s_hal.c **** {
+ 335              	 .loc 1 63 1 is_stmt 1 view-0
+ 336              	 .cfi_startproc
+ 337              	 
+ 338              	 
+  64:.././hal//sam4s/sam4s_hal.c ****     // while (!uart_is_tx_buf_end(UART0));
+  65:.././hal//sam4s/sam4s_hal.c ****     while(uart_write(UART0, c));
+ 339              	 .loc 1 65 5 view .LVU75
+  63:.././hal//sam4s/sam4s_hal.c ****     // while (!uart_is_tx_buf_end(UART0));
+ 340              	 .loc 1 63 1 is_stmt 0 view .LVU76
+ 341 0000 38B5     	 push {r3,r4,r5,lr}
+ 342              	.LCFI4:
+ 343              	 .cfi_def_cfa_offset 16
+ 344              	 .cfi_offset 3,-16
+ 345              	 .cfi_offset 4,-12
+ 346              	 .cfi_offset 5,-8
+ 347              	 .cfi_offset 14,-4
+ 348              	 .loc 1 65 11 discriminator 1 view .LVU77
+ 349 0002 044D     	 ldr r5,.L13
+  63:.././hal//sam4s/sam4s_hal.c ****     // while (!uart_is_tx_buf_end(UART0));
+ 350              	 .loc 1 63 1 view .LVU78
+ 351 0004 0446     	 mov r4,r0
+ 352              	.LVL24:
+ 353              	.L11:
+ 354              	 .loc 1 65 11 is_stmt 1 discriminator 1 view .LVU79
+ 355 0006 0448     	 ldr r0,.L13+4
+ 356 0008 2146     	 mov r1,r4
+ 357 000a A847     	 blx r5
+ 358              	.LVL25:
+ 359 000c 0028     	 cmp r0,#0
+ 360 000e FAD1     	 bne .L11
+  66:.././hal//sam4s/sam4s_hal.c **** }
+ 361              	 .loc 1 66 1 is_stmt 0 view .LVU80
+ 362 0010 38BD     	 pop {r3,r4,r5,pc}
+ 363              	.LVL26:
+ 364              	.L14:
+ 365              	 .loc 1 66 1 view .LVU81
+ 366 0012 00BF     	 .align 2
+ 367              	.L13:
+ 368 0014 00000000 	 .word uart_write
+ 369 0018 00060E40 	 .word 1074660864
+ 370              	 .cfi_endproc
+ 371              	.LFE167:
+ 373              	 .section .text.getch,"ax",%progbits
+ 374              	 .align 1
+ 375              	 .global getch
+ 376              	 .syntax unified
+ 377              	 .thumb
+ 378              	 .thumb_func
+ 380              	getch:
+ 381              	.LFB168:
+  67:.././hal//sam4s/sam4s_hal.c **** 
+  68:.././hal//sam4s/sam4s_hal.c **** char getch(void)
+  69:.././hal//sam4s/sam4s_hal.c **** {
+ 382              	 .loc 1 69 1 is_stmt 1 view-0
+ 383              	 .cfi_startproc
+ 384              	 
+ 385              	 
+  70:.././hal//sam4s/sam4s_hal.c ****     uint8_t c;
+ 386              	 .loc 1 70 5 view .LVU83
+  71:.././hal//sam4s/sam4s_hal.c ****     while(uart_read(UART0, &c));
+ 387              	 .loc 1 71 5 view .LVU84
+  69:.././hal//sam4s/sam4s_hal.c ****     uint8_t c;
+ 388              	 .loc 1 69 1 is_stmt 0 view .LVU85
+ 389 0000 13B5     	 push {r0,r1,r4,lr}
+ 390              	.LCFI5:
+ 391              	 .cfi_def_cfa_offset 16
+ 392              	 .cfi_offset 4,-8
+ 393              	 .cfi_offset 14,-4
+ 394              	 .loc 1 71 11 discriminator 1 view .LVU86
+ 395 0002 054C     	 ldr r4,.L18
+ 396              	.L16:
+ 397              	 .loc 1 71 11 is_stmt 1 discriminator 1 view .LVU87
+ 398 0004 0548     	 ldr r0,.L18+4
+ 399 0006 0DF10701 	 add r1,sp,#7
+ 400 000a A047     	 blx r4
+ 401              	.LVL27:
+ 402 000c 0028     	 cmp r0,#0
+ 403 000e F9D1     	 bne .L16
+  72:.././hal//sam4s/sam4s_hal.c ****     return c;
+ 404              	 .loc 1 72 5 view .LVU88
+  73:.././hal//sam4s/sam4s_hal.c **** }
+ 405              	 .loc 1 73 1 is_stmt 0 view .LVU89
+ 406 0010 9DF80700 	 ldrb r0,[sp,#7]
+ 407 0014 02B0     	 add sp,sp,#8
+ 408              	.LCFI6:
+ 409              	 .cfi_def_cfa_offset 8
+ 410              	 
+ 411 0016 10BD     	 pop {r4,pc}
+ 412              	.L19:
+ 413              	 .align 2
+ 414              	.L18:
+ 415 0018 00000000 	 .word uart_read
+ 416 001c 00060E40 	 .word 1074660864
+ 417              	 .cfi_endproc
+ 418              	.LFE168:
+ 420              	 .section .text.trigger_setup,"ax",%progbits
+ 421              	 .align 1
+ 422              	 .global trigger_setup
+ 423              	 .syntax unified
+ 424              	 .thumb
+ 425              	 .thumb_func
+ 427              	trigger_setup:
+ 428              	.LFB169:
+  74:.././hal//sam4s/sam4s_hal.c **** 
+  75:.././hal//sam4s/sam4s_hal.c **** void trigger_setup(void)
+  76:.././hal//sam4s/sam4s_hal.c **** {
+ 429              	 .loc 1 76 1 is_stmt 1 view-0
+ 430              	 .cfi_startproc
+ 431              	 
+ 432              	 
+  77:.././hal//sam4s/sam4s_hal.c ****     sysclk_enable_peripheral_clock(ID_PIOA);
+ 433              	 .loc 1 77 5 view .LVU91
+ 434              	.LVL28:
+ 435              	.LBB52:
+ 436              	.LBI52:
+ 407:.././hal//sam4s/inc/sam4s/sysclk.h **** {
+ 437              	 .loc 2 407 20 view .LVU92
+ 438              	.LBB53:
+ 439              	 .loc 2 409 2 view .LVU93
+ 440              	.LBE53:
+ 441              	.LBE52:
+  76:.././hal//sam4s/sam4s_hal.c ****     sysclk_enable_peripheral_clock(ID_PIOA);
+ 442              	 .loc 1 76 1 is_stmt 0 view .LVU94
+ 443 0000 10B5     	 push {r4,lr}
+ 444              	.LCFI7:
+ 445              	 .cfi_def_cfa_offset 8
+ 446              	 .cfi_offset 4,-8
+ 447              	 .cfi_offset 14,-4
+ 448              	.LBB55:
+ 449              	.LBB54:
+ 450              	 .loc 2 409 2 view .LVU95
+ 451 0002 054B     	 ldr r3,.L21
+ 452 0004 0B20     	 movs r0,#11
+ 453 0006 9847     	 blx r3
+ 454              	.LVL29:
+ 455              	 .loc 2 409 2 view .LVU96
+ 456              	.LBE54:
+ 457              	.LBE55:
+  78:.././hal//sam4s/sam4s_hal.c ****     gpio_configure_pin(PIO_PA7_IDX, PIO_OUTPUT_0 | PIO_DEFAULT);
+ 458              	 .loc 1 78 5 is_stmt 1 view .LVU97
+  79:.././hal//sam4s/sam4s_hal.c **** }
+ 459              	 .loc 1 79 1 is_stmt 0 view .LVU98
+ 460 0008 BDE81040 	 pop {r4,lr}
+ 461              	.LCFI8:
+ 462              	 .cfi_restore 14
+ 463              	 .cfi_restore 4
+ 464              	 .cfi_def_cfa_offset 0
+  78:.././hal//sam4s/sam4s_hal.c ****     gpio_configure_pin(PIO_PA7_IDX, PIO_OUTPUT_0 | PIO_DEFAULT);
+ 465              	 .loc 1 78 5 view .LVU99
+ 466 000c 034B     	 ldr r3,.L21+4
+ 467 000e 4FF04051 	 mov r1,#805306368
+ 468 0012 0720     	 movs r0,#7
+ 469 0014 1847     	 bx r3
+ 470              	.LVL30:
+ 471              	.L22:
+ 472 0016 00BF     	 .align 2
+ 473              	.L21:
+ 474 0018 00000000 	 .word pmc_enable_periph_clk
+ 475 001c 00000000 	 .word pio_configure_pin
+ 476              	 .cfi_endproc
+ 477              	.LFE169:
+ 479              	 .section .text.trigger_low,"ax",%progbits
+ 480              	 .align 1
+ 481              	 .global trigger_low
+ 482              	 .syntax unified
+ 483              	 .thumb
+ 484              	 .thumb_func
+ 486              	trigger_low:
+ 487              	.LFB170:
+  80:.././hal//sam4s/sam4s_hal.c **** 
+  81:.././hal//sam4s/sam4s_hal.c **** void trigger_low(void)
+  82:.././hal//sam4s/sam4s_hal.c **** {
+ 488              	 .loc 1 82 1 is_stmt 1 view-0
+ 489              	 .cfi_startproc
+ 490              	 
+ 491              	 
+  83:.././hal//sam4s/sam4s_hal.c ****     gpio_set_pin_low(PIO_PA7_IDX);
+ 492              	 .loc 1 83 5 view .LVU101
+  82:.././hal//sam4s/sam4s_hal.c ****     gpio_set_pin_low(PIO_PA7_IDX);
+ 493              	 .loc 1 82 1 is_stmt 0 view .LVU102
+ 494 0000 10B5     	 push {r4,lr}
+ 495              	.LCFI9:
+ 496              	 .cfi_def_cfa_offset 8
+ 497              	 .cfi_offset 4,-8
+ 498              	 .cfi_offset 14,-4
+ 499              	 .loc 1 83 5 view .LVU103
+ 500 0002 054B     	 ldr r3,.L24
+ 501 0004 0720     	 movs r0,#7
+ 502 0006 9847     	 blx r3
+ 503              	.LVL31:
+  84:.././hal//sam4s/sam4s_hal.c ****     gpio_configure_pin(PIO_PA7_IDX, PIO_OUTPUT_0 | PIO_DEFAULT);
+ 504              	 .loc 1 84 5 is_stmt 1 view .LVU104
+  85:.././hal//sam4s/sam4s_hal.c **** }
+ 505              	 .loc 1 85 1 is_stmt 0 view .LVU105
+ 506 0008 BDE81040 	 pop {r4,lr}
+ 507              	.LCFI10:
+ 508              	 .cfi_restore 14
+ 509              	 .cfi_restore 4
+ 510              	 .cfi_def_cfa_offset 0
+  84:.././hal//sam4s/sam4s_hal.c ****     gpio_configure_pin(PIO_PA7_IDX, PIO_OUTPUT_0 | PIO_DEFAULT);
+ 511              	 .loc 1 84 5 view .LVU106
+ 512 000c 034B     	 ldr r3,.L24+4
+ 513 000e 4FF04051 	 mov r1,#805306368
+ 514 0012 0720     	 movs r0,#7
+ 515 0014 1847     	 bx r3
+ 516              	.LVL32:
+ 517              	.L25:
+ 518 0016 00BF     	 .align 2
+ 519              	.L24:
+ 520 0018 00000000 	 .word pio_set_pin_low
+ 521 001c 00000000 	 .word pio_configure_pin
+ 522              	 .cfi_endproc
+ 523              	.LFE170:
+ 525              	 .section .text.trigger_high,"ax",%progbits
+ 526              	 .align 1
+ 527              	 .global trigger_high
+ 528              	 .syntax unified
+ 529              	 .thumb
+ 530              	 .thumb_func
+ 532              	trigger_high:
+ 533              	.LFB171:
+  86:.././hal//sam4s/sam4s_hal.c **** 
+  87:.././hal//sam4s/sam4s_hal.c **** void trigger_high(void)
+  88:.././hal//sam4s/sam4s_hal.c **** {
+ 534              	 .loc 1 88 1 is_stmt 1 view-0
+ 535              	 .cfi_startproc
+ 536              	 
+ 537              	 
+  89:.././hal//sam4s/sam4s_hal.c ****     gpio_set_pin_high(PIO_PA7_IDX);
+ 538              	 .loc 1 89 5 view .LVU108
+  88:.././hal//sam4s/sam4s_hal.c ****     gpio_set_pin_high(PIO_PA7_IDX);
+ 539              	 .loc 1 88 1 is_stmt 0 view .LVU109
+ 540 0000 10B5     	 push {r4,lr}
+ 541              	.LCFI11:
+ 542              	 .cfi_def_cfa_offset 8
+ 543              	 .cfi_offset 4,-8
+ 544              	 .cfi_offset 14,-4
+ 545              	 .loc 1 89 5 view .LVU110
+ 546 0002 054B     	 ldr r3,.L27
+ 547 0004 0720     	 movs r0,#7
+ 548 0006 9847     	 blx r3
+ 549              	.LVL33:
+  90:.././hal//sam4s/sam4s_hal.c ****     gpio_configure_pin(PIO_PA7_IDX, PIO_OUTPUT_1 | PIO_DEFAULT);
+ 550              	 .loc 1 90 5 is_stmt 1 view .LVU111
+  91:.././hal//sam4s/sam4s_hal.c **** }...
+ 551              	 .loc 1 91 1 is_stmt 0 view .LVU112
+ 552 0008 BDE81040 	 pop {r4,lr}
+ 553              	.LCFI12:
+ 554              	 .cfi_restore 14
+ 555              	 .cfi_restore 4
+ 556              	 .cfi_def_cfa_offset 0
+  90:.././hal//sam4s/sam4s_hal.c ****     gpio_configure_pin(PIO_PA7_IDX, PIO_OUTPUT_1 | PIO_DEFAULT);
+ 557              	 .loc 1 90 5 view .LVU113
+ 558 000c 034B     	 ldr r3,.L27+4
+ 559 000e 4FF06051 	 mov r1,#939524096
+ 560 0012 0720     	 movs r0,#7
+ 561 0014 1847     	 bx r3
+ 562              	.LVL34:
+ 563              	.L28:
+ 564 0016 00BF     	 .align 2
+ 565              	.L27:
+ 566 0018 00000000 	 .word pio_set_pin_high
+ 567 001c 00000000 	 .word pio_configure_pin
+ 568              	 .cfi_endproc
+ 569              	.LFE171:
+ 571              	 .section .bss.cpu_irq_prev_interrupt_state,"aw",%nobits
+ 574              	cpu_irq_prev_interrupt_state:
+ 575 0000 00       	 .space 1
+ 576              	 .section .bss.cpu_irq_critical_section_counter,"aw",%nobits
+ 577              	 .align 2
+ 580              	cpu_irq_critical_section_counter:
+ 581 0000 00000000 	 .space 4
+ 582              	 .text
+ 583              	.Letext0:
+ 584              	 .file 5 "/usr/lib/gcc/arm-none-eabi/14.2.1/include/stdint.h"
+ 585              	 .file 6 ".././hal//sam4s/inc/component/component_efc.h"
+ 586              	 .file 7 ".././hal//sam4s/inc/component/component_uart.h"
+ 587              	 .file 8 ".././hal//sam4s/inc/component/component_wdt.h"
+ 588              	 .file 9 ".././hal//sam4s/inc/interrupt/interrupt_sam_nvic.h"
+ 589              	 .file 10 ".././hal//sam4s/inc/uart.h"
+ 590              	 .file 11 ".././hal//sam4s/inc/pio.h"
+ 591              	 .file 12 ".././hal//sam4s/inc/pmc.h"
+ 592              	 .file 13 ".././hal//sam4s/inc/system_sam4s.h"
+DEFINED SYMBOLS
+                            *ABS*:00000000 sam4s_hal.c
+    {standard input}:19     .text.platform_init:00000000 $t
+    {standard input}:25     .text.platform_init:00000000 platform_init
+    {standard input}:217    .text.platform_init:00000064 $d
+    {standard input}:234    .text.init_uart:00000000 $t
+    {standard input}:240    .text.init_uart:00000000 init_uart
+    {standard input}:314    .text.init_uart:00000040 $d
+    {standard input}:326    .text.putch:00000000 $t
+    {standard input}:332    .text.putch:00000000 putch
+    {standard input}:368    .text.putch:00000014 $d
+    {standard input}:374    .text.getch:00000000 $t
+    {standard input}:380    .text.getch:00000000 getch
+    {standard input}:415    .text.getch:00000018 $d
+    {standard input}:421    .text.trigger_setup:00000000 $t
+    {standard input}:427    .text.trigger_setup:00000000 trigger_setup
+    {standard input}:474    .text.trigger_setup:00000018 $d
+    {standard input}:480    .text.trigger_low:00000000 $t
+    {standard input}:486    .text.trigger_low:00000000 trigger_low
+    {standard input}:520    .text.trigger_low:00000018 $d
+    {standard input}:526    .text.trigger_high:00000000 $t
+    {standard input}:532    .text.trigger_high:00000000 trigger_high
+    {standard input}:566    .text.trigger_high:00000018 $d
+    {standard input}:574    .bss.cpu_irq_prev_interrupt_state:00000000 cpu_irq_prev_interrupt_state
+    {standard input}:575    .bss.cpu_irq_prev_interrupt_state:00000000 $d
+    {standard input}:577    .bss.cpu_irq_critical_section_counter:00000000 $d
+    {standard input}:580    .bss.cpu_irq_critical_section_counter:00000000 cpu_irq_critical_section_counter
+                           .group:00000000 wm4.0.2f1d4b5f906b2af29100e61b04549e40
+                           .group:00000000 wm4.stdint.h.29.6d480f4ba0f60596e88234283d42444f
+                           .group:00000000 wm4.parts.h.38.09ccce703cc30b12360b0e797fac8cb6
+                           .group:00000000 wm4.stddef.h.39.38eb7ec030421799c657b13be5aa21c7
+                           .group:00000000 wm4.tpaste.h.38.f9caafafc33cddaf7097f68661fce374
+                           .group:00000000 wm4.stringz.h.38.451b1c9629f877d07c6b3529fe5b37b2
+                           .group:00000000 wm4.mrepeat.h.52.224450943b2762ae34ad2cae2fa96ad2
+                           .group:00000000 wm4.sam4s2b.h.46.0f6cf15cc0eb3f1d5e6ab7e6cadb7a8c
+                           .group:00000000 wm4.core_cm4.h.43.9593ac0dcec24a3a6f1d638d754e90b2
+                           .group:00000000 wm4.core_cmInstr.h.39.53f0cdf363d7ba01993152fdcb6be5d3
+                           .group:00000000 wm4.core_cmSimd.h.43.c355993beb49ccd10586af5b1cfe5aee
+                           .group:00000000 wm4.core_cm4.h.201.504dd1a6bdf57a6296d26f255ae618b9
+                           .group:00000000 wm4.component_acc.h.36.308f7d4c1685c8ebd00910c37bbeab26
+                           .group:00000000 wm4.component_adc.h.36.b8477219496e42be1d01ccb1b6f6b02b
+                           .group:00000000 wm4.component_chipid.h.36.cb4a4222aca9bee8d01f4aa49afe4d6d
+                           .group:00000000 wm4.component_crccu.h.36.1d71ce61706000275b271d03beaec6d2
+                           .group:00000000 wm4.component_dacc.h.36.0b87b1e719912b5885bdf9531e0e43d6
+                           .group:00000000 wm4.component_efc.h.36.a6b4458c43d27669aaa6147006e1eb74
+                           .group:00000000 wm4.component_gpbr.h.36.595122ea9c79505c4e73c9e7421802a8
+                           .group:00000000 wm4.component_hsmci.h.36.ccf6dd1a128877835aec3d40c12745dd
+                           .group:00000000 wm4.component_matrix.h.36.8f1d7aeed86a08ab4d936e5a0f026440
+                           .group:00000000 wm4.component_pdc.h.36.363e6546b41ce8a14a922d18930df184
+                           .group:00000000 wm4.component_pio.h.36.f033c3341fbeea7d2a04545c9a72bd24
+                           .group:00000000 wm4.component_pmc.h.36.2771b76afbda6351cb4cf4c6708887d5
+                           .group:00000000 wm4.component_pwm.h.36.0cd735c74e99ef7d330cb87d1f16c213
+                           .group:00000000 wm4.component_rstc.h.36.1af4b8140176d86bc0af5b861fd3a623
+                           .group:00000000 wm4.component_rtc.h.36.c865407d28492a40a128dee548893efe
+                           .group:00000000 wm4.component_rtt.h.36.46adad6456893b38ef49ae9a2d0afea1
+                           .group:00000000 wm4.component_spi.h.36.a18850bcdd90fcb2d130155fa94829ea
+                           .group:00000000 wm4.component_ssc.h.36.6ffc46b5a0a9219bd5c90b3f63510b0f
+                           .group:00000000 wm4.component_supc.h.36.0db4554695c6e864e5338e4faca84d88
+                           .group:00000000 wm4.component_tc.h.36.af47419b07ade32b2d1423414983d2f7
+                           .group:00000000 wm4.component_twi.h.36.3496bc3884f63f906fd446649da75de1
+                           .group:00000000 wm4.component_uart.h.36.74e9355d463b56860c56764a9be37213
+                           .group:00000000 wm4.component_udp.h.36.8cb9530d4bf5319aabe6158f5e738b3d
+                           .group:00000000 wm4.component_usart.h.36.5e91c114006f7b551a45955ae29cb6cf
+                           .group:00000000 wm4.component_wdt.h.36.277adc27b017beabbb9f7b11b0fa46f2
+                           .group:00000000 wm4.instance_hsmci.h.36.9855cb84ff287cffb479099857800873
+                           .group:00000000 wm4.instance_ssc.h.36.630afe78e802d5fc05c6224c23890fe1
+                           .group:00000000 wm4.instance_spi.h.36.325bf539a06b58ad3327698a7ef68d81
+                           .group:00000000 wm4.instance_tc0.h.36.fbfa021f96aebd3d46fa1937156b0b0a
+                           .group:00000000 wm4.instance_twi0.h.36.13a0f0822f7bd9074e9b846b04ed10b9
+                           .group:00000000 wm4.instance_twi1.h.36.6c6b55c3fab76b3818eb5314bf7bc410
+                           .group:00000000 wm4.instance_pwm.h.36.1b555f9fd14d69df968818a3882b2cde
+                           .group:00000000 wm4.instance_usart0.h.36.3b6138f7be7c01038525724f6c5d6c1e
+                           .group:00000000 wm4.instance_usart1.h.36.137c36ec170c7ca2c1f8e046f5d0e0c9
+                           .group:00000000 wm4.instance_udp.h.36.b94eabb27893117a74b4d6faebd80bc6
+                           .group:00000000 wm4.instance_adc.h.36.84184448551cb0a3c52160d178904d14
+                           .group:00000000 wm4.instance_dacc.h.36.28a68c12285ab1a6b24d06876c4b8807
+                           .group:00000000 wm4.instance_acc.h.36.71d96a8f2214f8a9d18eec4d2d93f130
+                           .group:00000000 wm4.instance_crccu.h.36.549cca511b407ab33982b56bae0c25ac
+                           .group:00000000 wm4.instance_matrix.h.36.da03b47f7e819cfcead8ef1cd71b60ce
+                           .group:00000000 wm4.instance_pmc.h.36.002f4765e9f18dc4b183b779163ab06e
+                           .group:00000000 wm4.instance_uart0.h.36.fa62b2ed6ce17806cd77556aa65a73f5
+                           .group:00000000 wm4.instance_chipid.h.36.6f5f676d52e3e21dba5d88a4bb87d922
+                           .group:00000000 wm4.instance_uart1.h.36.bc11f9c4189a4ac15cce81cf9f40fcf9
+                           .group:00000000 wm4.instance_efc0.h.36.67a3a70e962ac1d6ef8fcee0e9fd4a9b
+                           .group:00000000 wm4.instance_pioa.h.36.27d92aa6d00d8b6a2b34acdeee1aa60a
+                           .group:00000000 wm4.instance_piob.h.36.b0f95d3fb66ff01bcd91fb6a4cb54dc3
+                           .group:00000000 wm4.instance_rstc.h.36.f8bcddbd3310cbb6a39c155e9e6b3cfb
+                           .group:00000000 wm4.instance_supc.h.36.17878f57a77a9d368090917738ff3e02
+                           .group:00000000 wm4.instance_rtt.h.36.8759ab7e2580c101b6db702769407cb0
+                           .group:00000000 wm4.instance_wdt.h.36.ab83587b138c65dcd29a29119835b92a
+                           .group:00000000 wm4.instance_rtc.h.36.52aa67a6a7c945bf00db9fb9d057e3e0
+                           .group:00000000 wm4.instance_gpbr.h.36.b2cfd4dee03ed0c28ecb9eb233d2ac42
+                           .group:00000000 wm4.sam4s2b.h.313.04ed20c80f538f8fadb9388a8469283e
+                           .group:00000000 wm4.pio_sam4s2b.h.36.e1b33fead6a6e1ee98b2f4cba4bb11b4
+                           .group:00000000 wm4.sam4s2b.h.450.98a9c8ea67d90470c8554ffe87c8398a
+                           .group:00000000 wm4._newlib_version.h.4.0eb654b64686e2bd29646258853f6c22
+                           .group:00000000 wm4.newlib.h.27.07bf1b8b16da454ae07478107717878b
+                           .group:00000000 wm4.ieeefp.h.77.b6f5ce903562917fbd9193ee87d4fa47
+                           .group:00000000 wm4.features.h.22.03467e2205ec9ffbc20524d97cdbdf6a
+                           .group:00000000 wm4.config.h.224.10ee1ad185d877c6e334e6581faab44d
+                           .group:00000000 wm4._ansi.h.31.de524f58584151836e90d8620a16f8e8
+                           .group:00000000 wm4.stdio.h.31.7c0e28c411445f3f9c5b11accf882760
+                           .group:00000000 wm4._default_types.h.6.959254cf5f09734ea7516c89e8bb21bd
+                           .group:00000000 wm4.stddef.h.158.eec8bf00b5213f43d095cb984c5f22e3
+                           .group:00000000 wm4.cdefs.h.49.bafb023044e47a1dcdd854e4d6521f7d
+                           .group:00000000 wm4.stdarg.h.34.3a23a216c0c293b3d2ea2e89281481e6
+                           .group:00000000 wm4._types.h.20.dd0d04dca3800a0d2a6129b87f3adbb2
+                           .group:00000000 wm4.stddef.h.158.6f8e08a347b1cff664332fa350bfceb3
+                           .group:00000000 wm4._types.h.127.3bdfe3ff8ea2d0985b03d9cbe93480e3
+                           .group:00000000 wm4.reent.h.18.25503cdc8b7e55dd0d6ea7b3e5af7a03
+                           .group:00000000 wm4.lock.h.2.c0958401bd0ce484d507ee19aacab817
+                           .group:00000000 wm4.reent.h.78.6b87466b04591b1f1cb88c14fdf2ba9e
+                           .group:00000000 wm4.stdio.h.67.0cf8a9c281ab0b348aef5c02e7e48825
+                           .group:00000000 wm4.stdio.h.2.4aa87247282eca6c8f36f9de33d8df1a
+                           .group:00000000 wm4.stdio.h.87.a1e20d2651f9bfb66e51bfbe849db00a
+                           .group:00000000 wm4.stdbool.h.29.c08aa3eec75cf5b9b5003883f43253f0
+                           .group:00000000 wm4.stdlib.h.13.4ed386f5c1a80d71e72172885d946ef2
+                           .group:00000000 wm4.alloca.h.8.dfc0c703c47ec3e69746825b17d9e66d
+                           .group:00000000 wm4.stdlib.h.56.f4862cfbf4363a1db01842d5bdf72c18
+                           .group:00000000 wm4.compiler.h.81.f75af8228a71cd19fa09df23f58333e2
+                           .group:00000000 wm4.interrupt_sam_nvic.h.77.5650b866702c5f625c80d648ec551823
+                           .group:00000000 wm4.compiler.h.420.b563cf39b91298e26f28e0fd38c47072
+                           .group:00000000 wm4.board.h.62.04be389f52057678d89e56bc54ba7f0f
+                           .group:00000000 wm4.naeusb_board_config.h.2.c0942a0b7acc934ff850888bfbdc5425
+                           .group:00000000 wm4.pmc.h.38.7bb294bcb77f1d5cfe61fa73ada2626e
+                           .group:00000000 wm4.osc.h.87.371785ea7a094c5a3243c30289e8acd7
+                           .group:00000000 wm4.pll.h.38.ab8b2c241cd341f0f249b0c1a76bd14f
+                           .group:00000000 wm4.genclk.h.58.b82bb81dab8b318d4136340273323c9a
+                           .group:00000000 wm4.pio.h.38.4f65a4a8b91f1e25ccdabe1bb6f61b1a
+                           .group:00000000 wm4.uart.h.38.048fadcc18b5a446479d5a782d85c102
+                           .group:00000000 wm4.sysclk.h.38.30ca0cf27d09e9bc0d0170f433d48fa1
+                           .group:00000000 wm4.sam_gpio.h.38.025fa01e9a8b28efa5cd82d5f53d12f0
+
+UNDEFINED SYMBOLS
+pmc_enable_periph_clk
+system_init_flash
+pmc_osc_is_ready_mainck
+pmc_set_writeprotect
+pmc_switch_mck_to_sclk
+pmc_switch_mainck_to_xtal
+pmc_switch_mck_to_mainck
+SystemCoreClockUpdate
+pio_configure_pin
+uart_init
+uart_enable_rx
+uart_enable_tx
+uart_write
+uart_read
+pio_set_pin_low
+pio_set_pin_high

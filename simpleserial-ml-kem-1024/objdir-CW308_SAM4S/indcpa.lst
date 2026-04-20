@@ -1,0 +1,1489 @@
+   1              	 .cpu cortex-m4
+   2              	 .arch armv7e-m
+   3              	 .fpu softvfp
+   4              	 .eabi_attribute 20,1
+   5              	 .eabi_attribute 21,1
+   6              	 .eabi_attribute 23,3
+   7              	 .eabi_attribute 24,1
+   8              	 .eabi_attribute 25,1
+   9              	 .eabi_attribute 26,1
+  10              	 .eabi_attribute 30,4
+  11              	 .eabi_attribute 34,1
+  12              	 .eabi_attribute 18,4
+  13              	 .file "indcpa.c"
+  14              	 .text
+  15              	.Ltext0:
+  16              	 .cfi_sections .debug_frame
+  17              	 .file 1 "indcpa.c"
+  18              	 .section .text.rej_uniform,"ax",%progbits
+  19              	 .align 1
+  20              	 .syntax unified
+  21              	 .thumb
+  22              	 .thumb_func
+  24              	rej_uniform:
+  25              	.LVL0:
+  26              	.LFB6:
+   1:indcpa.c      **** #include <stddef.h>
+   2:indcpa.c      **** #include <stdint.h>
+   3:indcpa.c      **** #include "params.h"
+   4:indcpa.c      **** #include "indcpa.h"
+   5:indcpa.c      **** #include "poly.h"
+   6:indcpa.c      **** #include "polyvec.h"
+   7:indcpa.c      **** #include "randombytes.h"
+   8:indcpa.c      **** #include "ntt.h"
+   9:indcpa.c      **** #include "symmetric.h"
+  10:indcpa.c      **** 
+  11:indcpa.c      **** /*************************************************
+  12:indcpa.c      **** * Name:        pack_pk
+  13:indcpa.c      **** *
+  14:indcpa.c      **** * Description: Serialize the public key as concatenation of the
+  15:indcpa.c      **** *              serialized vector of polynomials pk
+  16:indcpa.c      **** *              and the public seed used to generate the matrix A.
+  17:indcpa.c      **** *
+  18:indcpa.c      **** * Arguments:   uint8_t *r:          pointer to the output serialized public key
+  19:indcpa.c      **** *              polyvec *pk:         pointer to the input public-key polyvec
+  20:indcpa.c      **** *              const uint8_t *seed: pointer to the input public seed
+  21:indcpa.c      **** **************************************************/
+  22:indcpa.c      **** static void pack_pk(uint8_t r[KYBER_INDCPA_PUBLICKEYBYTES],
+  23:indcpa.c      ****                     polyvec *pk,
+  24:indcpa.c      ****                     const uint8_t seed[KYBER_SYMBYTES])
+  25:indcpa.c      **** {
+  26:indcpa.c      ****   size_t i;
+  27:indcpa.c      ****   polyvec_tobytes(r, pk);
+  28:indcpa.c      ****   for(i=0;i<KYBER_SYMBYTES;i++)
+  29:indcpa.c      ****     r[i+KYBER_POLYVECBYTES] = seed[i];
+  30:indcpa.c      **** }
+  31:indcpa.c      **** 
+  32:indcpa.c      **** /*************************************************
+  33:indcpa.c      **** * Name:        unpack_pk
+  34:indcpa.c      **** *
+  35:indcpa.c      **** * Description: De-serialize public key from a byte array;
+  36:indcpa.c      **** *              approximate inverse of pack_pk
+  37:indcpa.c      **** *
+  38:indcpa.c      **** * Arguments:   - polyvec *pk:             pointer to output public-key
+  39:indcpa.c      **** *                                         polynomial vector
+  40:indcpa.c      **** *              - uint8_t *seed:           pointer to output seed to generate
+  41:indcpa.c      **** *                                         matrix A
+  42:indcpa.c      **** *              - const uint8_t *packedpk: pointer to input serialized public key
+  43:indcpa.c      **** **************************************************/
+  44:indcpa.c      **** static void unpack_pk(polyvec *pk,
+  45:indcpa.c      ****                       uint8_t seed[KYBER_SYMBYTES],
+  46:indcpa.c      ****                       const uint8_t packedpk[KYBER_INDCPA_PUBLICKEYBYTES])
+  47:indcpa.c      **** {
+  48:indcpa.c      ****   size_t i;
+  49:indcpa.c      ****   polyvec_frombytes(pk, packedpk);
+  50:indcpa.c      ****   for(i=0;i<KYBER_SYMBYTES;i++)
+  51:indcpa.c      ****     seed[i] = packedpk[i+KYBER_POLYVECBYTES];
+  52:indcpa.c      **** }
+  53:indcpa.c      **** 
+  54:indcpa.c      **** /*************************************************
+  55:indcpa.c      **** * Name:        pack_sk
+  56:indcpa.c      **** *
+  57:indcpa.c      **** * Description: Serialize the secret key
+  58:indcpa.c      **** *
+  59:indcpa.c      **** * Arguments:   - uint8_t *r:  pointer to output serialized secret key
+  60:indcpa.c      **** *              - polyvec *sk: pointer to input vector of polynomials (secret key)
+  61:indcpa.c      **** **************************************************/
+  62:indcpa.c      **** static void pack_sk(uint8_t r[KYBER_INDCPA_SECRETKEYBYTES], polyvec *sk)
+  63:indcpa.c      **** {
+  64:indcpa.c      ****   polyvec_tobytes(r, sk);
+  65:indcpa.c      **** }
+  66:indcpa.c      **** 
+  67:indcpa.c      **** /*************************************************
+  68:indcpa.c      **** * Name:        unpack_sk
+  69:indcpa.c      **** *
+  70:indcpa.c      **** * Description: De-serialize the secret key;
+  71:indcpa.c      **** *              inverse of pack_sk
+  72:indcpa.c      **** *
+  73:indcpa.c      **** * Arguments:   - polyvec *sk:             pointer to output vector of
+  74:indcpa.c      **** *                                         polynomials (secret key)
+  75:indcpa.c      **** *              - const uint8_t *packedsk: pointer to input serialized secret key
+  76:indcpa.c      **** **************************************************/
+  77:indcpa.c      **** static void unpack_sk(polyvec *sk,
+  78:indcpa.c      ****                       const uint8_t packedsk[KYBER_INDCPA_SECRETKEYBYTES])
+  79:indcpa.c      **** {
+  80:indcpa.c      ****   polyvec_frombytes(sk, packedsk);
+  81:indcpa.c      **** }
+  82:indcpa.c      **** 
+  83:indcpa.c      **** /*************************************************
+  84:indcpa.c      **** * Name:        pack_ciphertext
+  85:indcpa.c      **** *
+  86:indcpa.c      **** * Description: Serialize the ciphertext as concatenation of the
+  87:indcpa.c      **** *              compressed and serialized vector of polynomials b
+  88:indcpa.c      **** *              and the compressed and serialized polynomial v
+  89:indcpa.c      **** *
+  90:indcpa.c      **** * Arguments:   uint8_t *r: pointer to the output serialized ciphertext
+  91:indcpa.c      **** *              poly *pk:   pointer to the input vector of polynomials b
+  92:indcpa.c      **** *              poly *v:    pointer to the input polynomial v
+  93:indcpa.c      **** **************************************************/
+  94:indcpa.c      **** static void pack_ciphertext(uint8_t r[KYBER_INDCPA_BYTES],
+  95:indcpa.c      ****                             polyvec *b,
+  96:indcpa.c      ****                             poly *v)
+  97:indcpa.c      **** {
+  98:indcpa.c      ****   polyvec_compress(r, b);
+  99:indcpa.c      ****   poly_compress(r+KYBER_POLYVECCOMPRESSEDBYTES, v);
+ 100:indcpa.c      **** }
+ 101:indcpa.c      **** 
+ 102:indcpa.c      **** /*************************************************
+ 103:indcpa.c      **** * Name:        unpack_ciphertext
+ 104:indcpa.c      **** *
+ 105:indcpa.c      **** * Description: De-serialize and decompress ciphertext from a byte array;
+ 106:indcpa.c      **** *              approximate inverse of pack_ciphertext
+ 107:indcpa.c      **** *
+ 108:indcpa.c      **** * Arguments:   - polyvec *b:       pointer to the output vector of polynomials b
+ 109:indcpa.c      **** *              - poly *v:          pointer to the output polynomial v
+ 110:indcpa.c      **** *              - const uint8_t *c: pointer to the input serialized ciphertext
+ 111:indcpa.c      **** **************************************************/
+ 112:indcpa.c      **** static void unpack_ciphertext(polyvec *b,
+ 113:indcpa.c      ****                               poly *v,
+ 114:indcpa.c      ****                               const uint8_t c[KYBER_INDCPA_BYTES])
+ 115:indcpa.c      **** {
+ 116:indcpa.c      ****   polyvec_decompress(b, c);
+ 117:indcpa.c      ****   poly_decompress(v, c+KYBER_POLYVECCOMPRESSEDBYTES);
+ 118:indcpa.c      **** }
+ 119:indcpa.c      **** 
+ 120:indcpa.c      **** /*************************************************
+ 121:indcpa.c      **** * Name:        rej_uniform
+ 122:indcpa.c      **** *
+ 123:indcpa.c      **** * Description: Run rejection sampling on uniform random bytes to generate
+ 124:indcpa.c      **** *              uniform random integers mod q
+ 125:indcpa.c      **** *
+ 126:indcpa.c      **** * Arguments:   - int16_t *r:          pointer to output buffer
+ 127:indcpa.c      **** *              - unsigned int len:    requested number of 16-bit integers
+ 128:indcpa.c      **** *                                     (uniform mod q)
+ 129:indcpa.c      **** *              - const uint8_t *buf:  pointer to input buffer
+ 130:indcpa.c      **** *                                     (assumed to be uniform random bytes)
+ 131:indcpa.c      **** *              - unsigned int buflen: length of input buffer in bytes
+ 132:indcpa.c      **** *
+ 133:indcpa.c      **** * Returns number of sampled 16-bit integers (at most len)
+ 134:indcpa.c      **** **************************************************/
+ 135:indcpa.c      **** static unsigned int rej_uniform(int16_t *r,
+ 136:indcpa.c      ****                                 unsigned int len,
+ 137:indcpa.c      ****                                 const uint8_t *buf,
+ 138:indcpa.c      ****                                 unsigned int buflen)
+ 139:indcpa.c      **** {
+  27              	 .loc 1 139 1 view-0
+  28              	 .cfi_startproc
+  29              	 
+  30              	 
+  31              	 .loc 1 139 1 is_stmt 0 view .LVU1
+  32 0000 F0B5     	 push {r4,r5,r6,r7,lr}
+  33              	.LCFI0:
+  34              	 .cfi_def_cfa_offset 20
+  35              	 .cfi_offset 4,-20
+  36              	 .cfi_offset 5,-16
+  37              	 .cfi_offset 6,-12
+  38              	 .cfi_offset 7,-8
+  39              	 .cfi_offset 14,-4
+ 140:indcpa.c      ****   unsigned int ctr, pos;
+ 141:indcpa.c      ****   uint16_t val;
+ 142:indcpa.c      **** 
+ 143:indcpa.c      ****   ctr = pos = 0;
+ 144:indcpa.c      ****   while(ctr < len && pos + 2 <= buflen) {
+  40              	 .loc 1 144 19 discriminator 1 view .LVU2
+  41 0002 C2F1020C 	 rsb ip,r2,#2
+ 139:indcpa.c      ****   unsigned int ctr, pos;
+  42              	 .loc 1 139 1 view .LVU3
+  43 0006 0746     	 mov r7,r0
+ 140:indcpa.c      ****   unsigned int ctr, pos;
+  44              	 .loc 1 140 3 is_stmt 1 view .LVU4
+ 141:indcpa.c      **** 
+  45              	 .loc 1 141 3 view .LVU5
+ 143:indcpa.c      ****   while(ctr < len && pos + 2 <= buflen) {
+  46              	 .loc 1 143 3 view .LVU6
+  47              	.LVL1:
+  48              	 .loc 1 144 3 view .LVU7
+  49              	 .loc 1 144 19 view .LVU8
+ 145:indcpa.c      ****     val = buf[pos] | ((uint16_t)buf[pos+1] << 8);
+ 146:indcpa.c      ****     pos += 2;
+ 147:indcpa.c      **** 
+ 148:indcpa.c      ****     if(val < 19*KYBER_Q) {
+  50              	 .loc 1 148 7 is_stmt 0 view .LVU9
+  51 0008 4FF2127E 	 movw lr,#63250
+ 143:indcpa.c      ****   while(ctr < len && pos + 2 <= buflen) {
+  52              	 .loc 1 143 7 view .LVU10
+  53 000c 0020     	 movs r0,#0
+  54              	.LVL2:
+  55              	.L4:
+ 145:indcpa.c      ****     val = buf[pos] | ((uint16_t)buf[pos+1] << 8);
+  56              	 .loc 1 145 5 is_stmt 1 view .LVU11
+ 145:indcpa.c      ****     val = buf[pos] | ((uint16_t)buf[pos+1] << 8);
+  57              	 .loc 1 145 20 is_stmt 0 view .LVU12
+  58 000e 5478     	 ldrb r4,[r2,#1]
+ 145:indcpa.c      ****     val = buf[pos] | ((uint16_t)buf[pos+1] << 8);
+  59              	 .loc 1 145 14 view .LVU13
+  60 0010 1678     	 ldrb r6,[r2]
+ 145:indcpa.c      ****     val = buf[pos] | ((uint16_t)buf[pos+1] << 8);
+  61              	 .loc 1 145 9 view .LVU14
+  62 0012 46EA0426 	 orr r6,r6,r4,lsl#8
+  63              	.LVL3:
+ 146:indcpa.c      **** 
+  64              	 .loc 1 146 5 is_stmt 1 view .LVU15
+  65              	 .loc 1 148 5 view .LVU16
+  66              	 .loc 1 148 7 is_stmt 0 view .LVU17
+  67 0016 7645     	 cmp r6,lr
+  68 0018 0DD8     	 bhi .L2
+ 149:indcpa.c      ****       val -= (val >> 12)*KYBER_Q; // Barrett reduction
+  69              	 .loc 1 149 7 is_stmt 1 view .LVU18
+  70              	 .loc 1 149 11 is_stmt 0 view .LVU19
+  71 001a 340B     	 lsrs r4,r6,#12
+  72 001c 04EB4405 	 add r5,r4,r4,lsl#1
+  73 0020 05EBC505 	 add r5,r5,r5,lsl#3
+  74 0024 05EBC505 	 add r5,r5,r5,lsl#3
+  75 0028 C4EB0524 	 rsb r4,r4,r5,lsl#8
+  76              	.LVL4:
+ 150:indcpa.c      ****       r[ctr++] = (int16_t)val;
+  77              	 .loc 1 150 7 is_stmt 1 view .LVU20
+ 149:indcpa.c      ****       val -= (val >> 12)*KYBER_Q; // Barrett reduction
+  78              	 .loc 1 149 11 is_stmt 0 view .LVU21
+  79 002c 16FA84F4 	 uxtah r4,r6,r4
+  80              	.LVL5:
+  81              	 .loc 1 150 16 view .LVU22
+  82 0030 27F81040 	 strh r4,[r7,r0,lsl#1]
+  83              	 .loc 1 150 12 view .LVU23
+  84 0034 0130     	 adds r0,r0,#1
+  85              	.LVL6:
+  86              	.L2:
+ 144:indcpa.c      ****     val = buf[pos] | ((uint16_t)buf[pos+1] << 8);
+  87              	 .loc 1 144 19 is_stmt 1 view .LVU24
+  88 0036 8142     	 cmp r1,r0
+  89 0038 04D9     	 bls .L1
+ 144:indcpa.c      ****     val = buf[pos] | ((uint16_t)buf[pos+1] << 8);
+  90              	 .loc 1 144 19 is_stmt 0 discriminator 1 view .LVU25
+  91 003a 0232     	 adds r2,r2,#2
+  92              	.LVL7:
+ 144:indcpa.c      ****     val = buf[pos] | ((uint16_t)buf[pos+1] << 8);
+  93              	 .loc 1 144 19 discriminator 1 view .LVU26
+  94 003c 0CEB0204 	 add r4,ip,r2
+  95 0040 9C42     	 cmp r4,r3
+  96 0042 E4D9     	 bls .L4
+  97              	.LVL8:
+  98              	.L1:
+ 151:indcpa.c      ****     }
+ 152:indcpa.c      ****   }
+ 153:indcpa.c      **** 
+ 154:indcpa.c      ****   return ctr;
+ 155:indcpa.c      **** }
+  99              	 .loc 1 155 1 view .LVU27
+ 100 0044 F0BD     	 pop {r4,r5,r6,r7,pc}
+ 101              	 .loc 1 155 1 view .LVU28
+ 102              	 .cfi_endproc
+ 103              	.LFE6:
+ 105              	 .section .text.crypto_kem_kyber1024_ref_gen_matrix,"ax",%progbits
+ 106              	 .align 1
+ 107              	 .global crypto_kem_kyber1024_ref_gen_matrix
+ 108              	 .syntax unified
+ 109              	 .thumb
+ 110              	 .thumb_func
+ 112              	crypto_kem_kyber1024_ref_gen_matrix:
+ 113              	.LVL9:
+ 114              	.LFB7:
+ 156:indcpa.c      **** 
+ 157:indcpa.c      **** #define gen_a(A,B)  gen_matrix(A,B,0)
+ 158:indcpa.c      **** #define gen_at(A,B) gen_matrix(A,B,1)
+ 159:indcpa.c      **** 
+ 160:indcpa.c      **** /*************************************************
+ 161:indcpa.c      **** * Name:        gen_matrix
+ 162:indcpa.c      **** *
+ 163:indcpa.c      **** * Description: Deterministically generate matrix A (or the transpose of A)
+ 164:indcpa.c      **** *              from a seed. Entries of the matrix are polynomials that look
+ 165:indcpa.c      **** *              uniformly random. Performs rejection sampling on output of
+ 166:indcpa.c      **** *              a XOF
+ 167:indcpa.c      **** *
+ 168:indcpa.c      **** * Arguments:   - polyvec *a:          pointer to ouptput matrix A
+ 169:indcpa.c      **** *              - const uint8_t *seed: pointer to input seed
+ 170:indcpa.c      **** *              - int transposed:      boolean deciding whether A or A^T
+ 171:indcpa.c      **** *                                     is generated
+ 172:indcpa.c      **** **************************************************/
+ 173:indcpa.c      **** #define GEN_MATRIX_NBLOCKS ((2*KYBER_N*(1U << 16)/(19*KYBER_Q) \
+ 174:indcpa.c      ****                              + XOF_BLOCKBYTES)/XOF_BLOCKBYTES)
+ 175:indcpa.c      **** // Not static for benchmarking
+ 176:indcpa.c      **** void gen_matrix(polyvec *a, const uint8_t seed[KYBER_SYMBYTES], int transposed)
+ 177:indcpa.c      **** {
+ 115              	 .loc 1 177 1 is_stmt 1 view-0
+ 116              	 .cfi_startproc
+ 117              	 
+ 118              	 
+ 178:indcpa.c      ****   unsigned int ctr, i, j;
+ 119              	 .loc 1 178 3 view .LVU30
+ 179:indcpa.c      ****   uint8_t buf[GEN_MATRIX_NBLOCKS*XOF_BLOCKBYTES];
+ 120              	 .loc 1 179 3 view .LVU31
+ 180:indcpa.c      ****   xof_state state;
+ 121              	 .loc 1 180 3 view .LVU32
+ 181:indcpa.c      **** 
+ 182:indcpa.c      ****   for(i=0;i<KYBER_K;i++) {
+ 122              	 .loc 1 182 3 view .LVU33
+ 123              	 .loc 1 182 12 discriminator 1 view .LVU34
+ 177:indcpa.c      ****   unsigned int ctr, i, j;
+ 124              	 .loc 1 177 1 is_stmt 0 view .LVU35
+ 125 0000 2DE9F04F 	 push {r4,r5,r6,r7,r8,r9,r10,fp,lr}
+ 126              	.LCFI1:
+ 127              	 .cfi_def_cfa_offset 36
+ 128              	 .cfi_offset 4,-36
+ 129              	 .cfi_offset 5,-32
+ 130              	 .cfi_offset 6,-28
+ 131              	 .cfi_offset 7,-24
+ 132              	 .cfi_offset 8,-20
+ 133              	 .cfi_offset 9,-16
+ 134              	 .cfi_offset 10,-12
+ 135              	 .cfi_offset 11,-8
+ 136              	 .cfi_offset 14,-4
+ 137 0004 ADF55D7D 	 sub sp,sp,#884
+ 138              	.LCFI2:
+ 139              	 .cfi_def_cfa_offset 920
+ 183:indcpa.c      ****     for(j=0;j<KYBER_K;j++) {
+ 184:indcpa.c      ****       if(transposed)
+ 185:indcpa.c      ****         xof_absorb(&state, seed, i, j);
+ 186:indcpa.c      ****       else
+ 187:indcpa.c      ****         xof_absorb(&state, seed, j, i);
+ 188:indcpa.c      **** 
+ 189:indcpa.c      ****       xof_squeezeblocks(buf, GEN_MATRIX_NBLOCKS, &state);
+ 140              	 .loc 1 189 7 view .LVU36
+ 141 0008 DFF87C90 	 ldr r9,.L16
+ 190:indcpa.c      ****       ctr = rej_uniform(a[i].vec[j].coeffs, KYBER_N, buf, sizeof(buf));
+ 142              	 .loc 1 190 13 view .LVU37
+ 143 000c DFF87CA0 	 ldr r10,.L16+4
+ 177:indcpa.c      ****   unsigned int ctr, i, j;
+ 144              	 .loc 1 177 1 view .LVU38
+ 145 0010 0090     	 str r0,[sp]
+ 146 0012 0F46     	 mov r7,r1
+ 147 0014 0192     	 str r2,[sp,#4]
+ 182:indcpa.c      ****     for(j=0;j<KYBER_K;j++) {
+ 148              	 .loc 1 182 8 view .LVU39
+ 149 0016 0026     	 movs r6,#0
+ 150              	.LVL10:
+ 151              	.L7:
+ 183:indcpa.c      ****     for(j=0;j<KYBER_K;j++) {
+ 152              	 .loc 1 183 14 is_stmt 1 discriminator 1 view .LVU40
+ 153 0018 009B     	 ldr r3,[sp]
+ 183:indcpa.c      ****     for(j=0;j<KYBER_K;j++) {
+ 154              	 .loc 1 183 10 is_stmt 0 view .LVU41
+ 155 001a 0025     	 movs r5,#0
+ 156 001c 03EBC628 	 add r8,r3,r6,lsl#11
+ 157              	.LVL11:
+ 158              	.L12:
+ 184:indcpa.c      ****         xof_absorb(&state, seed, i, j);
+ 159              	 .loc 1 184 7 is_stmt 1 view .LVU42
+ 184:indcpa.c      ****         xof_absorb(&state, seed, i, j);
+ 160              	 .loc 1 184 9 is_stmt 0 view .LVU43
+ 161 0020 019B     	 ldr r3,[sp,#4]
+ 162 0022 1B4C     	 ldr r4,.L16+8
+ 163 0024 EAB2     	 uxtb r2,r5
+ 164 0026 F1B2     	 uxtb r1,r6
+ 165 0028 F3B1     	 cbz r3,.L8
+ 185:indcpa.c      ****       else
+ 166              	 .loc 1 185 9 is_stmt 1 view .LVU44
+ 167 002a 1346     	 mov r3,r2
+ 168 002c 0A46     	 mov r2,r1
+ 169              	.L15:
+ 187:indcpa.c      **** 
+ 170              	 .loc 1 187 9 is_stmt 0 view .LVU45
+ 171 002e 3946     	 mov r1,r7
+ 172 0030 02A8     	 add r0,sp,#8
+ 173 0032 A047     	 blx r4
+ 174              	.LVL12:
+ 189:indcpa.c      ****       ctr = rej_uniform(a[i].vec[j].coeffs, KYBER_N, buf, sizeof(buf));
+ 175              	 .loc 1 189 7 is_stmt 1 view .LVU46
+ 176              	 .loc 1 190 36 is_stmt 0 view .LVU47
+ 177 0034 08EB452B 	 add fp,r8,r5,lsl#9
+ 189:indcpa.c      ****       ctr = rej_uniform(a[i].vec[j].coeffs, KYBER_N, buf, sizeof(buf));
+ 178              	 .loc 1 189 7 view .LVU48
+ 179 0038 02AA     	 add r2,sp,#8
+ 180 003a 0421     	 movs r1,#4
+ 181 003c 34A8     	 add r0,sp,#208
+ 182 003e C847     	 blx r9
+ 183              	.LVL13:
+ 184              	 .loc 1 190 7 is_stmt 1 view .LVU49
+ 185              	 .loc 1 190 13 is_stmt 0 view .LVU50
+ 186 0040 4FF42873 	 mov r3,#672
+ 187 0044 34AA     	 add r2,sp,#208
+ 188 0046 4FF48071 	 mov r1,#256
+ 189 004a 5846     	 mov r0,fp
+ 190 004c D047     	 blx r10
+ 191              	.LVL14:
+ 192 004e 0446     	 mov r4,r0
+ 193              	.LVL15:
+ 191:indcpa.c      **** 
+ 192:indcpa.c      ****       while(ctr < KYBER_N) {
+ 194              	 .loc 1 192 7 is_stmt 1 view .LVU51
+ 195              	.L10:
+ 196              	 .loc 1 192 17 view .LVU52
+ 197 0050 FF2C     	 cmp r4,#255
+ 198 0052 0BD9     	 bls .L11
+ 183:indcpa.c      ****       if(transposed)
+ 199              	 .loc 1 183 24 discriminator 2 view .LVU53
+ 200 0054 0135     	 adds r5,r5,#1
+ 201              	.LVL16:
+ 183:indcpa.c      ****       if(transposed)
+ 202              	 .loc 1 183 14 discriminator 1 view .LVU54
+ 203 0056 042D     	 cmp r5,#4
+ 204 0058 E2D1     	 bne .L12
+ 182:indcpa.c      ****     for(j=0;j<KYBER_K;j++) {
+ 205              	 .loc 1 182 22 discriminator 2 view .LVU55
+ 206 005a 0136     	 adds r6,r6,#1
+ 207              	.LVL17:
+ 182:indcpa.c      ****     for(j=0;j<KYBER_K;j++) {
+ 208              	 .loc 1 182 12 discriminator 1 view .LVU56
+ 209 005c 042E     	 cmp r6,#4
+ 210 005e DBD1     	 bne .L7
+ 193:indcpa.c      ****         xof_squeezeblocks(buf, 1, &state);
+ 194:indcpa.c      ****         ctr += rej_uniform(a[i].vec[j].coeffs + ctr, KYBER_N - ctr, buf,
+ 195:indcpa.c      ****                            XOF_BLOCKBYTES);
+ 196:indcpa.c      ****       }
+ 197:indcpa.c      ****     }
+ 198:indcpa.c      ****   }
+ 199:indcpa.c      **** }
+ 211              	 .loc 1 199 1 is_stmt 0 view .LVU57
+ 212 0060 0DF55D7D 	 add sp,sp,#884
+ 213              	.LCFI3:
+ 214              	 .cfi_remember_state
+ 215              	 .cfi_def_cfa_offset 36
+ 216              	.LVL18:
+ 217              	 .loc 1 199 1 view .LVU58
+ 218              	 
+ 219 0064 BDE8F08F 	 pop {r4,r5,r6,r7,r8,r9,r10,fp,pc}
+ 220              	.LVL19:
+ 221              	.L8:
+ 222              	.LCFI4:
+ 223              	 .cfi_restore_state
+ 187:indcpa.c      **** 
+ 224              	 .loc 1 187 9 is_stmt 1 view .LVU59
+ 225 0068 0B46     	 mov r3,r1
+ 226 006a E0E7     	 b .L15
+ 227              	.LVL20:
+ 228              	.L11:
+ 193:indcpa.c      ****         xof_squeezeblocks(buf, 1, &state);
+ 229              	 .loc 1 193 9 view .LVU60
+ 230 006c 02AA     	 add r2,sp,#8
+ 231 006e 0121     	 movs r1,#1
+ 232 0070 34A8     	 add r0,sp,#208
+ 233 0072 C847     	 blx r9
+ 234              	.LVL21:
+ 194:indcpa.c      ****                            XOF_BLOCKBYTES);
+ 235              	 .loc 1 194 9 view .LVU61
+ 194:indcpa.c      ****                            XOF_BLOCKBYTES);
+ 236              	 .loc 1 194 16 is_stmt 0 view .LVU62
+ 237 0074 C4F58071 	 rsb r1,r4,#256
+ 238 0078 0BEB4400 	 add r0,fp,r4,lsl#1
+ 239 007c A823     	 movs r3,#168
+ 240 007e 34AA     	 add r2,sp,#208
+ 241 0080 D047     	 blx r10
+ 242              	.LVL22:
+ 194:indcpa.c      ****                            XOF_BLOCKBYTES);
+ 243              	 .loc 1 194 13 discriminator 1 view .LVU63
+ 244 0082 0444     	 add r4,r4,r0
+ 245              	.LVL23:
+ 194:indcpa.c      ****                            XOF_BLOCKBYTES);
+ 246              	 .loc 1 194 13 discriminator 1 view .LVU64
+ 247 0084 E4E7     	 b .L10
+ 248              	.L17:
+ 249 0086 00BF     	 .align 2
+ 250              	.L16:
+ 251 0088 00000000 	 .word crypto_kem_kyber1024_ref_shake128_squeezeblocks
+ 252 008c 00000000 	 .word rej_uniform
+ 253 0090 00000000 	 .word crypto_kem_kyber1024_ref_kyber_shake128_absorb
+ 254              	 .cfi_endproc
+ 255              	.LFE7:
+ 257              	 .section .text.crypto_kem_kyber1024_ref_indcpa_keypair,"ax",%progbits
+ 258              	 .align 1
+ 259              	 .global crypto_kem_kyber1024_ref_indcpa_keypair
+ 260              	 .syntax unified
+ 261              	 .thumb
+ 262              	 .thumb_func
+ 264              	crypto_kem_kyber1024_ref_indcpa_keypair:
+ 265              	.LVL24:
+ 266              	.LFB8:
+ 200:indcpa.c      **** 
+ 201:indcpa.c      **** /*************************************************
+ 202:indcpa.c      **** * Name:        indcpa_keypair
+ 203:indcpa.c      **** *
+ 204:indcpa.c      **** * Description: Generates public and private key for the CPA-secure
+ 205:indcpa.c      **** *              public-key encryption scheme underlying Kyber
+ 206:indcpa.c      **** *
+ 207:indcpa.c      **** * Arguments:   - uint8_t *pk: pointer to output public key
+ 208:indcpa.c      **** *                             (of length KYBER_INDCPA_PUBLICKEYBYTES bytes)
+ 209:indcpa.c      **** *              - uint8_t *sk: pointer to output private key
+ 210:indcpa.c      ****                               (of length KYBER_INDCPA_SECRETKEYBYTES bytes)
+ 211:indcpa.c      **** **************************************************/
+ 212:indcpa.c      **** void indcpa_keypair(uint8_t pk[KYBER_INDCPA_PUBLICKEYBYTES],
+ 213:indcpa.c      ****                     uint8_t sk[KYBER_INDCPA_SECRETKEYBYTES])
+ 214:indcpa.c      **** {
+ 267              	 .loc 1 214 1 is_stmt 1 view-0
+ 268              	 .cfi_startproc
+ 269              	 
+ 270              	 
+ 215:indcpa.c      ****   unsigned int i;
+ 271              	 .loc 1 215 3 view .LVU66
+ 216:indcpa.c      ****   uint8_t buf[2*KYBER_SYMBYTES];
+ 272              	 .loc 1 216 3 view .LVU67
+ 217:indcpa.c      ****   const uint8_t *publicseed = buf;
+ 273              	 .loc 1 217 3 view .LVU68
+ 214:indcpa.c      ****   unsigned int i;
+ 274              	 .loc 1 214 1 is_stmt 0 view .LVU69
+ 275 0000 2DE9F04F 	 push {r4,r5,r6,r7,r8,r9,r10,fp,lr}
+ 276              	.LCFI5:
+ 277              	 .cfi_def_cfa_offset 36
+ 278              	 .cfi_offset 4,-36
+ 279              	 .cfi_offset 5,-32
+ 280              	 .cfi_offset 6,-28
+ 281              	 .cfi_offset 7,-24
+ 282              	 .cfi_offset 8,-20
+ 283              	 .cfi_offset 9,-16
+ 284              	 .cfi_offset 10,-12
+ 285              	 .cfi_offset 11,-8
+ 286              	 .cfi_offset 14,-4
+ 287 0004 ADF5615D 	 sub sp,sp,#14400
+ 288              	.LCFI6:
+ 289              	 .cfi_def_cfa_offset 14436
+ 290 0008 81B0     	 sub sp,sp,#4
+ 291              	.LCFI7:
+ 292              	 .cfi_def_cfa_offset 14440
+ 293              	.LVL25:
+ 218:indcpa.c      ****   const uint8_t *noiseseed = buf+KYBER_SYMBYTES;
+ 294              	 .loc 1 218 3 is_stmt 1 view .LVU70
+ 219:indcpa.c      ****   uint8_t nonce = 0;
+ 295              	 .loc 1 219 3 view .LVU71
+ 220:indcpa.c      ****   polyvec a[KYBER_K], e, pkpv, skpv;
+ 296              	 .loc 1 220 3 view .LVU72
+ 221:indcpa.c      **** 
+ 222:indcpa.c      ****   randombytes(buf, KYBER_SYMBYTES);
+ 297              	 .loc 1 222 3 view .LVU73
+ 298 000a 3A4B     	 ldr r3,.L27
+ 223:indcpa.c      ****   hash_g(buf, buf, KYBER_SYMBYTES);
+ 224:indcpa.c      **** 
+ 225:indcpa.c      ****   gen_a(a, publicseed);
+ 226:indcpa.c      **** 
+ 227:indcpa.c      ****   for(i=0;i<KYBER_K;i++)
+ 228:indcpa.c      ****     poly_getnoise(&skpv.vec[i], noiseseed, nonce++);
+ 299              	 .loc 1 228 5 is_stmt 0 view .LVU74
+ 300 000c DFF8E8A0 	 ldr r10,.L27+4
+ 214:indcpa.c      ****   unsigned int i;
+ 301              	 .loc 1 214 1 view .LVU75
+ 302 0010 0646     	 mov r6,r0
+ 303 0012 8846     	 mov r8,r1
+ 222:indcpa.c      ****   hash_g(buf, buf, KYBER_SYMBYTES);
+ 304              	 .loc 1 222 3 view .LVU76
+ 305 0014 6846     	 mov r0,sp
+ 306              	.LVL26:
+ 222:indcpa.c      ****   hash_g(buf, buf, KYBER_SYMBYTES);
+ 307              	 .loc 1 222 3 view .LVU77
+ 308 0016 2021     	 movs r1,#32
+ 309              	.LVL27:
+ 222:indcpa.c      ****   hash_g(buf, buf, KYBER_SYMBYTES);
+ 310              	 .loc 1 222 3 view .LVU78
+ 311 0018 9847     	 blx r3
+ 312              	.LVL28:
+ 223:indcpa.c      ****   hash_g(buf, buf, KYBER_SYMBYTES);
+ 313              	 .loc 1 223 3 is_stmt 1 view .LVU79
+ 314 001a 384B     	 ldr r3,.L27+8
+ 315 001c 2022     	 movs r2,#32
+ 316 001e 6946     	 mov r1,sp
+ 317 0020 6846     	 mov r0,sp
+ 318 0022 9847     	 blx r3
+ 319              	.LVL29:
+ 225:indcpa.c      **** 
+ 320              	 .loc 1 225 3 view .LVU80
+ 321 0024 364B     	 ldr r3,.L27+12
+ 322 0026 0022     	 movs r2,#0
+ 323 0028 6946     	 mov r1,sp
+ 324 002a 0DF5C250 	 add r0,sp,#6208
+ 325 002e 9847     	 blx r3
+ 326              	.LVL30:
+ 227:indcpa.c      ****     poly_getnoise(&skpv.vec[i], noiseseed, nonce++);
+ 327              	 .loc 1 227 3 view .LVU81
+ 227:indcpa.c      ****     poly_getnoise(&skpv.vec[i], noiseseed, nonce++);
+ 328              	 .loc 1 227 12 discriminator 1 view .LVU82
+ 222:indcpa.c      ****   hash_g(buf, buf, KYBER_SYMBYTES);
+ 329              	 .loc 1 222 3 is_stmt 0 view .LVU83
+ 330 0030 6C46     	 mov r4,sp
+ 331 0032 0DF58257 	 add r7,sp,#4160
+ 227:indcpa.c      ****     poly_getnoise(&skpv.vec[i], noiseseed, nonce++);
+ 332              	 .loc 1 227 8 view .LVU84
+ 333 0036 0025     	 movs r5,#0
+ 334              	 .loc 1 228 5 view .LVU85
+ 335 0038 0DF1200B 	 add fp,sp,#32
+ 336              	.LVL31:
+ 337              	 .loc 1 228 5 view .LVU86
+ 338 003c D146     	 mov r9,r10
+ 339              	.LVL32:
+ 340              	.L19:
+ 341              	 .loc 1 228 5 is_stmt 1 view .LVU87
+ 342              	 .loc 1 228 5 is_stmt 0 view .LVU88
+ 343 003e EAB2     	 uxtb r2,r5
+ 344 0040 3846     	 mov r0,r7
+ 345 0042 5946     	 mov r1,fp
+ 227:indcpa.c      ****     poly_getnoise(&skpv.vec[i], noiseseed, nonce++);
+ 346              	 .loc 1 227 22 discriminator 3 view .LVU89
+ 347 0044 0135     	 adds r5,r5,#1
+ 348              	.LVL33:
+ 349              	 .loc 1 228 5 view .LVU90
+ 350 0046 D047     	 blx r10
+ 351              	.LVL34:
+ 227:indcpa.c      ****     poly_getnoise(&skpv.vec[i], noiseseed, nonce++);
+ 352              	 .loc 1 227 22 is_stmt 1 discriminator 3 view .LVU91
+ 227:indcpa.c      ****     poly_getnoise(&skpv.vec[i], noiseseed, nonce++);
+ 353              	 .loc 1 227 12 discriminator 1 view .LVU92
+ 354 0048 042D     	 cmp r5,#4
+ 355 004a 07F50077 	 add r7,r7,#512
+ 356 004e F6D1     	 bne .L19
+ 357              	.LVL35:
+ 229:indcpa.c      ****   for(i=0;i<KYBER_K;i++)
+ 358              	 .loc 1 229 12 discriminator 1 view .LVU93
+ 359 0050 10AF     	 add r7,sp,#64
+ 230:indcpa.c      ****     poly_getnoise(&e.vec[i], noiseseed, nonce++);
+ 360              	 .loc 1 230 5 is_stmt 0 view .LVU94
+ 361 0052 04F1200A 	 add r10,r4,#32
+ 362              	.LVL36:
+ 363              	.L20:
+ 364              	 .loc 1 230 5 is_stmt 1 view .LVU95
+ 365 0056 2A46     	 mov r2,r5
+ 366 0058 0135     	 adds r5,r5,#1
+ 367              	.LVL37:
+ 368              	 .loc 1 230 5 is_stmt 0 view .LVU96
+ 369 005a 3846     	 mov r0,r7
+ 370 005c EDB2     	 uxtb r5,r5
+ 371              	.LVL38:
+ 372              	 .loc 1 230 5 view .LVU97
+ 373 005e 5146     	 mov r1,r10
+ 374 0060 C847     	 blx r9
+ 375              	.LVL39:
+ 229:indcpa.c      ****   for(i=0;i<KYBER_K;i++)
+ 376              	 .loc 1 229 22 is_stmt 1 discriminator 3 view .LVU98
+ 229:indcpa.c      ****   for(i=0;i<KYBER_K;i++)
+ 377              	 .loc 1 229 12 discriminator 1 view .LVU99
+ 378 0062 082D     	 cmp r5,#8
+ 379 0064 07F50077 	 add r7,r7,#512
+ 380 0068 F5D1     	 bne .L20
+ 231:indcpa.c      **** 
+ 232:indcpa.c      ****   polyvec_ntt(&skpv);
+ 381              	 .loc 1 232 3 view .LVU100
+ 382 006a 264D     	 ldr r5,.L27+16
+ 383              	.LVL40:
+ 233:indcpa.c      ****   polyvec_ntt(&e);
+ 234:indcpa.c      **** 
+ 235:indcpa.c      ****   // matrix-vector multiplication
+ 236:indcpa.c      ****   for(i=0;i<KYBER_K;i++) {
+ 237:indcpa.c      ****     polyvec_pointwise_acc_montgomery(&pkpv.vec[i], &a[i], &skpv);
+ 384              	 .loc 1 237 5 is_stmt 0 view .LVU101
+ 385 006c DFF898B0 	 ldr fp,.L27+20
+ 386              	.LVL41:
+ 238:indcpa.c      ****     poly_tomont(&pkpv.vec[i]);
+ 387              	 .loc 1 238 5 view .LVU102
+ 388 0070 DFF898A0 	 ldr r10,.L27+24
+ 232:indcpa.c      ****   polyvec_ntt(&e);
+ 389              	 .loc 1 232 3 view .LVU103
+ 390 0074 0DF58250 	 add r0,sp,#4160
+ 391 0078 A847     	 blx r5
+ 392              	.LVL42:
+ 233:indcpa.c      ****   polyvec_ntt(&e);
+ 393              	 .loc 1 233 3 is_stmt 1 view .LVU104
+ 394 007a 10A8     	 add r0,sp,#64
+ 395 007c A847     	 blx r5
+ 396              	.LVL43:
+ 236:indcpa.c      ****     polyvec_pointwise_acc_montgomery(&pkpv.vec[i], &a[i], &skpv);
+ 397              	 .loc 1 236 3 view .LVU105
+ 236:indcpa.c      ****     polyvec_pointwise_acc_montgomery(&pkpv.vec[i], &a[i], &skpv);
+ 398              	 .loc 1 236 12 discriminator 1 view .LVU106
+ 399 007e 0DF50467 	 add r7,sp,#2112
+ 400 0082 0DF5C255 	 add r5,sp,#6208
+ 236:indcpa.c      ****     polyvec_pointwise_acc_montgomery(&pkpv.vec[i], &a[i], &skpv);
+ 401              	 .loc 1 236 8 is_stmt 0 view .LVU107
+ 402 0086 4FF00009 	 mov r9,#0
+ 403              	.LVL44:
+ 404              	.L21:
+ 237:indcpa.c      ****     poly_tomont(&pkpv.vec[i]);
+ 405              	 .loc 1 237 5 is_stmt 1 view .LVU108
+ 406 008a 2946     	 mov r1,r5
+ 407 008c 3846     	 mov r0,r7
+ 408 008e 0DF58252 	 add r2,sp,#4160
+ 409 0092 D847     	 blx fp
+ 410              	.LVL45:
+ 411              	 .loc 1 238 5 view .LVU109
+ 236:indcpa.c      ****     polyvec_pointwise_acc_montgomery(&pkpv.vec[i], &a[i], &skpv);
+ 412              	 .loc 1 236 22 is_stmt 0 discriminator 3 view .LVU110
+ 413 0094 09F10109 	 add r9,r9,#1
+ 414              	.LVL46:
+ 415              	 .loc 1 238 5 view .LVU111
+ 416 0098 3846     	 mov r0,r7
+ 417 009a D047     	 blx r10
+ 418              	.LVL47:
+ 236:indcpa.c      ****     polyvec_pointwise_acc_montgomery(&pkpv.vec[i], &a[i], &skpv);
+ 419              	 .loc 1 236 22 is_stmt 1 discriminator 3 view .LVU112
+ 236:indcpa.c      ****     polyvec_pointwise_acc_montgomery(&pkpv.vec[i], &a[i], &skpv);
+ 420              	 .loc 1 236 12 discriminator 1 view .LVU113
+ 421 009c B9F1040F 	 cmp r9,#4
+ 422 00a0 07F50077 	 add r7,r7,#512
+ 423 00a4 05F50065 	 add r5,r5,#2048
+ 424 00a8 EFD1     	 bne .L21
+ 239:indcpa.c      ****   }
+ 240:indcpa.c      **** 
+ 241:indcpa.c      ****   polyvec_add(&pkpv, &pkpv, &e);
+ 425              	 .loc 1 241 3 view .LVU114
+ 426 00aa 0DF50461 	 add r1,sp,#2112
+ 427 00ae 10AA     	 add r2,sp,#64
+ 428 00b0 0846     	 mov r0,r1
+ 429 00b2 174B     	 ldr r3,.L27+28
+ 430              	.LBB10:
+ 431              	.LBB11:
+  64:indcpa.c      **** }
+ 432              	 .loc 1 64 3 is_stmt 0 view .LVU115
+ 433 00b4 174D     	 ldr r5,.L27+32
+ 434              	.LBE11:
+ 435              	.LBE10:
+ 436              	 .loc 1 241 3 view .LVU116
+ 437 00b6 9847     	 blx r3
+ 438              	.LVL48:
+ 242:indcpa.c      ****   polyvec_reduce(&pkpv);
+ 439              	 .loc 1 242 3 is_stmt 1 view .LVU117
+ 440 00b8 174B     	 ldr r3,.L27+36
+ 441 00ba 0DF50460 	 add r0,sp,#2112
+ 442 00be 9847     	 blx r3
+ 443              	.LVL49:
+ 243:indcpa.c      **** 
+ 244:indcpa.c      ****   pack_sk(sk, &skpv);
+ 444              	 .loc 1 244 3 view .LVU118
+ 445              	.LBB13:
+ 446              	.LBI10:
+  62:indcpa.c      **** {
+ 447              	 .loc 1 62 13 view .LVU119
+ 448              	.LBB12:
+  64:indcpa.c      **** }
+ 449              	 .loc 1 64 3 view .LVU120
+ 450 00c0 0DF58251 	 add r1,sp,#4160
+ 451              	.LVL50:
+  64:indcpa.c      **** }
+ 452              	 .loc 1 64 3 is_stmt 0 view .LVU121
+ 453 00c4 4046     	 mov r0,r8
+ 454 00c6 A847     	 blx r5
+ 455              	.LVL51:
+  64:indcpa.c      **** }
+ 456              	 .loc 1 64 3 view .LVU122
+ 457              	.LBE12:
+ 458              	.LBE13:
+ 245:indcpa.c      ****   pack_pk(pk, &pkpv, publicseed);
+ 459              	 .loc 1 245 3 is_stmt 1 view .LVU123
+ 460              	.LBB14:
+ 461              	.LBI14:
+  22:indcpa.c      ****                     polyvec *pk,
+ 462              	 .loc 1 22 13 view .LVU124
+ 463              	.LBB15:
+  26:indcpa.c      ****   polyvec_tobytes(r, pk);
+ 464              	 .loc 1 26 3 view .LVU125
+  27:indcpa.c      ****   for(i=0;i<KYBER_SYMBYTES;i++)
+ 465              	 .loc 1 27 3 view .LVU126
+ 466 00c8 0DF50461 	 add r1,sp,#2112
+ 467              	.LVL52:
+  27:indcpa.c      ****   for(i=0;i<KYBER_SYMBYTES;i++)
+ 468              	 .loc 1 27 3 is_stmt 0 view .LVU127
+ 469 00cc 3046     	 mov r0,r6
+ 470 00ce A847     	 blx r5
+ 471              	.LVL53:
+  28:indcpa.c      ****     r[i+KYBER_POLYVECBYTES] = seed[i];
+ 472              	 .loc 1 28 3 is_stmt 1 view .LVU128
+  28:indcpa.c      ****     r[i+KYBER_POLYVECBYTES] = seed[i];
+ 473              	 .loc 1 28 12 discriminator 1 view .LVU129
+  29:indcpa.c      **** }
+ 474              	 .loc 1 29 29 is_stmt 0 view .LVU130
+ 475 00d0 06F5C063 	 add r3,r6,#1536
+ 476 00d4 04F12005 	 add r5,r4,#32
+ 477              	.L22:
+  29:indcpa.c      **** }
+ 478              	 .loc 1 29 29 view .LVU131
+ 479 00d8 2246     	 mov r2,r4
+ 480 00da 03CA     	 ldmia r2!,{r0,r1}
+ 481 00dc AA42     	 cmp r2,r5
+ 482 00de 1860     	 str r0,[r3]
+ 483 00e0 5960     	 str r1,[r3,#4]
+ 484 00e2 1446     	 mov r4,r2
+ 485 00e4 03F10803 	 add r3,r3,#8
+ 486 00e8 F6D1     	 bne .L22
+ 487              	.LBE15:
+ 488              	.LBE14:
+ 246:indcpa.c      **** }
+ 489              	 .loc 1 246 1 view .LVU132
+ 490 00ea 0DF5615D 	 add sp,sp,#14400
+ 491              	.LVL54:
+ 492              	 .loc 1 246 1 view .LVU133
+ 493 00ee 01B0     	 add sp,sp,#4
+ 494              	.LCFI8:
+ 495              	 .cfi_def_cfa_offset 36
+ 496              	 
+ 497 00f0 BDE8F08F 	 pop {r4,r5,r6,r7,r8,r9,r10,fp,pc}
+ 498              	.LVL55:
+ 499              	.L28:
+ 500              	 .loc 1 246 1 view .LVU134
+ 501              	 .align 2
+ 502              	.L27:
+ 503 00f4 00000000 	 .word PQCLEAN_randombytes
+ 504 00f8 00000000 	 .word crypto_kem_kyber1024_ref_poly_getnoise
+ 505 00fc 00000000 	 .word crypto_kem_kyber1024_ref_sha3_512
+ 506 0100 00000000 	 .word crypto_kem_kyber1024_ref_gen_matrix
+ 507 0104 00000000 	 .word crypto_kem_kyber1024_ref_polyvec_ntt
+ 508 0108 00000000 	 .word crypto_kem_kyber1024_ref_polyvec_pointwise_acc_montgomery
+ 509 010c 00000000 	 .word crypto_kem_kyber1024_ref_poly_tomont
+ 510 0110 00000000 	 .word crypto_kem_kyber1024_ref_polyvec_add
+ 511 0114 00000000 	 .word crypto_kem_kyber1024_ref_polyvec_tobytes
+ 512 0118 00000000 	 .word crypto_kem_kyber1024_ref_polyvec_reduce
+ 513              	 .cfi_endproc
+ 514              	.LFE8:
+ 516              	 .section .text.crypto_kem_kyber1024_ref_indcpa_enc,"ax",%progbits
+ 517              	 .align 1
+ 518              	 .global crypto_kem_kyber1024_ref_indcpa_enc
+ 519              	 .syntax unified
+ 520              	 .thumb
+ 521              	 .thumb_func
+ 523              	crypto_kem_kyber1024_ref_indcpa_enc:
+ 524              	.LVL56:
+ 525              	.LFB9:
+ 247:indcpa.c      **** 
+ 248:indcpa.c      **** /*************************************************
+ 249:indcpa.c      **** * Name:        indcpa_enc
+ 250:indcpa.c      **** *
+ 251:indcpa.c      **** * Description: Encryption function of the CPA-secure
+ 252:indcpa.c      **** *              public-key encryption scheme underlying Kyber.
+ 253:indcpa.c      **** *
+ 254:indcpa.c      **** * Arguments:   - uint8_t *c:           pointer to output ciphertext
+ 255:indcpa.c      **** *                                      (of length KYBER_INDCPA_BYTES bytes)
+ 256:indcpa.c      **** *              - const uint8_t *m:     pointer to input message
+ 257:indcpa.c      **** *                                      (of length KYBER_INDCPA_MSGBYTES bytes)
+ 258:indcpa.c      **** *              - const uint8_t *pk:    pointer to input public key
+ 259:indcpa.c      **** *                                      (of length KYBER_INDCPA_PUBLICKEYBYTES)
+ 260:indcpa.c      **** *              - const uint8_t *coins: pointer to input random coins
+ 261:indcpa.c      **** *                                      used as seed (of length KYBER_SYMBYTES)
+ 262:indcpa.c      **** *                                      to deterministically generate all
+ 263:indcpa.c      **** *                                      randomness
+ 264:indcpa.c      **** **************************************************/
+ 265:indcpa.c      **** void indcpa_enc(uint8_t c[KYBER_INDCPA_BYTES],
+ 266:indcpa.c      ****                 const uint8_t m[KYBER_INDCPA_MSGBYTES],
+ 267:indcpa.c      ****                 const uint8_t pk[KYBER_INDCPA_PUBLICKEYBYTES],
+ 268:indcpa.c      ****                 const uint8_t coins[KYBER_SYMBYTES])
+ 269:indcpa.c      **** {
+ 526              	 .loc 1 269 1 is_stmt 1 view-0
+ 527              	 .cfi_startproc
+ 528              	 
+ 529              	 
+ 270:indcpa.c      ****   unsigned int i;
+ 530              	 .loc 1 270 3 view .LVU136
+ 271:indcpa.c      ****   uint8_t seed[KYBER_SYMBYTES];
+ 531              	 .loc 1 271 3 view .LVU137
+ 272:indcpa.c      ****   uint8_t nonce = 0;
+ 532              	 .loc 1 272 3 view .LVU138
+ 273:indcpa.c      ****   polyvec sp, pkpv, ep, at[KYBER_K], bp;
+ 533              	 .loc 1 273 3 view .LVU139
+ 274:indcpa.c      ****   poly v, k, epp;
+ 534              	 .loc 1 274 3 view .LVU140
+ 275:indcpa.c      **** 
+ 276:indcpa.c      ****   unpack_pk(&pkpv, seed, pk);
+ 535              	 .loc 1 276 3 view .LVU141
+ 269:indcpa.c      ****   unsigned int i;
+ 536              	 .loc 1 269 1 is_stmt 0 view .LVU142
+ 537 0000 2DE9F04F 	 push {r4,r5,r6,r7,r8,r9,r10,fp,lr}
+ 538              	.LCFI9:
+ 539              	 .cfi_def_cfa_offset 36
+ 540              	 .cfi_offset 4,-36
+ 541              	 .cfi_offset 5,-32
+ 542              	 .cfi_offset 6,-28
+ 543              	 .cfi_offset 7,-24
+ 544              	 .cfi_offset 8,-20
+ 545              	 .cfi_offset 9,-16
+ 546              	 .cfi_offset 10,-12
+ 547              	 .cfi_offset 11,-8
+ 548              	 .cfi_offset 14,-4
+ 549 0004 ADF58C4D 	 sub sp,sp,#17920
+ 550              	.LCFI10:
+ 551              	 .cfi_def_cfa_offset 17956
+ 552 0008 89B0     	 sub sp,sp,#36
+ 553              	.LCFI11:
+ 554              	 .cfi_def_cfa_offset 17992
+ 555              	.LVL57:
+ 556              	.LBB20:
+ 557              	.LBI20:
+  44:indcpa.c      ****                       uint8_t seed[KYBER_SYMBYTES],
+ 558              	 .loc 1 44 13 is_stmt 1 view .LVU143
+ 559              	.LBB21:
+  48:indcpa.c      ****   polyvec_frombytes(pk, packedpk);
+ 560              	 .loc 1 48 3 view .LVU144
+  49:indcpa.c      ****   for(i=0;i<KYBER_SYMBYTES;i++)
+ 561              	 .loc 1 49 3 view .LVU145
+ 562              	.LBE21:
+ 563              	.LBE20:
+ 269:indcpa.c      ****   unsigned int i;
+ 564              	 .loc 1 269 1 is_stmt 0 view .LVU146
+ 565 000a 1446     	 mov r4,r2
+ 566 000c 8046     	 mov r8,r0
+ 567 000e 0D46     	 mov r5,r1
+ 568 0010 1F46     	 mov r7,r3
+ 569              	.LBB23:
+ 570              	.LBB22:
+  49:indcpa.c      ****   for(i=0;i<KYBER_SYMBYTES;i++)
+ 571              	 .loc 1 49 3 view .LVU147
+ 572 0012 1146     	 mov r1,r2
+ 573              	.LVL58:
+  49:indcpa.c      ****   for(i=0;i<KYBER_SYMBYTES;i++)
+ 574              	 .loc 1 49 3 view .LVU148
+ 575 0014 444B     	 ldr r3,.L38
+ 576              	.LVL59:
+  49:indcpa.c      ****   for(i=0;i<KYBER_SYMBYTES;i++)
+ 577              	 .loc 1 49 3 view .LVU149
+ 578 0016 0DF56260 	 add r0,sp,#3616
+ 579              	.LVL60:
+  49:indcpa.c      ****   for(i=0;i<KYBER_SYMBYTES;i++)
+ 580              	 .loc 1 49 3 view .LVU150
+ 581 001a 9847     	 blx r3
+ 582              	.LVL61:
+  50:indcpa.c      ****     seed[i] = packedpk[i+KYBER_POLYVECBYTES];
+ 583              	 .loc 1 50 3 is_stmt 1 view .LVU151
+  50:indcpa.c      ****     seed[i] = packedpk[i+KYBER_POLYVECBYTES];
+ 584              	 .loc 1 50 12 discriminator 1 view .LVU152
+  51:indcpa.c      **** }
+ 585              	 .loc 1 51 13 is_stmt 0 view .LVU153
+ 586 001c 0DF5C466 	 add r6,sp,#1568
+ 587 0020 04F5C063 	 add r3,r4,#1536
+ 588 0024 EC46     	 mov ip,sp
+ 589 0026 04F5C464 	 add r4,r4,#1568
+ 590              	.LVL62:
+ 591              	.L30:
+  51:indcpa.c      **** }
+ 592              	 .loc 1 51 13 view .LVU154
+ 593 002a 1868     	 ldr r0,[r3]
+ 594 002c 5968     	 ldr r1,[r3,#4]
+ 595 002e 6246     	 mov r2,ip
+ 596 0030 03C2     	 stmia r2!,{r0,r1}
+ 597 0032 0833     	 adds r3,r3,#8
+ 598 0034 A342     	 cmp r3,r4
+ 599 0036 9446     	 mov ip,r2
+ 600 0038 F7D1     	 bne .L30
+ 601              	.LVL63:
+  51:indcpa.c      **** }
+ 602              	 .loc 1 51 13 view .LVU155
+ 603              	.LBE22:
+ 604              	.LBE23:
+ 277:indcpa.c      ****   poly_frommsg(&k, m);
+ 605              	 .loc 1 277 3 is_stmt 1 view .LVU156
+ 606 003a 2946     	 mov r1,r5
+ 607 003c 3B4B     	 ldr r3,.L38+4
+ 278:indcpa.c      ****   gen_at(at, seed);
+ 279:indcpa.c      **** 
+ 280:indcpa.c      ****   for(i=0;i<KYBER_K;i++)
+ 281:indcpa.c      ****     poly_getnoise(sp.vec+i, coins, nonce++);
+ 608              	 .loc 1 281 5 is_stmt 0 view .LVU157
+ 609 003e DFF8F0B0 	 ldr fp,.L38+8
+ 277:indcpa.c      ****   poly_frommsg(&k, m);
+ 610              	 .loc 1 277 3 view .LVU158
+ 611 0042 88A8     	 add r0,sp,#544
+ 612 0044 9847     	 blx r3
+ 613              	.LVL64:
+ 278:indcpa.c      ****   gen_at(at, seed);
+ 614              	 .loc 1 278 3 is_stmt 1 view .LVU159
+ 615 0046 0DF51850 	 add r0,sp,#9728
+ 616 004a 3A4B     	 ldr r3,.L38+12
+ 617 004c 0122     	 movs r2,#1
+ 618 004e 6946     	 mov r1,sp
+ 619 0050 2030     	 adds r0,r0,#32
+ 620 0052 9847     	 blx r3
+ 621              	.LVL65:
+ 280:indcpa.c      ****     poly_getnoise(sp.vec+i, coins, nonce++);
+ 622              	 .loc 1 280 3 view .LVU160
+ 280:indcpa.c      ****     poly_getnoise(sp.vec+i, coins, nonce++);
+ 623              	 .loc 1 280 12 discriminator 1 view .LVU161
+ 278:indcpa.c      ****   gen_at(at, seed);
+ 624              	 .loc 1 278 3 is_stmt 0 view .LVU162
+ 625 0054 08AD     	 add r5,sp,#32
+ 626              	.LVL66:
+ 278:indcpa.c      ****   gen_at(at, seed);
+ 627              	 .loc 1 278 3 view .LVU163
+ 628 0056 B246     	 mov r10,r6
+ 280:indcpa.c      ****     poly_getnoise(sp.vec+i, coins, nonce++);
+ 629              	 .loc 1 280 8 view .LVU164
+ 630 0058 0024     	 movs r4,#0
+ 631              	.LVL67:
+ 280:indcpa.c      ****     poly_getnoise(sp.vec+i, coins, nonce++);
+ 632              	 .loc 1 280 8 view .LVU165
+ 633 005a D946     	 mov r9,fp
+ 634              	.LVL68:
+ 635              	.L31:
+ 636              	 .loc 1 281 5 is_stmt 1 view .LVU166
+ 637              	 .loc 1 281 5 is_stmt 0 view .LVU167
+ 638 005c E2B2     	 uxtb r2,r4
+ 639 005e 5046     	 mov r0,r10
+ 640 0060 3946     	 mov r1,r7
+ 280:indcpa.c      ****     poly_getnoise(sp.vec+i, coins, nonce++);
+ 641              	 .loc 1 280 22 discriminator 3 view .LVU168
+ 642 0062 0134     	 adds r4,r4,#1
+ 643              	.LVL69:
+ 644              	 .loc 1 281 5 view .LVU169
+ 645 0064 D847     	 blx fp
+ 646              	.LVL70:
+ 280:indcpa.c      ****     poly_getnoise(sp.vec+i, coins, nonce++);
+ 647              	 .loc 1 280 22 is_stmt 1 discriminator 3 view .LVU170
+ 280:indcpa.c      ****     poly_getnoise(sp.vec+i, coins, nonce++);
+ 648              	 .loc 1 280 12 discriminator 1 view .LVU171
+ 649 0066 042C     	 cmp r4,#4
+ 650 0068 0AF5007A 	 add r10,r10,#512
+ 651 006c F6D1     	 bne .L31
+ 652              	.LVL71:
+ 282:indcpa.c      ****   for(i=0;i<KYBER_K;i++)
+ 653              	 .loc 1 282 12 discriminator 1 view .LVU172
+ 654 006e 0DF5B15A 	 add r10,sp,#5664
+ 655              	.LVL72:
+ 656              	.L32:
+ 283:indcpa.c      ****     poly_getnoise(ep.vec+i, coins, nonce++);
+ 657              	 .loc 1 283 5 view .LVU173
+ 658 0072 2246     	 mov r2,r4
+ 659 0074 0134     	 adds r4,r4,#1
+ 660              	.LVL73:
+ 661              	 .loc 1 283 5 is_stmt 0 view .LVU174
+ 662 0076 5046     	 mov r0,r10
+ 663 0078 E4B2     	 uxtb r4,r4
+ 664              	.LVL74:
+ 665              	 .loc 1 283 5 view .LVU175
+ 666 007a 3946     	 mov r1,r7
+ 667 007c C847     	 blx r9
+ 668              	.LVL75:
+ 282:indcpa.c      ****   for(i=0;i<KYBER_K;i++)
+ 669              	 .loc 1 282 22 is_stmt 1 discriminator 3 view .LVU176
+ 282:indcpa.c      ****   for(i=0;i<KYBER_K;i++)
+ 670              	 .loc 1 282 12 discriminator 1 view .LVU177
+ 671 007e 082C     	 cmp r4,#8
+ 672 0080 0AF5007A 	 add r10,r10,#512
+ 673 0084 F5D1     	 bne .L32
+ 284:indcpa.c      ****   poly_getnoise(&epp, coins, nonce++);
+ 674              	 .loc 1 284 3 view .LVU178
+ 675              	.LVL76:
+ 676              	 .loc 1 284 3 is_stmt 0 view .LVU179
+ 677 0086 2246     	 mov r2,r4
+ 678 0088 3946     	 mov r1,r7
+ 679 008a 0DF58460 	 add r0,sp,#1056
+ 680 008e C847     	 blx r9
+ 681              	.LVL77:
+ 285:indcpa.c      **** 
+ 286:indcpa.c      ****   polyvec_ntt(&sp);
+ 682              	 .loc 1 286 3 is_stmt 1 view .LVU180
+ 683 0090 294B     	 ldr r3,.L38+16
+ 287:indcpa.c      **** 
+ 288:indcpa.c      ****   // matrix-vector multiplication
+ 289:indcpa.c      ****   for(i=0;i<KYBER_K;i++)
+ 290:indcpa.c      ****     polyvec_pointwise_acc_montgomery(&bp.vec[i], &at[i], &sp);
+ 684              	 .loc 1 290 5 is_stmt 0 view .LVU181
+ 685 0092 DFF8A8A0 	 ldr r10,.L38+20
+ 286:indcpa.c      **** 
+ 686              	 .loc 1 286 3 view .LVU182
+ 687 0096 3046     	 mov r0,r6
+ 688 0098 9847     	 blx r3
+ 689              	.LVL78:
+ 289:indcpa.c      ****     polyvec_pointwise_acc_montgomery(&bp.vec[i], &at[i], &sp);
+ 690              	 .loc 1 289 3 is_stmt 1 view .LVU183
+ 289:indcpa.c      ****     polyvec_pointwise_acc_montgomery(&bp.vec[i], &at[i], &sp);
+ 691              	 .loc 1 289 12 discriminator 1 view .LVU184
+ 692 009a 0DF51854 	 add r4,sp,#9728
+ 693 009e 0DF5F157 	 add r7,sp,#7712
+ 694              	.LVL79:
+ 289:indcpa.c      ****     polyvec_pointwise_acc_montgomery(&bp.vec[i], &at[i], &sp);
+ 695              	 .loc 1 289 12 is_stmt 0 discriminator 1 view .LVU185
+ 696 00a2 2034     	 adds r4,r4,#32
+ 289:indcpa.c      ****     polyvec_pointwise_acc_montgomery(&bp.vec[i], &at[i], &sp);
+ 697              	 .loc 1 289 8 view .LVU186
+ 698 00a4 4FF00009 	 mov r9,#0
+ 699              	.LVL80:
+ 700              	.L33:
+ 701              	 .loc 1 290 5 is_stmt 1 view .LVU187
+ 702 00a8 2146     	 mov r1,r4
+ 703 00aa 3846     	 mov r0,r7
+ 704 00ac 3246     	 mov r2,r6
+ 289:indcpa.c      ****     polyvec_pointwise_acc_montgomery(&bp.vec[i], &at[i], &sp);
+ 705              	 .loc 1 289 22 is_stmt 0 discriminator 3 view .LVU188
+ 706 00ae 09F10109 	 add r9,r9,#1
+ 707              	.LVL81:
+ 708              	 .loc 1 290 5 view .LVU189
+ 709 00b2 D047     	 blx r10
+ 710              	.LVL82:
+ 289:indcpa.c      ****     polyvec_pointwise_acc_montgomery(&bp.vec[i], &at[i], &sp);
+ 711              	 .loc 1 289 22 is_stmt 1 discriminator 3 view .LVU190
+ 289:indcpa.c      ****     polyvec_pointwise_acc_montgomery(&bp.vec[i], &at[i], &sp);
+ 712              	 .loc 1 289 12 discriminator 1 view .LVU191
+ 713 00b4 B9F1040F 	 cmp r9,#4
+ 714 00b8 07F50077 	 add r7,r7,#512
+ 715 00bc 04F50064 	 add r4,r4,#2048
+ 716 00c0 F2D1     	 bne .L33
+ 291:indcpa.c      **** 
+ 292:indcpa.c      ****   polyvec_pointwise_acc_montgomery(&v, &pkpv, &sp);
+ 717              	 .loc 1 292 3 view .LVU192
+ 718 00c2 3246     	 mov r2,r6
+ 719 00c4 0DF56261 	 add r1,sp,#3616
+ 720 00c8 2846     	 mov r0,r5
+ 721 00ca D047     	 blx r10
+ 722              	.LVL83:
+ 293:indcpa.c      **** 
+ 294:indcpa.c      ****   polyvec_invntt_tomont(&bp);
+ 723              	 .loc 1 294 3 view .LVU193
+ 724 00cc 0DF5F150 	 add r0,sp,#7712
+ 725 00d0 1B4B     	 ldr r3,.L38+24
+ 295:indcpa.c      ****   poly_invntt_tomont(&v);
+ 296:indcpa.c      **** 
+ 297:indcpa.c      ****   polyvec_add(&bp, &bp, &ep);
+ 298:indcpa.c      ****   poly_add(&v, &v, &epp);
+ 726              	 .loc 1 298 3 is_stmt 0 view .LVU194
+ 727 00d2 1C4C     	 ldr r4,.L38+28
+ 294:indcpa.c      ****   poly_invntt_tomont(&v);
+ 728              	 .loc 1 294 3 view .LVU195
+ 729 00d4 9847     	 blx r3
+ 730              	.LVL84:
+ 295:indcpa.c      ****   poly_invntt_tomont(&v);
+ 731              	 .loc 1 295 3 is_stmt 1 view .LVU196
+ 732 00d6 2846     	 mov r0,r5
+ 733 00d8 1B4B     	 ldr r3,.L38+32
+ 734 00da 9847     	 blx r3
+ 735              	.LVL85:
+ 297:indcpa.c      ****   poly_add(&v, &v, &epp);
+ 736              	 .loc 1 297 3 view .LVU197
+ 737 00dc 0DF5F151 	 add r1,sp,#7712
+ 738 00e0 1A4B     	 ldr r3,.L38+36
+ 739 00e2 0DF5B152 	 add r2,sp,#5664
+ 740 00e6 0846     	 mov r0,r1
+ 741 00e8 9847     	 blx r3
+ 742              	.LVL86:
+ 743              	 .loc 1 298 3 view .LVU198
+ 744 00ea 0DF58462 	 add r2,sp,#1056
+ 745 00ee 2946     	 mov r1,r5
+ 746 00f0 2846     	 mov r0,r5
+ 747 00f2 A047     	 blx r4
+ 748              	.LVL87:
+ 299:indcpa.c      ****   poly_add(&v, &v, &k);
+ 749              	 .loc 1 299 3 view .LVU199
+ 750 00f4 88AA     	 add r2,sp,#544
+ 751 00f6 2946     	 mov r1,r5
+ 752 00f8 2846     	 mov r0,r5
+ 753 00fa A047     	 blx r4
+ 754              	.LVL88:
+ 300:indcpa.c      ****   polyvec_reduce(&bp);
+ 755              	 .loc 1 300 3 view .LVU200
+ 756 00fc 0DF5F150 	 add r0,sp,#7712
+ 757 0100 134B     	 ldr r3,.L38+40
+ 758 0102 9847     	 blx r3
+ 759              	.LVL89:
+ 301:indcpa.c      ****   poly_reduce(&v);
+ 760              	 .loc 1 301 3 view .LVU201
+ 761 0104 2846     	 mov r0,r5
+ 762 0106 134B     	 ldr r3,.L38+44
+ 763 0108 9847     	 blx r3
+ 764              	.LVL90:
+ 302:indcpa.c      **** 
+ 303:indcpa.c      ****   pack_ciphertext(c, &bp, &v);
+ 765              	 .loc 1 303 3 view .LVU202
+ 766              	.LBB24:
+ 767              	.LBI24:
+  94:indcpa.c      ****                             polyvec *b,
+ 768              	 .loc 1 94 13 view .LVU203
+ 769              	.LBB25:
+  98:indcpa.c      ****   poly_compress(r+KYBER_POLYVECCOMPRESSEDBYTES, v);
+ 770              	 .loc 1 98 3 view .LVU204
+ 771 010a 0DF5F151 	 add r1,sp,#7712
+ 772              	.LVL91:
+  98:indcpa.c      ****   poly_compress(r+KYBER_POLYVECCOMPRESSEDBYTES, v);
+ 773              	 .loc 1 98 3 is_stmt 0 view .LVU205
+ 774 010e 4046     	 mov r0,r8
+ 775 0110 114B     	 ldr r3,.L38+48
+ 776 0112 9847     	 blx r3
+ 777              	.LVL92:
+  99:indcpa.c      **** }
+ 778              	 .loc 1 99 3 is_stmt 1 view .LVU206
+ 779 0114 114B     	 ldr r3,.L38+52
+ 780 0116 2946     	 mov r1,r5
+ 781 0118 08F5B060 	 add r0,r8,#1408
+ 782 011c 9847     	 blx r3
+ 783              	.LVL93:
+  99:indcpa.c      **** }
+ 784              	 .loc 1 99 3 is_stmt 0 view .LVU207
+ 785              	.LBE25:
+ 786              	.LBE24:
+ 304:indcpa.c      **** }
+ 787              	 .loc 1 304 1 view .LVU208
+ 788 011e 0DF58C4D 	 add sp,sp,#17920
+ 789 0122 09B0     	 add sp,sp,#36
+ 790              	.LCFI12:
+ 791              	 .cfi_def_cfa_offset 36
+ 792              	 
+ 793 0124 BDE8F08F 	 pop {r4,r5,r6,r7,r8,r9,r10,fp,pc}
+ 794              	.LVL94:
+ 795              	.L39:
+ 796              	 .loc 1 304 1 view .LVU209
+ 797              	 .align 2
+ 798              	.L38:
+ 799 0128 00000000 	 .word crypto_kem_kyber1024_ref_polyvec_frombytes
+ 800 012c 00000000 	 .word crypto_kem_kyber1024_ref_poly_frommsg
+ 801 0130 00000000 	 .word crypto_kem_kyber1024_ref_poly_getnoise
+ 802 0134 00000000 	 .word crypto_kem_kyber1024_ref_gen_matrix
+ 803 0138 00000000 	 .word crypto_kem_kyber1024_ref_polyvec_ntt
+ 804 013c 00000000 	 .word crypto_kem_kyber1024_ref_polyvec_pointwise_acc_montgomery
+ 805 0140 00000000 	 .word crypto_kem_kyber1024_ref_polyvec_invntt_tomont
+ 806 0144 00000000 	 .word crypto_kem_kyber1024_ref_poly_add
+ 807 0148 00000000 	 .word crypto_kem_kyber1024_ref_poly_invntt_tomont
+ 808 014c 00000000 	 .word crypto_kem_kyber1024_ref_polyvec_add
+ 809 0150 00000000 	 .word crypto_kem_kyber1024_ref_polyvec_reduce
+ 810 0154 00000000 	 .word crypto_kem_kyber1024_ref_poly_reduce
+ 811 0158 00000000 	 .word crypto_kem_kyber1024_ref_polyvec_compress
+ 812 015c 00000000 	 .word crypto_kem_kyber1024_ref_poly_compress
+ 813              	 .cfi_endproc
+ 814              	.LFE9:
+ 816              	 .section .text.crypto_kem_kyber1024_ref_indcpa_dec,"ax",%progbits
+ 817              	 .align 1
+ 818              	 .global crypto_kem_kyber1024_ref_indcpa_dec
+ 819              	 .syntax unified
+ 820              	 .thumb
+ 821              	 .thumb_func
+ 823              	crypto_kem_kyber1024_ref_indcpa_dec:
+ 824              	.LVL95:
+ 825              	.LFB10:
+ 305:indcpa.c      **** 
+ 306:indcpa.c      **** /*************************************************
+ 307:indcpa.c      **** * Name:        indcpa_dec
+ 308:indcpa.c      **** *
+ 309:indcpa.c      **** * Description: Decryption function of the CPA-secure
+ 310:indcpa.c      **** *              public-key encryption scheme underlying Kyber.
+ 311:indcpa.c      **** *
+ 312:indcpa.c      **** * Arguments:   - uint8_t *m:        pointer to output decrypted message
+ 313:indcpa.c      **** *                                   (of length KYBER_INDCPA_MSGBYTES)
+ 314:indcpa.c      **** *              - const uint8_t *c:  pointer to input ciphertext
+ 315:indcpa.c      **** *                                   (of length KYBER_INDCPA_BYTES)
+ 316:indcpa.c      **** *              - const uint8_t *sk: pointer to input secret key
+ 317:indcpa.c      **** *                                   (of length KYBER_INDCPA_SECRETKEYBYTES)
+ 318:indcpa.c      **** **************************************************/
+ 319:indcpa.c      **** void indcpa_dec(uint8_t m[KYBER_INDCPA_MSGBYTES],
+ 320:indcpa.c      ****                 const uint8_t c[KYBER_INDCPA_BYTES],
+ 321:indcpa.c      ****                 const uint8_t sk[KYBER_INDCPA_SECRETKEYBYTES])
+ 322:indcpa.c      **** {
+ 826              	 .loc 1 322 1 is_stmt 1 view-0
+ 827              	 .cfi_startproc
+ 828              	 
+ 829              	 
+ 323:indcpa.c      ****   polyvec bp, skpv;
+ 830              	 .loc 1 323 3 view .LVU211
+ 324:indcpa.c      ****   poly v, mp;
+ 831              	 .loc 1 324 3 view .LVU212
+ 325:indcpa.c      **** 
+ 326:indcpa.c      ****   unpack_ciphertext(&bp, &v, c);
+ 832              	 .loc 1 326 3 view .LVU213
+ 322:indcpa.c      ****   polyvec bp, skpv;
+ 833              	 .loc 1 322 1 is_stmt 0 view .LVU214
+ 834 0000 70B5     	 push {r4,r5,r6,lr}
+ 835              	.LCFI13:
+ 836              	 .cfi_def_cfa_offset 16
+ 837              	 .cfi_offset 4,-16
+ 838              	 .cfi_offset 5,-12
+ 839              	 .cfi_offset 6,-8
+ 840              	 .cfi_offset 14,-4
+ 841 0002 ADF5A05D 	 sub sp,sp,#5120
+ 842              	.LCFI14:
+ 843              	 .cfi_def_cfa_offset 5136
+ 844              	.LVL96:
+ 322:indcpa.c      ****   polyvec bp, skpv;
+ 845              	 .loc 1 322 1 view .LVU215
+ 846 0006 0446     	 mov r4,r0
+ 847 0008 0E46     	 mov r6,r1
+ 848              	.LVL97:
+ 849              	.LBB30:
+ 850              	.LBI30:
+ 112:indcpa.c      ****                               poly *v,
+ 851              	 .loc 1 112 13 is_stmt 1 view .LVU216
+ 852              	.LBB31:
+ 116:indcpa.c      ****   poly_decompress(v, c+KYBER_POLYVECCOMPRESSEDBYTES);
+ 853              	 .loc 1 116 3 view .LVU217
+ 854 000a 0DF58060 	 add r0,sp,#1024
+ 855              	.LVL98:
+ 116:indcpa.c      ****   poly_decompress(v, c+KYBER_POLYVECCOMPRESSEDBYTES);
+ 856              	 .loc 1 116 3 is_stmt 0 view .LVU218
+ 857 000e 154B     	 ldr r3,.L41
+ 858              	.LBE31:
+ 859              	.LBE30:
+ 322:indcpa.c      ****   polyvec bp, skpv;
+ 860              	 .loc 1 322 1 view .LVU219
+ 861 0010 1546     	 mov r5,r2
+ 862              	.LBB33:
+ 863              	.LBB32:
+ 116:indcpa.c      ****   poly_decompress(v, c+KYBER_POLYVECCOMPRESSEDBYTES);
+ 864              	 .loc 1 116 3 view .LVU220
+ 865 0012 9847     	 blx r3
+ 866              	.LVL99:
+ 117:indcpa.c      **** }
+ 867              	 .loc 1 117 3 is_stmt 1 view .LVU221
+ 868 0014 06F5B061 	 add r1,r6,#1408
+ 869 0018 6846     	 mov r0,sp
+ 870 001a 134B     	 ldr r3,.L41+4
+ 871 001c 9847     	 blx r3
+ 872              	.LVL100:
+ 117:indcpa.c      **** }
+ 873              	 .loc 1 117 3 is_stmt 0 view .LVU222
+ 874              	.LBE32:
+ 875              	.LBE33:
+ 327:indcpa.c      ****   unpack_sk(&skpv, sk);
+ 876              	 .loc 1 327 3 is_stmt 1 view .LVU223
+ 877              	.LBB34:
+ 878              	.LBI34:
+  77:indcpa.c      ****                       const uint8_t packedsk[KYBER_INDCPA_SECRETKEYBYTES])
+ 879              	 .loc 1 77 13 view .LVU224
+ 880              	.LBB35:
+  80:indcpa.c      **** }
+ 881              	 .loc 1 80 3 view .LVU225
+ 882 001e 2946     	 mov r1,r5
+ 883 0020 0DF54060 	 add r0,sp,#3072
+ 884              	.LVL101:
+  80:indcpa.c      **** }
+ 885              	 .loc 1 80 3 is_stmt 0 view .LVU226
+ 886 0024 114B     	 ldr r3,.L41+8
+ 887 0026 9847     	 blx r3
+ 888              	.LVL102:
+  80:indcpa.c      **** }
+ 889              	 .loc 1 80 3 view .LVU227
+ 890              	.LBE35:
+ 891              	.LBE34:
+ 328:indcpa.c      **** 
+ 329:indcpa.c      ****   polyvec_ntt(&bp);
+ 892              	 .loc 1 329 3 is_stmt 1 view .LVU228
+ 893 0028 0DF58060 	 add r0,sp,#1024
+ 894 002c 104B     	 ldr r3,.L41+12
+ 895 002e 9847     	 blx r3
+ 896              	.LVL103:
+ 330:indcpa.c      ****   polyvec_pointwise_acc_montgomery(&mp, &skpv, &bp);
+ 897              	 .loc 1 330 3 view .LVU229
+ 898 0030 0DF58062 	 add r2,sp,#1024
+ 899 0034 0DF54061 	 add r1,sp,#3072
+ 900 0038 80A8     	 add r0,sp,#512
+ 901 003a 0E4B     	 ldr r3,.L41+16
+ 902 003c 9847     	 blx r3
+ 903              	.LVL104:
+ 331:indcpa.c      ****   poly_invntt_tomont(&mp);
+ 904              	 .loc 1 331 3 view .LVU230
+ 905 003e 80A8     	 add r0,sp,#512
+ 906 0040 0D4B     	 ldr r3,.L41+20
+ 907 0042 9847     	 blx r3
+ 908              	.LVL105:
+ 332:indcpa.c      **** 
+ 333:indcpa.c      ****   poly_sub(&mp, &v, &mp);
+ 909              	 .loc 1 333 3 view .LVU231
+ 910 0044 80AA     	 add r2,sp,#512
+ 911 0046 1046     	 mov r0,r2
+ 912 0048 6946     	 mov r1,sp
+ 913 004a 0C4B     	 ldr r3,.L41+24
+ 914 004c 9847     	 blx r3
+ 915              	.LVL106:
+ 334:indcpa.c      ****   poly_reduce(&mp);
+ 916              	 .loc 1 334 3 view .LVU232
+ 917 004e 80A8     	 add r0,sp,#512
+ 918 0050 0B4B     	 ldr r3,.L41+28
+ 919 0052 9847     	 blx r3
+ 920              	.LVL107:
+ 335:indcpa.c      **** 
+ 336:indcpa.c      ****   poly_tomsg(m, &mp);
+ 921              	 .loc 1 336 3 view .LVU233
+ 922 0054 0B4B     	 ldr r3,.L41+32
+ 923 0056 80A9     	 add r1,sp,#512
+ 924 0058 2046     	 mov r0,r4
+ 925 005a 9847     	 blx r3
+ 926              	.LVL108:
+ 337:indcpa.c      **** }
+ 927              	 .loc 1 337 1 is_stmt 0 view .LVU234
+ 928 005c 0DF5A05D 	 add sp,sp,#5120
+ 929              	.LCFI15:
+ 930              	 .cfi_def_cfa_offset 16
+ 931              	 
+ 932 0060 70BD     	 pop {r4,r5,r6,pc}
+ 933              	.LVL109:
+ 934              	.L42:
+ 935              	 .loc 1 337 1 view .LVU235
+ 936 0062 00BF     	 .align 2
+ 937              	.L41:
+ 938 0064 00000000 	 .word crypto_kem_kyber1024_ref_polyvec_decompress
+ 939 0068 00000000 	 .word crypto_kem_kyber1024_ref_poly_decompress
+ 940 006c 00000000 	 .word crypto_kem_kyber1024_ref_polyvec_frombytes
+ 941 0070 00000000 	 .word crypto_kem_kyber1024_ref_polyvec_ntt
+ 942 0074 00000000 	 .word crypto_kem_kyber1024_ref_polyvec_pointwise_acc_montgomery
+ 943 0078 00000000 	 .word crypto_kem_kyber1024_ref_poly_invntt_tomont
+ 944 007c 00000000 	 .word crypto_kem_kyber1024_ref_poly_sub
+ 945 0080 00000000 	 .word crypto_kem_kyber1024_ref_poly_reduce
+ 946 0084 00000000 	 .word crypto_kem_kyber1024_ref_poly_tomsg
+ 947              	 .cfi_endproc
+ 948              	.LFE10:
+ 950              	 .text
+ 951              	.Letext0:
+ 952              	 .file 2 "/usr/lib/gcc/arm-none-eabi/14.2.1/include/stddef.h"
+ 953              	 .file 3 "/usr/lib/gcc/arm-none-eabi/14.2.1/include/stdint.h"
+ 954              	 .file 4 "poly.h"
+ 955              	 .file 5 "polyvec.h"
+ 956              	 .file 6 "fips202.h"
+ 957              	 .file 7 "symmetric.h"
+ 958              	 .file 8 "randombytes.h"
+DEFINED SYMBOLS
+                            *ABS*:00000000 indcpa.c
+    {standard input}:19     .text.rej_uniform:00000000 $t
+    {standard input}:24     .text.rej_uniform:00000000 rej_uniform
+    {standard input}:106    .text.crypto_kem_kyber1024_ref_gen_matrix:00000000 $t
+    {standard input}:112    .text.crypto_kem_kyber1024_ref_gen_matrix:00000000 crypto_kem_kyber1024_ref_gen_matrix
+    {standard input}:251    .text.crypto_kem_kyber1024_ref_gen_matrix:00000088 $d
+    {standard input}:258    .text.crypto_kem_kyber1024_ref_indcpa_keypair:00000000 $t
+    {standard input}:264    .text.crypto_kem_kyber1024_ref_indcpa_keypair:00000000 crypto_kem_kyber1024_ref_indcpa_keypair
+    {standard input}:503    .text.crypto_kem_kyber1024_ref_indcpa_keypair:000000f4 $d
+    {standard input}:517    .text.crypto_kem_kyber1024_ref_indcpa_enc:00000000 $t
+    {standard input}:523    .text.crypto_kem_kyber1024_ref_indcpa_enc:00000000 crypto_kem_kyber1024_ref_indcpa_enc
+    {standard input}:799    .text.crypto_kem_kyber1024_ref_indcpa_enc:00000128 $d
+    {standard input}:817    .text.crypto_kem_kyber1024_ref_indcpa_dec:00000000 $t
+    {standard input}:823    .text.crypto_kem_kyber1024_ref_indcpa_dec:00000000 crypto_kem_kyber1024_ref_indcpa_dec
+    {standard input}:938    .text.crypto_kem_kyber1024_ref_indcpa_dec:00000064 $d
+                           .group:00000000 wm4.0.9f3a4c6b5812d20634d55e39ed31011a
+                           .group:00000000 wm4.stddef.h.39.38eb7ec030421799c657b13be5aa21c7
+                           .group:00000000 wm4.stdint.h.29.6d480f4ba0f60596e88234283d42444f
+                           .group:00000000 wm4.params.h.2.424e8b69daf74be3d402b39ff8b011f8
+                           .group:00000000 wm4.poly.h.2.b6919fe31c15bb5e938a7c84e2ea1b4c
+                           .group:00000000 wm4.polyvec.h.12.86b160b3168959d7a47c886f049b9e1c
+                           .group:00000000 wm4.indcpa.h.8.5d2ed09307d1666e9bedc371decda90d
+                           .group:00000000 wm4._newlib_version.h.4.0eb654b64686e2bd29646258853f6c22
+                           .group:00000000 wm4.newlib.h.27.07bf1b8b16da454ae07478107717878b
+                           .group:00000000 wm4.ieeefp.h.77.b6f5ce903562917fbd9193ee87d4fa47
+                           .group:00000000 wm4.features.h.22.03467e2205ec9ffbc20524d97cdbdf6a
+                           .group:00000000 wm4.config.h.224.10ee1ad185d877c6e334e6581faab44d
+                           .group:00000000 wm4._ansi.h.31.de524f58584151836e90d8620a16f8e8
+                           .group:00000000 wm4.unistd.h.9.2709ac388e61c5728907bf928c890ff7
+                           .group:00000000 wm4._default_types.h.6.959254cf5f09734ea7516c89e8bb21bd
+                           .group:00000000 wm4.stddef.h.158.eec8bf00b5213f43d095cb984c5f22e3
+                           .group:00000000 wm4.cdefs.h.49.bafb023044e47a1dcdd854e4d6521f7d
+                           .group:00000000 wm4.types.h.40.8b6acba56cefbb11746718204edc8f5e
+                           .group:00000000 wm4._types.h.20.dd0d04dca3800a0d2a6129b87f3adbb2
+                           .group:00000000 wm4.stddef.h.158.6f8e08a347b1cff664332fa350bfceb3
+                           .group:00000000 wm4._types.h.127.3bdfe3ff8ea2d0985b03d9cbe93480e3
+                           .group:00000000 wm4._stdint.h.10.c24fa3af3bc1706662bb5593a907e841
+                           .group:00000000 wm4._endian.h.31.65a10590763c3dde1ac4a7f66d7d4891
+                           .group:00000000 wm4.endian.h.9.49f3a4695c1b61e8a0808de3c4a106cb
+                           .group:00000000 wm4._timeval.h.32.bec3221fa7a9bb0bdde696c9c57e47d2
+                           .group:00000000 wm4.timespec.h.41.d855182eb0e690443ab8651bcedca6e1
+                           .group:00000000 wm4.select.h.19.8c04bee5682eafa577cf6325dd7ee64c
+                           .group:00000000 wm4.types.h.51.e2a6e4379b4797ffcc4841f8498fd61b
+                           .group:00000000 wm4.sched.h.22.c60982713a5c428609783c78f9c78d95
+                           .group:00000000 wm4._pthreadtypes.h.36.fcee9961c35163dde6267ef772ad1972
+                           .group:00000000 wm4.unistd.h.166.64f46862ce0a3925984c663d49123e22
+                           .group:00000000 wm4.ntt.h.2.897e2440bcde6b9a3d89d32fabc9dbcf
+                           .group:00000000 wm4.fips202.h.8.8779f48eea13226fdfe94b9f248ada05
+                           .group:00000000 wm4.symmetric.h.49.11f302b73b08542b87200e689a54420a
+
+UNDEFINED SYMBOLS
+crypto_kem_kyber1024_ref_shake128_squeezeblocks
+crypto_kem_kyber1024_ref_kyber_shake128_absorb
+PQCLEAN_randombytes
+crypto_kem_kyber1024_ref_poly_getnoise
+crypto_kem_kyber1024_ref_sha3_512
+crypto_kem_kyber1024_ref_polyvec_ntt
+crypto_kem_kyber1024_ref_polyvec_pointwise_acc_montgomery
+crypto_kem_kyber1024_ref_poly_tomont
+crypto_kem_kyber1024_ref_polyvec_add
+crypto_kem_kyber1024_ref_polyvec_tobytes
+crypto_kem_kyber1024_ref_polyvec_reduce
+crypto_kem_kyber1024_ref_polyvec_frombytes
+crypto_kem_kyber1024_ref_poly_frommsg
+crypto_kem_kyber1024_ref_polyvec_invntt_tomont
+crypto_kem_kyber1024_ref_poly_add
+crypto_kem_kyber1024_ref_poly_invntt_tomont
+crypto_kem_kyber1024_ref_poly_reduce
+crypto_kem_kyber1024_ref_polyvec_compress
+crypto_kem_kyber1024_ref_poly_compress
+crypto_kem_kyber1024_ref_polyvec_decompress
+crypto_kem_kyber1024_ref_poly_decompress
+crypto_kem_kyber1024_ref_poly_sub
+crypto_kem_kyber1024_ref_poly_tomsg

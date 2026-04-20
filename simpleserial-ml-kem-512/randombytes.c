@@ -87,37 +87,6 @@ THE SOFTWARE.
 # include <stdbool.h>
 #endif /* defined(__EMSCRIPTEN__) */
 
-#if defined(__arm__) || defined(__arm)
-/* ARM embedded platforms - use simple XORShift PRNG */
-#include <stdint.h>
-
-static uint32_t random_state = 0x12345678;
-
-static void randombytes_arm_init(void) {
-    /* Initialize with a non-zero seed */
-    if (random_state == 0) {
-        random_state = 0x12345678;
-    }
-}
-
-static uint32_t xorshift32(uint32_t x) {
-    x ^= x << 13;
-    x ^= x >> 17;
-    x ^= x << 5;
-    return x;
-}
-
-static int randombytes_arm_randombytes(void *buf, size_t n) {
-    uint8_t *p = (uint8_t *)buf;
-    randombytes_arm_init();
-    while (n--) {
-        random_state = xorshift32(random_state);
-        *p++ = random_state & 0xFF;
-    }
-    return 0;
-}
-#endif /* defined(__arm__) */
-
 #if defined(_WIN32)
 static int randombytes_win32_randombytes(void *buf, const size_t n) {
     HCRYPTPROV ctx;
@@ -380,9 +349,6 @@ int randombytes(uint8_t *output, size_t n) {
     #elif defined(__wasi__)
     /* Use WASI */
     return randombytes_wasi_randombytes(buf, n);
-    #elif defined(__arm__) || defined(__arm)
-    /* Use simple XORShift PRNG for ARM embedded platforms */
-    return randombytes_arm_randombytes(buf, n);
     #else
 # error "randombytes(...) is not supported on this platform"
     #endif

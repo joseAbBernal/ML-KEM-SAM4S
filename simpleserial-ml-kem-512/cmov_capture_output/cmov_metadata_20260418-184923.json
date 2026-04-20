@@ -1,0 +1,16 @@
+{
+  "command": "k",
+  "dummy_payload_hex": "eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee",
+  "n_traces_requested": 5000,
+  "n_traces_captured": 5000,
+  "adc_samples": 3000,
+  "adc_offset": 0,
+  "gain_db": 18,
+  "reference_vectors": {
+    "ss_hex": "17e15971054cd3ac2b416ef418d774ede04625d805102e246bed45468007530e",
+    "ss2_hex": "fb7385bf2239cb99565b3dd8faebe33c6feec265464bd8c934a02e7ffbaea3f0",
+    "delta_ss_hex": "ec92dcce277518357d1a532ce23c97d18fa8e7bd435bf6ed5f4d6b397ba9f0fe",
+    "ct_first32_hex": "463fc09919479cd668df9701c76569bcaac43b7ca541aaa072b102359a1e13c5",
+    "sk_first32_hex": "78d38c15d4ca32a353a7dcb510982b9c55628a5c7dd18a1123e4733e223ab6b5"
+  }
+}

@@ -1,0 +1,549 @@
+   1              	 .cpu cortex-m4
+   2              	 .arch armv7e-m
+   3              	 .fpu softvfp
+   4              	 .eabi_attribute 20,1
+   5              	 .eabi_attribute 21,1
+   6              	 .eabi_attribute 23,3
+   7              	 .eabi_attribute 24,1
+   8              	 .eabi_attribute 25,1
+   9              	 .eabi_attribute 26,1
+  10              	 .eabi_attribute 30,4
+  11              	 .eabi_attribute 34,1
+  12              	 .eabi_attribute 18,4
+  13              	 .file "kem.c"
+  14              	 .text
+  15              	.Ltext0:
+  16              	 .cfi_sections .debug_frame
+  17              	 .file 1 "kem.c"
+  18              	 .section .text.crypto_kem_kyber1024_ref_keypair,"ax",%progbits
+  19              	 .align 1
+  20              	 .global crypto_kem_kyber1024_ref_keypair
+  21              	 .syntax unified
+  22              	 .thumb
+  23              	 .thumb_func
+  25              	crypto_kem_kyber1024_ref_keypair:
+  26              	.LVL0:
+  27              	.LFB0:
+   1:kem.c         **** #include <stddef.h>
+   2:kem.c         **** #include <stdint.h>
+   3:kem.c         **** #include "kem.h"
+   4:kem.c         **** #include "params.h"
+   5:kem.c         **** #include "randombytes.h"
+   6:kem.c         **** #include "symmetric.h"
+   7:kem.c         **** #include "verify.h"
+   8:kem.c         **** #include "indcpa.h"
+   9:kem.c         **** 
+  10:kem.c         **** /*************************************************
+  11:kem.c         **** * Name:        crypto_kem_keypair
+  12:kem.c         **** *
+  13:kem.c         **** * Description: Generates public and private key
+  14:kem.c         **** *              for CCA-secure Kyber key encapsulation mechanism
+  15:kem.c         **** *
+  16:kem.c         **** * Arguments:   - unsigned char *pk: pointer to output public key
+  17:kem.c         **** *                (an already allocated array of CRYPTO_PUBLICKEYBYTES bytes)
+  18:kem.c         **** *              - unsigned char *sk: pointer to output private key
+  19:kem.c         **** *                (an already allocated array of CRYPTO_SECRETKEYBYTES bytes)
+  20:kem.c         **** *
+  21:kem.c         **** * Returns 0 (success)
+  22:kem.c         **** **************************************************/
+  23:kem.c         **** int crypto_kem_keypair(unsigned char *pk, unsigned char *sk)
+  24:kem.c         **** {
+  28              	 .loc 1 24 1 view-0
+  29              	 .cfi_startproc
+  30              	 
+  31              	 
+  25:kem.c         ****   size_t i;
+  32              	 .loc 1 25 3 view .LVU1
+  26:kem.c         ****   indcpa_keypair(pk, sk);
+  33              	 .loc 1 26 3 view .LVU2
+  24:kem.c         ****   size_t i;
+  34              	 .loc 1 24 1 is_stmt 0 view .LVU3
+  35 0000 38B5     	 push {r3,r4,r5,lr}
+  36              	.LCFI0:
+  37              	 .cfi_def_cfa_offset 16
+  38              	 .cfi_offset 3,-16
+  39              	 .cfi_offset 4,-12
+  40              	 .cfi_offset 5,-8
+  41              	 .cfi_offset 14,-4
+  24:kem.c         ****   size_t i;
+  42              	 .loc 1 24 1 view .LVU4
+  43 0002 0546     	 mov r5,r0
+  44 0004 0C46     	 mov r4,r1
+  45              	 .loc 1 26 3 view .LVU5
+  46 0006 0D4B     	 ldr r3,.L4
+  47 0008 9847     	 blx r3
+  48              	.LVL1:
+  27:kem.c         ****   for(i=0;i<KYBER_INDCPA_PUBLICKEYBYTES;i++)
+  49              	 .loc 1 27 3 is_stmt 1 view .LVU6
+  50              	 .loc 1 27 12 discriminator 1 view .LVU7
+  51 000a 6B1E     	 subs r3,r5,#1
+  52 000c 04F2FF52 	 addw r2,r4,#1535
+  53 0010 05F21F61 	 addw r1,r5,#1567
+  54              	.LVL2:
+  55              	.L2:
+  28:kem.c         ****     sk[i+KYBER_INDCPA_SECRETKEYBYTES] = pk[i];
+  56              	 .loc 1 28 5 view .LVU8
+  57              	 .loc 1 28 43 is_stmt 0 view .LVU9
+  58 0014 13F8010F 	 ldrb r0,[r3,#1]!
+  59              	 .loc 1 28 39 view .LVU10
+  60 0018 02F8010F 	 strb r0,[r2,#1]!
+  27:kem.c         ****   for(i=0;i<KYBER_INDCPA_PUBLICKEYBYTES;i++)
+  61              	 .loc 1 27 42 is_stmt 1 discriminator 3 view .LVU11
+  27:kem.c         ****   for(i=0;i<KYBER_INDCPA_PUBLICKEYBYTES;i++)
+  62              	 .loc 1 27 12 discriminator 1 view .LVU12
+  63 001c 8B42     	 cmp r3,r1
+  64 001e F9D1     	 bne .L2
+  29:kem.c         ****   hash_h(sk+KYBER_SECRETKEYBYTES-2*KYBER_SYMBYTES, pk, KYBER_PUBLICKEYBYTES);
+  65              	 .loc 1 29 3 view .LVU13
+  66 0020 4FF4C462 	 mov r2,#1568
+  67 0024 2946     	 mov r1,r5
+  68 0026 04F54260 	 add r0,r4,#3104
+  69 002a 054B     	 ldr r3,.L4+4
+  70 002c 9847     	 blx r3
+  71              	.LVL3:
+  30:kem.c         ****   /* Value z for pseudo-random output on reject */
+  31:kem.c         ****   randombytes(sk+KYBER_SECRETKEYBYTES-KYBER_SYMBYTES, KYBER_SYMBYTES);
+  72              	 .loc 1 31 3 view .LVU14
+  73 002e 054B     	 ldr r3,.L4+8
+  74 0030 2021     	 movs r1,#32
+  75 0032 04F54460 	 add r0,r4,#3136
+  76 0036 9847     	 blx r3
+  77              	.LVL4:
+  32:kem.c         ****   return 0;
+  78              	 .loc 1 32 3 view .LVU15
+  33:kem.c         **** }
+  79              	 .loc 1 33 1 is_stmt 0 view .LVU16
+  80 0038 0020     	 movs r0,#0
+  81 003a 38BD     	 pop {r3,r4,r5,pc}
+  82              	.LVL5:
+  83              	.L5:
+  84              	 .loc 1 33 1 view .LVU17
+  85              	 .align 2
+  86              	.L4:
+  87 003c 00000000 	 .word crypto_kem_kyber1024_ref_indcpa_keypair
+  88 0040 00000000 	 .word crypto_kem_kyber1024_ref_sha3_256
+  89 0044 00000000 	 .word PQCLEAN_randombytes
+  90              	 .cfi_endproc
+  91              	.LFE0:
+  93              	 .section .text.crypto_kem_kyber1024_ref_enc,"ax",%progbits
+  94              	 .align 1
+  95              	 .global crypto_kem_kyber1024_ref_enc
+  96              	 .syntax unified
+  97              	 .thumb
+  98              	 .thumb_func
+ 100              	crypto_kem_kyber1024_ref_enc:
+ 101              	.LVL6:
+ 102              	.LFB1:
+  34:kem.c         **** 
+  35:kem.c         **** /*************************************************
+  36:kem.c         **** * Name:        crypto_kem_enc
+  37:kem.c         **** *
+  38:kem.c         **** * Description: Generates cipher text and shared
+  39:kem.c         **** *              secret for given public key
+  40:kem.c         **** *
+  41:kem.c         **** * Arguments:   - unsigned char *ct: pointer to output cipher text
+  42:kem.c         **** *                (an already allocated array of CRYPTO_CIPHERTEXTBYTES bytes)
+  43:kem.c         **** *              - unsigned char *ss: pointer to output shared secret
+  44:kem.c         **** *                (an already allocated array of CRYPTO_BYTES bytes)
+  45:kem.c         **** *              - const unsigned char *pk: pointer to input public key
+  46:kem.c         **** *                (an already allocated array of CRYPTO_PUBLICKEYBYTES bytes)
+  47:kem.c         **** *
+  48:kem.c         **** * Returns 0 (success)
+  49:kem.c         **** **************************************************/
+  50:kem.c         **** int crypto_kem_enc(unsigned char *ct,
+  51:kem.c         ****                    unsigned char *ss,
+  52:kem.c         ****                    const unsigned char *pk)
+  53:kem.c         **** {
+ 103              	 .loc 1 53 1 is_stmt 1 view-0
+ 104              	 .cfi_startproc
+ 105              	 
+ 106              	 
+  54:kem.c         ****   uint8_t buf[2*KYBER_SYMBYTES];
+ 107              	 .loc 1 54 3 view .LVU19
+  55:kem.c         ****   /* Will contain key, coins */
+  56:kem.c         ****   uint8_t kr[2*KYBER_SYMBYTES];
+ 108              	 .loc 1 56 3 view .LVU20
+  57:kem.c         **** 
+  58:kem.c         ****   randombytes(buf, KYBER_SYMBYTES);
+ 109              	 .loc 1 58 3 view .LVU21
+  53:kem.c         ****   uint8_t buf[2*KYBER_SYMBYTES];
+ 110              	 .loc 1 53 1 is_stmt 0 view .LVU22
+ 111 0000 F0B5     	 push {r4,r5,r6,r7,lr}
+ 112              	.LCFI1:
+ 113              	 .cfi_def_cfa_offset 20
+ 114              	 .cfi_offset 4,-20
+ 115              	 .cfi_offset 5,-16
+ 116              	 .cfi_offset 6,-12
+ 117              	 .cfi_offset 7,-8
+ 118              	 .cfi_offset 14,-4
+ 119 0002 A1B0     	 sub sp,sp,#132
+ 120              	.LCFI2:
+ 121              	 .cfi_def_cfa_offset 152
+ 122              	 .loc 1 58 3 view .LVU23
+ 123 0004 154B     	 ldr r3,.L7
+  59:kem.c         ****   /* Don't release system RNG output */
+  60:kem.c         ****   hash_h(buf, buf, KYBER_SYMBYTES);
+ 124              	 .loc 1 60 3 view .LVU24
+ 125 0006 164F     	 ldr r7,.L7+4
+  53:kem.c         ****   uint8_t buf[2*KYBER_SYMBYTES];
+ 126              	 .loc 1 53 1 view .LVU25
+ 127 0008 0446     	 mov r4,r0
+ 128 000a 0E46     	 mov r6,r1
+  58:kem.c         ****   /* Don't release system RNG output */
+ 129              	 .loc 1 58 3 view .LVU26
+ 130 000c 6846     	 mov r0,sp
+ 131              	.LVL7:
+  58:kem.c         ****   /* Don't release system RNG output */
+ 132              	 .loc 1 58 3 view .LVU27
+ 133 000e 2021     	 movs r1,#32
+ 134              	.LVL8:
+  53:kem.c         ****   uint8_t buf[2*KYBER_SYMBYTES];
+ 135              	 .loc 1 53 1 view .LVU28
+ 136 0010 1546     	 mov r5,r2
+  58:kem.c         ****   /* Don't release system RNG output */
+ 137              	 .loc 1 58 3 view .LVU29
+ 138 0012 9847     	 blx r3
+ 139              	.LVL9:
+ 140              	 .loc 1 60 3 is_stmt 1 view .LVU30
+ 141 0014 6946     	 mov r1,sp
+ 142 0016 6846     	 mov r0,sp
+ 143 0018 2022     	 movs r2,#32
+ 144 001a B847     	 blx r7
+ 145              	.LVL10:
+  61:kem.c         **** 
+  62:kem.c         ****   /* Multitarget countermeasure for coins + contributory KEM */
+  63:kem.c         ****   hash_h(buf+KYBER_SYMBYTES, pk, KYBER_PUBLICKEYBYTES);
+ 146              	 .loc 1 63 3 view .LVU31
+ 147 001c 2946     	 mov r1,r5
+ 148 001e 08A8     	 add r0,sp,#32
+ 149 0020 4FF4C462 	 mov r2,#1568
+ 150 0024 B847     	 blx r7
+ 151              	.LVL11:
+  64:kem.c         ****   hash_g(kr, buf, 2*KYBER_SYMBYTES);
+ 152              	 .loc 1 64 3 view .LVU32
+ 153 0026 4022     	 movs r2,#64
+ 154 0028 0DEB0200 	 add r0,sp,r2
+ 155 002c 6946     	 mov r1,sp
+ 156 002e 0D4B     	 ldr r3,.L7+8
+ 157 0030 9847     	 blx r3
+ 158              	.LVL12:
+  65:kem.c         **** 
+  66:kem.c         ****   /* coins are in kr+KYBER_SYMBYTES */
+  67:kem.c         ****   indcpa_enc(ct, buf, pk, kr+KYBER_SYMBYTES);
+ 159              	 .loc 1 67 3 view .LVU33
+ 160 0032 18AB     	 add r3,sp,#96
+ 161 0034 2A46     	 mov r2,r5
+ 162 0036 6946     	 mov r1,sp
+ 163 0038 2046     	 mov r0,r4
+ 164 003a 0B4D     	 ldr r5,.L7+12
+ 165              	.LVL13:
+ 166              	 .loc 1 67 3 is_stmt 0 view .LVU34
+ 167 003c A847     	 blx r5
+ 168              	.LVL14:
+  68:kem.c         **** 
+  69:kem.c         ****   /* overwrite coins in kr with H(c) */
+  70:kem.c         ****   hash_h(kr+KYBER_SYMBYTES, ct, KYBER_CIPHERTEXTBYTES);
+ 169              	 .loc 1 70 3 is_stmt 1 view .LVU35
+ 170 003e 2146     	 mov r1,r4
+ 171 0040 18A8     	 add r0,sp,#96
+ 172 0042 4FF4C462 	 mov r2,#1568
+ 173 0046 B847     	 blx r7
+ 174              	.LVL15:
+  71:kem.c         ****   /* hash concatenation of pre-k and H(c) to k */
+  72:kem.c         ****   kdf(ss, kr, 2*KYBER_SYMBYTES);
+ 175              	 .loc 1 72 3 view .LVU36
+ 176 0048 4023     	 movs r3,#64
+ 177 004a 3046     	 mov r0,r6
+ 178 004c 074C     	 ldr r4,.L7+16
+ 179              	.LVL16:
+ 180              	 .loc 1 72 3 is_stmt 0 view .LVU37
+ 181 004e 0DEB0302 	 add r2,sp,r3
+ 182 0052 2021     	 movs r1,#32
+ 183 0054 A047     	 blx r4
+ 184              	.LVL17:
+  73:kem.c         ****   return 0;
+ 185              	 .loc 1 73 3 is_stmt 1 view .LVU38
+  74:kem.c         **** }
+ 186              	 .loc 1 74 1 is_stmt 0 view .LVU39
+ 187 0056 0020     	 movs r0,#0
+ 188 0058 21B0     	 add sp,sp,#132
+ 189              	.LCFI3:
+ 190              	 .cfi_def_cfa_offset 20
+ 191              	 
+ 192 005a F0BD     	 pop {r4,r5,r6,r7,pc}
+ 193              	.LVL18:
+ 194              	.L8:
+ 195              	 .loc 1 74 1 view .LVU40
+ 196              	 .align 2
+ 197              	.L7:
+ 198 005c 00000000 	 .word PQCLEAN_randombytes
+ 199 0060 00000000 	 .word crypto_kem_kyber1024_ref_sha3_256
+ 200 0064 00000000 	 .word crypto_kem_kyber1024_ref_sha3_512
+ 201 0068 00000000 	 .word crypto_kem_kyber1024_ref_indcpa_enc
+ 202 006c 00000000 	 .word crypto_kem_kyber1024_ref_shake256
+ 203              	 .cfi_endproc
+ 204              	.LFE1:
+ 206              	 .section .text.crypto_kem_kyber1024_ref_dec,"ax",%progbits
+ 207              	 .align 1
+ 208              	 .global crypto_kem_kyber1024_ref_dec
+ 209              	 .syntax unified
+ 210              	 .thumb
+ 211              	 .thumb_func
+ 213              	crypto_kem_kyber1024_ref_dec:
+ 214              	.LVL19:
+ 215              	.LFB2:
+  75:kem.c         **** 
+  76:kem.c         **** /*************************************************
+  77:kem.c         **** * Name:        crypto_kem_dec
+  78:kem.c         **** *
+  79:kem.c         **** * Description: Generates shared secret for given
+  80:kem.c         **** *              cipher text and private key
+  81:kem.c         **** *
+  82:kem.c         **** * Arguments:   - unsigned char *ss: pointer to output shared secret
+  83:kem.c         **** *                (an already allocated array of CRYPTO_BYTES bytes)
+  84:kem.c         **** *              - const unsigned char *ct: pointer to input cipher text
+  85:kem.c         **** *                (an already allocated array of CRYPTO_CIPHERTEXTBYTES bytes)
+  86:kem.c         **** *              - const unsigned char *sk: pointer to input private key
+  87:kem.c         **** *                (an already allocated array of CRYPTO_SECRETKEYBYTES bytes)
+  88:kem.c         **** *
+  89:kem.c         **** * Returns 0.
+  90:kem.c         **** *
+  91:kem.c         **** * On failure, ss will contain a pseudo-random value.
+  92:kem.c         **** **************************************************/
+  93:kem.c         **** int crypto_kem_dec(unsigned char *ss,
+  94:kem.c         ****                    const unsigned char *ct,
+  95:kem.c         ****                    const unsigned char *sk)
+  96:kem.c         **** {
+ 216              	 .loc 1 96 1 is_stmt 1 view-0
+ 217              	 .cfi_startproc
+ 218              	 
+ 219              	 
+  97:kem.c         ****   size_t i;
+ 220              	 .loc 1 97 3 view .LVU42
+  98:kem.c         ****   int fail;
+ 221              	 .loc 1 98 3 view .LVU43
+  99:kem.c         ****   uint8_t buf[2*KYBER_SYMBYTES];
+ 222              	 .loc 1 99 3 view .LVU44
+ 100:kem.c         ****   /* Will contain key, coins */
+ 101:kem.c         ****   uint8_t kr[2*KYBER_SYMBYTES];
+ 223              	 .loc 1 101 3 view .LVU45
+ 102:kem.c         ****   uint8_t cmp[KYBER_CIPHERTEXTBYTES];
+ 224              	 .loc 1 102 3 view .LVU46
+ 103:kem.c         ****   const uint8_t *pk = sk+KYBER_INDCPA_SECRETKEYBYTES;
+ 225              	 .loc 1 103 3 view .LVU47
+  96:kem.c         ****   size_t i;
+ 226              	 .loc 1 96 1 is_stmt 0 view .LVU48
+ 227 0000 F0B5     	 push {r4,r5,r6,r7,lr}
+ 228              	.LCFI4:
+ 229              	 .cfi_def_cfa_offset 20
+ 230              	 .cfi_offset 4,-20
+ 231              	 .cfi_offset 5,-16
+ 232              	 .cfi_offset 6,-12
+ 233              	 .cfi_offset 7,-8
+ 234              	 .cfi_offset 14,-4
+ 235 0002 ADF2A46D 	 subw sp,sp,#1700
+ 236              	.LCFI5:
+ 237              	 .cfi_def_cfa_offset 1720
+  96:kem.c         ****   size_t i;
+ 238              	 .loc 1 96 1 view .LVU49
+ 239 0006 1546     	 mov r5,r2
+ 240              	.LVL20:
+ 104:kem.c         **** 
+ 105:kem.c         ****   indcpa_dec(buf, ct, sk);
+ 241              	 .loc 1 105 3 is_stmt 1 view .LVU50
+ 242 0008 1E4B     	 ldr r3,.L12
+  96:kem.c         ****   size_t i;
+ 243              	 .loc 1 96 1 is_stmt 0 view .LVU51
+ 244 000a 0746     	 mov r7,r0
+ 245              	 .loc 1 105 3 view .LVU52
+ 246 000c 6846     	 mov r0,sp
+ 247              	.LVL21:
+  96:kem.c         ****   size_t i;
+ 248              	 .loc 1 96 1 view .LVU53
+ 249 000e 0E46     	 mov r6,r1
+ 106:kem.c         **** 
+ 107:kem.c         ****   /* Multitarget countermeasure for coins + contributory KEM */
+ 108:kem.c         ****   for(i=0;i<KYBER_SYMBYTES;i++)
+ 109:kem.c         ****     buf[KYBER_SYMBYTES+i] = sk[KYBER_SECRETKEYBYTES-2*KYBER_SYMBYTES+i];
+ 250              	 .loc 1 109 27 view .LVU54
+ 251 0010 05F54264 	 add r4,r5,#3104
+ 105:kem.c         **** 
+ 252              	 .loc 1 105 3 view .LVU55
+ 253 0014 9847     	 blx r3
+ 254              	.LVL22:
+ 108:kem.c         ****     buf[KYBER_SYMBYTES+i] = sk[KYBER_SECRETKEYBYTES-2*KYBER_SYMBYTES+i];
+ 255              	 .loc 1 108 3 is_stmt 1 view .LVU56
+ 108:kem.c         ****     buf[KYBER_SYMBYTES+i] = sk[KYBER_SECRETKEYBYTES-2*KYBER_SYMBYTES+i];
+ 256              	 .loc 1 108 12 discriminator 1 view .LVU57
+ 257              	 .loc 1 109 27 is_stmt 0 view .LVU58
+ 258 0016 08AA     	 add r2,sp,#32
+ 259 0018 05F5446C 	 add ip,r5,#3136
+ 260              	.L10:
+ 261 001c 2068     	 ldr r0,[r4]
+ 262 001e 6168     	 ldr r1,[r4,#4]
+ 263 0020 1346     	 mov r3,r2
+ 264 0022 03C3     	 stmia r3!,{r0,r1}
+ 265 0024 0834     	 adds r4,r4,#8
+ 266 0026 6445     	 cmp r4,ip
+ 267 0028 1A46     	 mov r2,r3
+ 268 002a F7D1     	 bne .L10
+ 269              	.LVL23:
+ 110:kem.c         ****   hash_g(kr, buf, 2*KYBER_SYMBYTES);
+ 270              	 .loc 1 110 3 is_stmt 1 view .LVU59
+ 271 002c 4022     	 movs r2,#64
+ 272 002e 0DEB0200 	 add r0,sp,r2
+ 273 0032 6946     	 mov r1,sp
+ 274 0034 144B     	 ldr r3,.L12+4
+ 275 0036 9847     	 blx r3
+ 276              	.LVL24:
+ 111:kem.c         **** 
+ 112:kem.c         ****   /* coins are in kr+KYBER_SYMBYTES */
+ 113:kem.c         ****   indcpa_enc(cmp, buf, pk, kr+KYBER_SYMBYTES);
+ 277              	 .loc 1 113 3 view .LVU60
+ 278 0038 18AB     	 add r3,sp,#96
+ 279 003a 05F5C062 	 add r2,r5,#1536
+ 280 003e 6946     	 mov r1,sp
+ 281 0040 20A8     	 add r0,sp,#128
+ 282 0042 124D     	 ldr r5,.L12+8
+ 283              	.LVL25:
+ 284              	 .loc 1 113 3 is_stmt 0 view .LVU61
+ 285 0044 A847     	 blx r5
+ 286              	.LVL26:
+ 114:kem.c         **** 
+ 115:kem.c         ****   fail = verify(ct, cmp, KYBER_CIPHERTEXTBYTES);
+ 287              	 .loc 1 115 3 is_stmt 1 view .LVU62
+ 288              	 .loc 1 115 10 is_stmt 0 view .LVU63
+ 289 0046 20A9     	 add r1,sp,#128
+ 290 0048 114B     	 ldr r3,.L12+12
+ 291 004a 4FF4C462 	 mov r2,#1568
+ 292 004e 3046     	 mov r0,r6
+ 293 0050 9847     	 blx r3
+ 294              	.LVL27:
+ 116:kem.c         **** 
+ 117:kem.c         ****   /* overwrite coins in kr with H(c) */
+ 118:kem.c         ****   hash_h(kr+KYBER_SYMBYTES, ct, KYBER_CIPHERTEXTBYTES);
+ 295              	 .loc 1 118 3 view .LVU64
+ 296 0052 3146     	 mov r1,r6
+ 115:kem.c         **** 
+ 297              	 .loc 1 115 10 view .LVU65
+ 298 0054 0546     	 mov r5,r0
+ 299              	.LVL28:
+ 300              	 .loc 1 118 3 is_stmt 1 view .LVU66
+ 301 0056 0F4B     	 ldr r3,.L12+16
+ 302 0058 18A8     	 add r0,sp,#96
+ 303              	.LVL29:
+ 304              	 .loc 1 118 3 is_stmt 0 view .LVU67
+ 305 005a 4FF4C462 	 mov r2,#1568
+ 306 005e 9847     	 blx r3
+ 307              	.LVL30:
+ 119:kem.c         **** 
+ 120:kem.c         ****   /* Overwrite pre-k with z on re-encryption failure */
+ 121:kem.c         ****   cmov(kr, sk+KYBER_SECRETKEYBYTES-KYBER_SYMBYTES, KYBER_SYMBYTES, fail);
+ 308              	 .loc 1 121 3 is_stmt 1 view .LVU68
+ 309 0060 EBB2     	 uxtb r3,r5
+ 310 0062 2146     	 mov r1,r4
+ 311 0064 10A8     	 add r0,sp,#64
+ 312 0066 0C4C     	 ldr r4,.L12+20
+ 313 0068 2022     	 movs r2,#32
+ 314 006a A047     	 blx r4
+ 315              	.LVL31:
+ 122:kem.c         **** 
+ 123:kem.c         ****   /* hash concatenation of pre-k and H(c) to k */
+ 124:kem.c         ****   kdf(ss, kr, 2*KYBER_SYMBYTES);
+ 316              	 .loc 1 124 3 view .LVU69
+ 317 006c 4023     	 movs r3,#64
+ 318 006e 3846     	 mov r0,r7
+ 319 0070 0A4C     	 ldr r4,.L12+24
+ 320 0072 0DEB0302 	 add r2,sp,r3
+ 321 0076 2021     	 movs r1,#32
+ 322 0078 A047     	 blx r4
+ 323              	.LVL32:
+ 125:kem.c         ****   return 0;
+ 324              	 .loc 1 125 3 view .LVU70
+ 126:kem.c         **** }
+ 325              	 .loc 1 126 1 is_stmt 0 view .LVU71
+ 326 007a 0020     	 movs r0,#0
+ 327 007c 0DF2A46D 	 addw sp,sp,#1700
+ 328              	.LCFI6:
+ 329              	 .cfi_def_cfa_offset 20
+ 330              	 
+ 331 0080 F0BD     	 pop {r4,r5,r6,r7,pc}
+ 332              	.LVL33:
+ 333              	.L13:
+ 334              	 .loc 1 126 1 view .LVU72
+ 335 0082 00BF     	 .align 2
+ 336              	.L12:
+ 337 0084 00000000 	 .word crypto_kem_kyber1024_ref_indcpa_dec
+ 338 0088 00000000 	 .word crypto_kem_kyber1024_ref_sha3_512
+ 339 008c 00000000 	 .word crypto_kem_kyber1024_ref_indcpa_enc
+ 340 0090 00000000 	 .word crypto_kem_kyber1024_ref_verify
+ 341 0094 00000000 	 .word crypto_kem_kyber1024_ref_sha3_256
+ 342 0098 00000000 	 .word crypto_kem_kyber1024_ref_cmov
+ 343 009c 00000000 	 .word crypto_kem_kyber1024_ref_shake256
+ 344              	 .cfi_endproc
+ 345              	.LFE2:
+ 347              	 .text
+ 348              	.Letext0:
+ 349              	 .file 2 "/usr/lib/gcc/arm-none-eabi/14.2.1/include/stddef.h"
+ 350              	 .file 3 "/usr/lib/gcc/arm-none-eabi/14.2.1/include/stdint.h"
+ 351              	 .file 4 "verify.h"
+ 352              	 .file 5 "indcpa.h"
+ 353              	 .file 6 "fips202.h"
+ 354              	 .file 7 "randombytes.h"
+DEFINED SYMBOLS
+                            *ABS*:00000000 kem.c
+    {standard input}:19     .text.crypto_kem_kyber1024_ref_keypair:00000000 $t
+    {standard input}:25     .text.crypto_kem_kyber1024_ref_keypair:00000000 crypto_kem_kyber1024_ref_keypair
+    {standard input}:87     .text.crypto_kem_kyber1024_ref_keypair:0000003c $d
+    {standard input}:94     .text.crypto_kem_kyber1024_ref_enc:00000000 $t
+    {standard input}:100    .text.crypto_kem_kyber1024_ref_enc:00000000 crypto_kem_kyber1024_ref_enc
+    {standard input}:198    .text.crypto_kem_kyber1024_ref_enc:0000005c $d
+    {standard input}:207    .text.crypto_kem_kyber1024_ref_dec:00000000 $t
+    {standard input}:213    .text.crypto_kem_kyber1024_ref_dec:00000000 crypto_kem_kyber1024_ref_dec
+    {standard input}:337    .text.crypto_kem_kyber1024_ref_dec:00000084 $d
+                           .group:00000000 wm4.0.9f3a4c6b5812d20634d55e39ed31011a
+                           .group:00000000 wm4.stddef.h.39.38eb7ec030421799c657b13be5aa21c7
+                           .group:00000000 wm4.stdint.h.29.6d480f4ba0f60596e88234283d42444f
+                           .group:00000000 wm4.params.h.2.424e8b69daf74be3d402b39ff8b011f8
+                           .group:00000000 wm4.kem.h.6.3fe91779c510406cdf173ce93607cef3
+                           .group:00000000 wm4._newlib_version.h.4.0eb654b64686e2bd29646258853f6c22
+                           .group:00000000 wm4.newlib.h.27.07bf1b8b16da454ae07478107717878b
+                           .group:00000000 wm4.ieeefp.h.77.b6f5ce903562917fbd9193ee87d4fa47
+                           .group:00000000 wm4.features.h.22.03467e2205ec9ffbc20524d97cdbdf6a
+                           .group:00000000 wm4.config.h.224.10ee1ad185d877c6e334e6581faab44d
+                           .group:00000000 wm4._ansi.h.31.de524f58584151836e90d8620a16f8e8
+                           .group:00000000 wm4.unistd.h.9.2709ac388e61c5728907bf928c890ff7
+                           .group:00000000 wm4._default_types.h.6.959254cf5f09734ea7516c89e8bb21bd
+                           .group:00000000 wm4.stddef.h.158.eec8bf00b5213f43d095cb984c5f22e3
+                           .group:00000000 wm4.cdefs.h.49.bafb023044e47a1dcdd854e4d6521f7d
+                           .group:00000000 wm4.types.h.40.8b6acba56cefbb11746718204edc8f5e
+                           .group:00000000 wm4._types.h.20.dd0d04dca3800a0d2a6129b87f3adbb2
+                           .group:00000000 wm4.stddef.h.158.6f8e08a347b1cff664332fa350bfceb3
+                           .group:00000000 wm4._types.h.127.3bdfe3ff8ea2d0985b03d9cbe93480e3
+                           .group:00000000 wm4._stdint.h.10.c24fa3af3bc1706662bb5593a907e841
+                           .group:00000000 wm4._endian.h.31.65a10590763c3dde1ac4a7f66d7d4891
+                           .group:00000000 wm4.endian.h.9.49f3a4695c1b61e8a0808de3c4a106cb
+                           .group:00000000 wm4._timeval.h.32.bec3221fa7a9bb0bdde696c9c57e47d2
+                           .group:00000000 wm4.timespec.h.41.d855182eb0e690443ab8651bcedca6e1
+                           .group:00000000 wm4.select.h.19.8c04bee5682eafa577cf6325dd7ee64c
+                           .group:00000000 wm4.types.h.51.e2a6e4379b4797ffcc4841f8498fd61b
+                           .group:00000000 wm4.sched.h.22.c60982713a5c428609783c78f9c78d95
+                           .group:00000000 wm4._pthreadtypes.h.36.fcee9961c35163dde6267ef772ad1972
+                           .group:00000000 wm4.unistd.h.166.64f46862ce0a3925984c663d49123e22
+                           .group:00000000 wm4.fips202.h.8.8779f48eea13226fdfe94b9f248ada05
+                           .group:00000000 wm4.symmetric.h.49.11f302b73b08542b87200e689a54420a
+                           .group:00000000 wm4.verify.h.8.5d6d2a22ef05d0cb6503b8b5945efec7
+                           .group:00000000 wm4.poly.h.2.b6919fe31c15bb5e938a7c84e2ea1b4c
+                           .group:00000000 wm4.polyvec.h.12.86b160b3168959d7a47c886f049b9e1c
+                           .group:00000000 wm4.indcpa.h.8.5d2ed09307d1666e9bedc371decda90d
+
+UNDEFINED SYMBOLS
+crypto_kem_kyber1024_ref_indcpa_keypair
+crypto_kem_kyber1024_ref_sha3_256
+PQCLEAN_randombytes
+crypto_kem_kyber1024_ref_sha3_512
+crypto_kem_kyber1024_ref_indcpa_enc
+crypto_kem_kyber1024_ref_shake256
+crypto_kem_kyber1024_ref_indcpa_dec
+crypto_kem_kyber1024_ref_verify
+crypto_kem_kyber1024_ref_cmov

@@ -1,20 +1,18 @@
-#ifndef API_H
-#define API_H
+#ifndef PQCLEAN_MLKEM512_CLEAN_API_H
+#define PQCLEAN_MLKEM512_CLEAN_API_H
 
-#include "params.h"
+#include <stdint.h>
 
-#define CRYPTO_SECRETKEYBYTES  KYBER_SECRETKEYBYTES
-#define CRYPTO_PUBLICKEYBYTES  KYBER_PUBLICKEYBYTES
-#define CRYPTO_CIPHERTEXTBYTES KYBER_CIPHERTEXTBYTES
-#define CRYPTO_BYTES           KYBER_SSBYTES
+#define PQCLEAN_MLKEM512_CLEAN_CRYPTO_SECRETKEYBYTES  1632
+#define PQCLEAN_MLKEM512_CLEAN_CRYPTO_PUBLICKEYBYTES  800
+#define PQCLEAN_MLKEM512_CLEAN_CRYPTO_CIPHERTEXTBYTES 768
+#define PQCLEAN_MLKEM512_CLEAN_CRYPTO_BYTES           32
+#define PQCLEAN_MLKEM512_CLEAN_CRYPTO_ALGNAME "ML-KEM-512"
 
-#define CRYPTO_ALGNAME "Kyber512"
+int PQCLEAN_MLKEM512_CLEAN_crypto_kem_keypair(uint8_t *pk, uint8_t *sk);
 
-int crypto_kem_keypair(unsigned char *pk, unsigned char *sk);
+int PQCLEAN_MLKEM512_CLEAN_crypto_kem_enc(uint8_t *ct, uint8_t *ss, const uint8_t *pk);
 
-int crypto_kem_enc(unsigned char *ct, unsigned char *ss, const unsigned char *pk);
-
-int crypto_kem_dec(unsigned char *ss, const unsigned char *ct, const unsigned char *sk);
-
+int PQCLEAN_MLKEM512_CLEAN_crypto_kem_dec(uint8_t *ss, const uint8_t *ct, const uint8_t *sk);
 
 #endif

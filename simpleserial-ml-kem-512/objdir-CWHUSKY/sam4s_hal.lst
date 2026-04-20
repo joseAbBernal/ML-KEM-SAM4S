@@ -1082,7 +1082,7 @@
   47:.././hal//sam4s/sam4s_hal.c ****     #endif
   48:.././hal//sam4s/sam4s_hal.c ****     uopts.ul_mck = 7.45E6; //overestimate clock a little to avoid large baud error from calc roundi
  254              	 .loc 1 48 18 view .LVU59
- 255 0002 104B     	 ldr r3,.L8
+ 255 0002 0F4B     	 ldr r3,.L8
   49:.././hal//sam4s/sam4s_hal.c **** 
   50:.././hal//sam4s/sam4s_hal.c ****     uopts.ul_mode = (0x00 << 14) | (0x04 << 9);
   51:.././hal//sam4s/sam4s_hal.c **** 
@@ -1090,8 +1090,11 @@
   53:.././hal//sam4s/sam4s_hal.c **** 
   54:.././hal//sam4s/sam4s_hal.c **** 
   55:.././hal//sam4s/sam4s_hal.c ****     uart_init(UART0, &uopts);
- 256              	 .loc 1 55 5 view .LVU60
- 257 0004 104C     	 ldr r4,.L8+4
+  56:.././hal//sam4s/sam4s_hal.c ****     uart_enable_rx(UART0);
+  57:.././hal//sam4s/sam4s_hal.c ****     uart_enable_tx(UART0);
+  58:.././hal//sam4s/sam4s_hal.c ****     gpio_configure_pin(PIO_PA9_IDX, PIO_PERIPH_A | PIO_DEFAULT | PIO_PULLUP);
+ 256              	 .loc 1 58 5 view .LVU60
+ 257 0004 0F4C     	 ldr r4,.L8+4
   48:.././hal//sam4s/sam4s_hal.c **** 
  258              	 .loc 1 48 18 view .LVU61
  259 0006 4FF46132 	 mov r2,#230400
@@ -1112,361 +1115,357 @@
  270              	.LBB51:
  271              	 .loc 2 409 2 view .LVU66
  272 0014 0820     	 movs r0,#8
- 273 0016 0D4B     	 ldr r3,.L8+8
+ 273 0016 0C4B     	 ldr r3,.L8+8
  274 0018 9847     	 blx r3
  275              	.LVL17:
  276              	 .loc 2 409 2 is_stmt 0 view .LVU67
  277              	.LBE51:
  278              	.LBE50:
+  55:.././hal//sam4s/sam4s_hal.c ****     uart_enable_rx(UART0);
  279              	 .loc 1 55 5 is_stmt 1 view .LVU68
  280 001a 01A9     	 add r1,sp,#4
- 281 001c 0C4B     	 ldr r3,.L8+12
- 282 001e 2046     	 mov r0,r4
+ 281 001c 0B4B     	 ldr r3,.L8+12
+ 282 001e 0C48     	 ldr r0,.L8+16
  283 0020 9847     	 blx r3
  284              	.LVL18:
-  56:.././hal//sam4s/sam4s_hal.c ****     uart_enable_rx(UART0);
+  56:.././hal//sam4s/sam4s_hal.c ****     uart_enable_tx(UART0);
  285              	 .loc 1 56 5 view .LVU69
- 286 0022 2046     	 mov r0,r4
- 287 0024 0B4B     	 ldr r3,.L8+16
+ 286 0022 0B48     	 ldr r0,.L8+16
+ 287 0024 0B4B     	 ldr r3,.L8+20
  288 0026 9847     	 blx r3
  289              	.LVL19:
-  57:.././hal//sam4s/sam4s_hal.c ****     uart_enable_tx(UART0);
+  57:.././hal//sam4s/sam4s_hal.c ****     gpio_configure_pin(PIO_PA9_IDX, PIO_PERIPH_A | PIO_DEFAULT | PIO_PULLUP);
  290              	 .loc 1 57 5 view .LVU70
- 291 0028 0B4B     	 ldr r3,.L8+20
- 292 002a 2046     	 mov r0,r4
+ 291 0028 0B4B     	 ldr r3,.L8+24
+ 292 002a 0948     	 ldr r0,.L8+16
  293 002c 9847     	 blx r3
  294              	.LVL20:
-  58:.././hal//sam4s/sam4s_hal.c ****     gpio_configure_pin(PIO_PA9_IDX, PIO_PERIPH_A | PIO_DEFAULT | PIO_PULLUP);
  295              	 .loc 1 58 5 view .LVU71
- 296 002e 0B4C     	 ldr r4,.L8+24
- 297 0030 0B49     	 ldr r1,.L8+28
- 298 0032 0920     	 movs r0,#9
- 299 0034 A047     	 blx r4
- 300              	.LVL21:
+ 296 002e 0B49     	 ldr r1,.L8+28
+ 297 0030 0920     	 movs r0,#9
+ 298 0032 A047     	 blx r4
+ 299              	.LVL21:
   59:.././hal//sam4s/sam4s_hal.c ****     gpio_configure_pin(PIO_PA10_IDX, PIO_PERIPH_A | PIO_DEFAULT);
- 301              	 .loc 1 59 5 view .LVU72
- 302 0036 4FF00061 	 mov r1,#134217728
- 303 003a 0A20     	 movs r0,#10
- 304 003c A047     	 blx r4
- 305              	.LVL22:
+ 300              	 .loc 1 59 5 view .LVU72
+ 301 0034 4FF00061 	 mov r1,#134217728
+ 302 0038 0A20     	 movs r0,#10
+ 303 003a A047     	 blx r4
+ 304              	.LVL22:
   60:.././hal//sam4s/sam4s_hal.c **** }
- 306              	 .loc 1 60 1 is_stmt 0 view .LVU73
- 307 003e 04B0     	 add sp,sp,#16
- 308              	.LCFI3:
- 309              	 .cfi_def_cfa_offset 8
- 310              	 
- 311 0040 10BD     	 pop {r4,pc}
- 312              	.L9:
- 313 0042 00BF     	 .align 2
- 314              	.L8:
- 315 0044 90AD7100 	 .word 7450000
- 316 0048 00060E40 	 .word 1074660864
- 317 004c 00000000 	 .word pmc_enable_periph_clk
- 318 0050 00000000 	 .word uart_init
+ 305              	 .loc 1 60 1 is_stmt 0 view .LVU73
+ 306 003c 04B0     	 add sp,sp,#16
+ 307              	.LCFI3:
+ 308              	 .cfi_def_cfa_offset 8
+ 309              	 
+ 310 003e 10BD     	 pop {r4,pc}
+ 311              	.L9:
+ 312              	 .align 2
+ 313              	.L8:
+ 314 0040 90AD7100 	 .word 7450000
+ 315 0044 00000000 	 .word pio_configure_pin
+ 316 0048 00000000 	 .word pmc_enable_periph_clk
+ 317 004c 00000000 	 .word uart_init
+ 318 0050 00060E40 	 .word 1074660864
  319 0054 00000000 	 .word uart_enable_rx
  320 0058 00000000 	 .word uart_enable_tx
- 321 005c 00000000 	 .word pio_configure_pin
- 322 0060 01000008 	 .word 134217729
- 323              	 .cfi_endproc
- 324              	.LFE166:
- 326              	 .section .text.putch,"ax",%progbits
- 327              	 .align 1
- 328              	 .global putch
- 329              	 .syntax unified
- 330              	 .thumb
- 331              	 .thumb_func
- 333              	putch:
- 334              	.LVL23:
- 335              	.LFB167:
+ 321 005c 01000008 	 .word 134217729
+ 322              	 .cfi_endproc
+ 323              	.LFE166:
+ 325              	 .section .text.putch,"ax",%progbits
+ 326              	 .align 1
+ 327              	 .global putch
+ 328              	 .syntax unified
+ 329              	 .thumb
+ 330              	 .thumb_func
+ 332              	putch:
+ 333              	.LVL23:
+ 334              	.LFB167:
   61:.././hal//sam4s/sam4s_hal.c **** 
   62:.././hal//sam4s/sam4s_hal.c **** void putch(char c)
   63:.././hal//sam4s/sam4s_hal.c **** {
- 336              	 .loc 1 63 1 is_stmt 1 view-0
- 337              	 .cfi_startproc
+ 335              	 .loc 1 63 1 is_stmt 1 view-0
+ 336              	 .cfi_startproc
+ 337              	 
  338              	 
- 339              	 
   64:.././hal//sam4s/sam4s_hal.c ****     // while (!uart_is_tx_buf_end(UART0));
   65:.././hal//sam4s/sam4s_hal.c ****     while(uart_write(UART0, c));
- 340              	 .loc 1 65 5 view .LVU75
+ 339              	 .loc 1 65 5 view .LVU75
   63:.././hal//sam4s/sam4s_hal.c ****     // while (!uart_is_tx_buf_end(UART0));
- 341              	 .loc 1 63 1 is_stmt 0 view .LVU76
- 342 0000 70B5     	 push {r4,r5,r6,lr}
- 343              	.LCFI4:
- 344              	 .cfi_def_cfa_offset 16
- 345              	 .cfi_offset 4,-16
- 346              	 .cfi_offset 5,-12
- 347              	 .cfi_offset 6,-8
- 348              	 .cfi_offset 14,-4
- 349              	 .loc 1 65 11 discriminator 1 view .LVU77
- 350 0002 044E     	 ldr r6,.L13
- 351 0004 044D     	 ldr r5,.L13+4
+ 340              	 .loc 1 63 1 is_stmt 0 view .LVU76
+ 341 0000 38B5     	 push {r3,r4,r5,lr}
+ 342              	.LCFI4:
+ 343              	 .cfi_def_cfa_offset 16
+ 344              	 .cfi_offset 3,-16
+ 345              	 .cfi_offset 4,-12
+ 346              	 .cfi_offset 5,-8
+ 347              	 .cfi_offset 14,-4
+ 348              	 .loc 1 65 11 discriminator 1 view .LVU77
+ 349 0002 044D     	 ldr r5,.L13
   63:.././hal//sam4s/sam4s_hal.c ****     // while (!uart_is_tx_buf_end(UART0));
- 352              	 .loc 1 63 1 view .LVU78
- 353 0006 0446     	 mov r4,r0
- 354              	.LVL24:
- 355              	.L11:
- 356              	 .loc 1 65 11 is_stmt 1 discriminator 1 view .LVU79
- 357 0008 2146     	 mov r1,r4
- 358 000a 3046     	 mov r0,r6
- 359 000c A847     	 blx r5
- 360              	.LVL25:
- 361 000e 0028     	 cmp r0,#0
- 362 0010 FAD1     	 bne .L11
+ 350              	 .loc 1 63 1 view .LVU78
+ 351 0004 0446     	 mov r4,r0
+ 352              	.LVL24:
+ 353              	.L11:
+ 354              	 .loc 1 65 11 is_stmt 1 discriminator 1 view .LVU79
+ 355 0006 0448     	 ldr r0,.L13+4
+ 356 0008 2146     	 mov r1,r4
+ 357 000a A847     	 blx r5
+ 358              	.LVL25:
+ 359 000c 0028     	 cmp r0,#0
+ 360 000e FAD1     	 bne .L11
   66:.././hal//sam4s/sam4s_hal.c **** }
- 363              	 .loc 1 66 1 is_stmt 0 view .LVU80
- 364 0012 70BD     	 pop {r4,r5,r6,pc}
- 365              	.LVL26:
- 366              	.L14:
- 367              	 .loc 1 66 1 view .LVU81
- 368              	 .align 2
- 369              	.L13:
- 370 0014 00060E40 	 .word 1074660864
- 371 0018 00000000 	 .word uart_write
- 372              	 .cfi_endproc
- 373              	.LFE167:
- 375              	 .section .text.getch,"ax",%progbits
- 376              	 .align 1
- 377              	 .global getch
- 378              	 .syntax unified
- 379              	 .thumb
- 380              	 .thumb_func
- 382              	getch:
- 383              	.LFB168:
+ 361              	 .loc 1 66 1 is_stmt 0 view .LVU80
+ 362 0010 38BD     	 pop {r3,r4,r5,pc}
+ 363              	.LVL26:
+ 364              	.L14:
+ 365              	 .loc 1 66 1 view .LVU81
+ 366 0012 00BF     	 .align 2
+ 367              	.L13:
+ 368 0014 00000000 	 .word uart_write
+ 369 0018 00060E40 	 .word 1074660864
+ 370              	 .cfi_endproc
+ 371              	.LFE167:
+ 373              	 .section .text.getch,"ax",%progbits
+ 374              	 .align 1
+ 375              	 .global getch
+ 376              	 .syntax unified
+ 377              	 .thumb
+ 378              	 .thumb_func
+ 380              	getch:
+ 381              	.LFB168:
   67:.././hal//sam4s/sam4s_hal.c **** 
   68:.././hal//sam4s/sam4s_hal.c **** char getch(void)
   69:.././hal//sam4s/sam4s_hal.c **** {
- 384              	 .loc 1 69 1 is_stmt 1 view-0
- 385              	 .cfi_startproc
- 386              	 
- 387              	 
+ 382              	 .loc 1 69 1 is_stmt 1 view-0
+ 383              	 .cfi_startproc
+ 384              	 
+ 385              	 
   70:.././hal//sam4s/sam4s_hal.c ****     uint8_t c;
- 388              	 .loc 1 70 5 view .LVU83
+ 386              	 .loc 1 70 5 view .LVU83
   71:.././hal//sam4s/sam4s_hal.c ****     while(uart_read(UART0, &c));
- 389              	 .loc 1 71 5 view .LVU84
+ 387              	 .loc 1 71 5 view .LVU84
   69:.././hal//sam4s/sam4s_hal.c ****     uint8_t c;
- 390              	 .loc 1 69 1 is_stmt 0 view .LVU85
- 391 0000 37B5     	 push {r0,r1,r2,r4,r5,lr}
- 392              	.LCFI5:
- 393              	 .cfi_def_cfa_offset 24
- 394              	 .cfi_offset 4,-12
- 395              	 .cfi_offset 5,-8
- 396              	 .cfi_offset 14,-4
- 397              	 .loc 1 71 11 discriminator 1 view .LVU86
- 398 0002 064D     	 ldr r5,.L18
- 399 0004 064C     	 ldr r4,.L18+4
- 400              	.L16:
- 401              	 .loc 1 71 11 is_stmt 1 discriminator 1 view .LVU87
- 402 0006 0DF10701 	 add r1,sp,#7
- 403 000a 2846     	 mov r0,r5
- 404 000c A047     	 blx r4
- 405              	.LVL27:
- 406 000e 0028     	 cmp r0,#0
- 407 0010 F9D1     	 bne .L16
+ 388              	 .loc 1 69 1 is_stmt 0 view .LVU85
+ 389 0000 13B5     	 push {r0,r1,r4,lr}
+ 390              	.LCFI5:
+ 391              	 .cfi_def_cfa_offset 16
+ 392              	 .cfi_offset 4,-8
+ 393              	 .cfi_offset 14,-4
+ 394              	 .loc 1 71 11 discriminator 1 view .LVU86
+ 395 0002 054C     	 ldr r4,.L18
+ 396              	.L16:
+ 397              	 .loc 1 71 11 is_stmt 1 discriminator 1 view .LVU87
+ 398 0004 0548     	 ldr r0,.L18+4
+ 399 0006 0DF10701 	 add r1,sp,#7
+ 400 000a A047     	 blx r4
+ 401              	.LVL27:
+ 402 000c 0028     	 cmp r0,#0
+ 403 000e F9D1     	 bne .L16
   72:.././hal//sam4s/sam4s_hal.c ****     return c;
- 408              	 .loc 1 72 5 view .LVU88
+ 404              	 .loc 1 72 5 view .LVU88
   73:.././hal//sam4s/sam4s_hal.c **** }
- 409              	 .loc 1 73 1 is_stmt 0 view .LVU89
- 410 0012 9DF80700 	 ldrb r0,[sp,#7]
- 411 0016 03B0     	 add sp,sp,#12
- 412              	.LCFI6:
- 413              	 .cfi_def_cfa_offset 12
- 414              	 
- 415 0018 30BD     	 pop {r4,r5,pc}
- 416              	.L19:
- 417 001a 00BF     	 .align 2
- 418              	.L18:
- 419 001c 00060E40 	 .word 1074660864
- 420 0020 00000000 	 .word uart_read
- 421              	 .cfi_endproc
- 422              	.LFE168:
- 424              	 .section .text.trigger_setup,"ax",%progbits
- 425              	 .align 1
- 426              	 .global trigger_setup
- 427              	 .syntax unified
- 428              	 .thumb
- 429              	 .thumb_func
- 431              	trigger_setup:
- 432              	.LFB169:
+ 405              	 .loc 1 73 1 is_stmt 0 view .LVU89
+ 406 0010 9DF80700 	 ldrb r0,[sp,#7]
+ 407 0014 02B0     	 add sp,sp,#8
+ 408              	.LCFI6:
+ 409              	 .cfi_def_cfa_offset 8
+ 410              	 
+ 411 0016 10BD     	 pop {r4,pc}
+ 412              	.L19:
+ 413              	 .align 2
+ 414              	.L18:
+ 415 0018 00000000 	 .word uart_read
+ 416 001c 00060E40 	 .word 1074660864
+ 417              	 .cfi_endproc
+ 418              	.LFE168:
+ 420              	 .section .text.trigger_setup,"ax",%progbits
+ 421              	 .align 1
+ 422              	 .global trigger_setup
+ 423              	 .syntax unified
+ 424              	 .thumb
+ 425              	 .thumb_func
+ 427              	trigger_setup:
+ 428              	.LFB169:
   74:.././hal//sam4s/sam4s_hal.c **** 
   75:.././hal//sam4s/sam4s_hal.c **** void trigger_setup(void)
   76:.././hal//sam4s/sam4s_hal.c **** {
- 433              	 .loc 1 76 1 is_stmt 1 view-0
- 434              	 .cfi_startproc
- 435              	 
- 436              	 
+ 429              	 .loc 1 76 1 is_stmt 1 view-0
+ 430              	 .cfi_startproc
+ 431              	 
+ 432              	 
   77:.././hal//sam4s/sam4s_hal.c ****     sysclk_enable_peripheral_clock(ID_PIOA);
- 437              	 .loc 1 77 5 view .LVU91
- 438              	.LVL28:
- 439              	.LBB52:
- 440              	.LBI52:
+ 433              	 .loc 1 77 5 view .LVU91
+ 434              	.LVL28:
+ 435              	.LBB52:
+ 436              	.LBI52:
  407:.././hal//sam4s/inc/sam4s/sysclk.h **** {
- 441              	 .loc 2 407 20 view .LVU92
- 442              	.LBB53:
- 443              	 .loc 2 409 2 view .LVU93
- 444              	.LBE53:
- 445              	.LBE52:
+ 437              	 .loc 2 407 20 view .LVU92
+ 438              	.LBB53:
+ 439              	 .loc 2 409 2 view .LVU93
+ 440              	.LBE53:
+ 441              	.LBE52:
   76:.././hal//sam4s/sam4s_hal.c ****     sysclk_enable_peripheral_clock(ID_PIOA);
- 446              	 .loc 1 76 1 is_stmt 0 view .LVU94
- 447 0000 10B5     	 push {r4,lr}
- 448              	.LCFI7:
- 449              	 .cfi_def_cfa_offset 8
- 450              	 .cfi_offset 4,-8
- 451              	 .cfi_offset 14,-4
- 452              	.LBB55:
- 453              	.LBB54:
- 454              	 .loc 2 409 2 view .LVU95
- 455 0002 054B     	 ldr r3,.L21
- 456 0004 0B20     	 movs r0,#11
- 457 0006 9847     	 blx r3
- 458              	.LVL29:
- 459              	 .loc 2 409 2 view .LVU96
- 460              	.LBE54:
- 461              	.LBE55:
+ 442              	 .loc 1 76 1 is_stmt 0 view .LVU94
+ 443 0000 10B5     	 push {r4,lr}
+ 444              	.LCFI7:
+ 445              	 .cfi_def_cfa_offset 8
+ 446              	 .cfi_offset 4,-8
+ 447              	 .cfi_offset 14,-4
+ 448              	.LBB55:
+ 449              	.LBB54:
+ 450              	 .loc 2 409 2 view .LVU95
+ 451 0002 054B     	 ldr r3,.L21
+ 452 0004 0B20     	 movs r0,#11
+ 453 0006 9847     	 blx r3
+ 454              	.LVL29:
+ 455              	 .loc 2 409 2 view .LVU96
+ 456              	.LBE54:
+ 457              	.LBE55:
   78:.././hal//sam4s/sam4s_hal.c ****     gpio_configure_pin(PIO_PA7_IDX, PIO_OUTPUT_0 | PIO_DEFAULT);
- 462              	 .loc 1 78 5 is_stmt 1 view .LVU97
+ 458              	 .loc 1 78 5 is_stmt 1 view .LVU97
   79:.././hal//sam4s/sam4s_hal.c **** }
- 463              	 .loc 1 79 1 is_stmt 0 view .LVU98
- 464 0008 BDE81040 	 pop {r4,lr}
- 465              	.LCFI8:
- 466              	 .cfi_restore 14
- 467              	 .cfi_restore 4
- 468              	 .cfi_def_cfa_offset 0
+ 459              	 .loc 1 79 1 is_stmt 0 view .LVU98
+ 460 0008 BDE81040 	 pop {r4,lr}
+ 461              	.LCFI8:
+ 462              	 .cfi_restore 14
+ 463              	 .cfi_restore 4
+ 464              	 .cfi_def_cfa_offset 0
   78:.././hal//sam4s/sam4s_hal.c ****     gpio_configure_pin(PIO_PA7_IDX, PIO_OUTPUT_0 | PIO_DEFAULT);
- 469              	 .loc 1 78 5 view .LVU99
- 470 000c 034B     	 ldr r3,.L21+4
- 471 000e 4FF04051 	 mov r1,#805306368
- 472 0012 0720     	 movs r0,#7
- 473 0014 1847     	 bx r3
- 474              	.LVL30:
- 475              	.L22:
- 476 0016 00BF     	 .align 2
- 477              	.L21:
- 478 0018 00000000 	 .word pmc_enable_periph_clk
- 479 001c 00000000 	 .word pio_configure_pin
- 480              	 .cfi_endproc
- 481              	.LFE169:
- 483              	 .section .text.trigger_low,"ax",%progbits
- 484              	 .align 1
- 485              	 .global trigger_low
- 486              	 .syntax unified
- 487              	 .thumb
- 488              	 .thumb_func
- 490              	trigger_low:
- 491              	.LFB170:
+ 465              	 .loc 1 78 5 view .LVU99
+ 466 000c 034B     	 ldr r3,.L21+4
+ 467 000e 4FF04051 	 mov r1,#805306368
+ 468 0012 0720     	 movs r0,#7
+ 469 0014 1847     	 bx r3
+ 470              	.LVL30:
+ 471              	.L22:
+ 472 0016 00BF     	 .align 2
+ 473              	.L21:
+ 474 0018 00000000 	 .word pmc_enable_periph_clk
+ 475 001c 00000000 	 .word pio_configure_pin
+ 476              	 .cfi_endproc
+ 477              	.LFE169:
+ 479              	 .section .text.trigger_low,"ax",%progbits
+ 480              	 .align 1
+ 481              	 .global trigger_low
+ 482              	 .syntax unified
+ 483              	 .thumb
+ 484              	 .thumb_func
+ 486              	trigger_low:
+ 487              	.LFB170:
   80:.././hal//sam4s/sam4s_hal.c **** 
   81:.././hal//sam4s/sam4s_hal.c **** void trigger_low(void)
   82:.././hal//sam4s/sam4s_hal.c **** {
- 492              	 .loc 1 82 1 is_stmt 1 view-0
- 493              	 .cfi_startproc
- 494              	 
- 495              	 
+ 488              	 .loc 1 82 1 is_stmt 1 view-0
+ 489              	 .cfi_startproc
+ 490              	 
+ 491              	 
   83:.././hal//sam4s/sam4s_hal.c ****     gpio_set_pin_low(PIO_PA7_IDX);
- 496              	 .loc 1 83 5 view .LVU101
+ 492              	 .loc 1 83 5 view .LVU101
   82:.././hal//sam4s/sam4s_hal.c ****     gpio_set_pin_low(PIO_PA7_IDX);
- 497              	 .loc 1 82 1 is_stmt 0 view .LVU102
- 498 0000 10B5     	 push {r4,lr}
- 499              	.LCFI9:
- 500              	 .cfi_def_cfa_offset 8
- 501              	 .cfi_offset 4,-8
- 502              	 .cfi_offset 14,-4
- 503              	 .loc 1 83 5 view .LVU103
- 504 0002 054B     	 ldr r3,.L24
- 505 0004 0720     	 movs r0,#7
- 506 0006 9847     	 blx r3
- 507              	.LVL31:
+ 493              	 .loc 1 82 1 is_stmt 0 view .LVU102
+ 494 0000 10B5     	 push {r4,lr}
+ 495              	.LCFI9:
+ 496              	 .cfi_def_cfa_offset 8
+ 497              	 .cfi_offset 4,-8
+ 498              	 .cfi_offset 14,-4
+ 499              	 .loc 1 83 5 view .LVU103
+ 500 0002 054B     	 ldr r3,.L24
+ 501 0004 0720     	 movs r0,#7
+ 502 0006 9847     	 blx r3
+ 503              	.LVL31:
   84:.././hal//sam4s/sam4s_hal.c ****     gpio_configure_pin(PIO_PA7_IDX, PIO_OUTPUT_0 | PIO_DEFAULT);
- 508              	 .loc 1 84 5 is_stmt 1 view .LVU104
+ 504              	 .loc 1 84 5 is_stmt 1 view .LVU104
   85:.././hal//sam4s/sam4s_hal.c **** }
- 509              	 .loc 1 85 1 is_stmt 0 view .LVU105
- 510 0008 BDE81040 	 pop {r4,lr}
- 511              	.LCFI10:
- 512              	 .cfi_restore 14
- 513              	 .cfi_restore 4
- 514              	 .cfi_def_cfa_offset 0
+ 505              	 .loc 1 85 1 is_stmt 0 view .LVU105
+ 506 0008 BDE81040 	 pop {r4,lr}
+ 507              	.LCFI10:
+ 508              	 .cfi_restore 14
+ 509              	 .cfi_restore 4
+ 510              	 .cfi_def_cfa_offset 0
   84:.././hal//sam4s/sam4s_hal.c ****     gpio_configure_pin(PIO_PA7_IDX, PIO_OUTPUT_0 | PIO_DEFAULT);
- 515              	 .loc 1 84 5 view .LVU106
- 516 000c 034B     	 ldr r3,.L24+4
- 517 000e 4FF04051 	 mov r1,#805306368
- 518 0012 0720     	 movs r0,#7
- 519 0014 1847     	 bx r3
- 520              	.LVL32:
- 521              	.L25:
- 522 0016 00BF     	 .align 2
- 523              	.L24:
- 524 0018 00000000 	 .word pio_set_pin_low
- 525 001c 00000000 	 .word pio_configure_pin
- 526              	 .cfi_endproc
- 527              	.LFE170:
- 529              	 .section .text.trigger_high,"ax",%progbits
- 530              	 .align 1
- 531              	 .global trigger_high
- 532              	 .syntax unified
- 533              	 .thumb
- 534              	 .thumb_func
- 536              	trigger_high:
- 537              	.LFB171:
+ 511              	 .loc 1 84 5 view .LVU106
+ 512 000c 034B     	 ldr r3,.L24+4
+ 513 000e 4FF04051 	 mov r1,#805306368
+ 514 0012 0720     	 movs r0,#7
+ 515 0014 1847     	 bx r3
+ 516              	.LVL32:
+ 517              	.L25:
+ 518 0016 00BF     	 .align 2
+ 519              	.L24:
+ 520 0018 00000000 	 .word pio_set_pin_low
+ 521 001c 00000000 	 .word pio_configure_pin
+ 522              	 .cfi_endproc
+ 523              	.LFE170:
+ 525              	 .section .text.trigger_high,"ax",%progbits
+ 526              	 .align 1
+ 527              	 .global trigger_high
+ 528              	 .syntax unified
+ 529              	 .thumb
+ 530              	 .thumb_func
+ 532              	trigger_high:
+ 533              	.LFB171:
   86:.././hal//sam4s/sam4s_hal.c **** 
   87:.././hal//sam4s/sam4s_hal.c **** void trigger_high(void)
   88:.././hal//sam4s/sam4s_hal.c **** {
- 538              	 .loc 1 88 1 is_stmt 1 view-0
- 539              	 .cfi_startproc
- 540              	 
- 541              	 
+ 534              	 .loc 1 88 1 is_stmt 1 view-0
+ 535              	 .cfi_startproc
+ 536              	 
+ 537              	 
   89:.././hal//sam4s/sam4s_hal.c ****     gpio_set_pin_high(PIO_PA7_IDX);
- 542              	 .loc 1 89 5 view .LVU108
+ 538              	 .loc 1 89 5 view .LVU108
   88:.././hal//sam4s/sam4s_hal.c ****     gpio_set_pin_high(PIO_PA7_IDX);
- 543              	 .loc 1 88 1 is_stmt 0 view .LVU109
- 544 0000 10B5     	 push {r4,lr}
- 545              	.LCFI11:
- 546              	 .cfi_def_cfa_offset 8
- 547              	 .cfi_offset 4,-8
- 548              	 .cfi_offset 14,-4
- 549              	 .loc 1 89 5 view .LVU110
- 550 0002 054B     	 ldr r3,.L27
- 551 0004 0720     	 movs r0,#7
- 552 0006 9847     	 blx r3
- 553              	.LVL33:
+ 539              	 .loc 1 88 1 is_stmt 0 view .LVU109
+ 540 0000 10B5     	 push {r4,lr}
+ 541              	.LCFI11:
+ 542              	 .cfi_def_cfa_offset 8
+ 543              	 .cfi_offset 4,-8
+ 544              	 .cfi_offset 14,-4
+ 545              	 .loc 1 89 5 view .LVU110
+ 546 0002 054B     	 ldr r3,.L27
+ 547 0004 0720     	 movs r0,#7
+ 548 0006 9847     	 blx r3
+ 549              	.LVL33:
   90:.././hal//sam4s/sam4s_hal.c ****     gpio_configure_pin(PIO_PA7_IDX, PIO_OUTPUT_1 | PIO_DEFAULT);
- 554              	 .loc 1 90 5 is_stmt 1 view .LVU111
+ 550              	 .loc 1 90 5 is_stmt 1 view .LVU111
   91:.././hal//sam4s/sam4s_hal.c **** }...
- 555              	 .loc 1 91 1 is_stmt 0 view .LVU112
- 556 0008 BDE81040 	 pop {r4,lr}
- 557              	.LCFI12:
- 558              	 .cfi_restore 14
- 559              	 .cfi_restore 4
- 560              	 .cfi_def_cfa_offset 0
+ 551              	 .loc 1 91 1 is_stmt 0 view .LVU112
+ 552 0008 BDE81040 	 pop {r4,lr}
+ 553              	.LCFI12:
+ 554              	 .cfi_restore 14
+ 555              	 .cfi_restore 4
+ 556              	 .cfi_def_cfa_offset 0
   90:.././hal//sam4s/sam4s_hal.c ****     gpio_configure_pin(PIO_PA7_IDX, PIO_OUTPUT_1 | PIO_DEFAULT);
- 561              	 .loc 1 90 5 view .LVU113
- 562 000c 034B     	 ldr r3,.L27+4
- 563 000e 4FF06051 	 mov r1,#939524096
- 564 0012 0720     	 movs r0,#7
- 565 0014 1847     	 bx r3
- 566              	.LVL34:
- 567              	.L28:
- 568 0016 00BF     	 .align 2
- 569              	.L27:
- 570 0018 00000000 	 .word pio_set_pin_high
- 571 001c 00000000 	 .word pio_configure_pin
- 572              	 .cfi_endproc
- 573              	.LFE171:
- 575              	 .section .bss.cpu_irq_prev_interrupt_state,"aw",%nobits
- 578              	cpu_irq_prev_interrupt_state:
- 579 0000 00       	 .space 1
- 580              	 .section .bss.cpu_irq_critical_section_counter,"aw",%nobits
- 581              	 .align 2
- 584              	cpu_irq_critical_section_counter:
- 585 0000 00000000 	 .space 4
- 586              	 .text
- 587              	.Letext0:
- 588              	 .file 5 "/usr/lib/gcc/arm-none-eabi/13.2.1/include/stdint.h"
- 589              	 .file 6 ".././hal//sam4s/inc/component/component_efc.h"
- 590              	 .file 7 ".././hal//sam4s/inc/component/component_uart.h"
- 591              	 .file 8 ".././hal//sam4s/inc/component/component_wdt.h"
- 592              	 .file 9 ".././hal//sam4s/inc/interrupt/interrupt_sam_nvic.h"
- 593              	 .file 10 ".././hal//sam4s/inc/uart.h"
- 594              	 .file 11 ".././hal//sam4s/inc/pio.h"
- 595              	 .file 12 ".././hal//sam4s/inc/pmc.h"
- 596              	 .file 13 ".././hal//sam4s/inc/system_sam4s.h"
+ 557              	 .loc 1 90 5 view .LVU113
+ 558 000c 034B     	 ldr r3,.L27+4
+ 559 000e 4FF06051 	 mov r1,#939524096
+ 560 0012 0720     	 movs r0,#7
+ 561 0014 1847     	 bx r3
+ 562              	.LVL34:
+ 563              	.L28:
+ 564 0016 00BF     	 .align 2
+ 565              	.L27:
+ 566 0018 00000000 	 .word pio_set_pin_high
+ 567 001c 00000000 	 .word pio_configure_pin
+ 568              	 .cfi_endproc
+ 569              	.LFE171:
+ 571              	 .section .bss.cpu_irq_prev_interrupt_state,"aw",%nobits
+ 574              	cpu_irq_prev_interrupt_state:
+ 575 0000 00       	 .space 1
+ 576              	 .section .bss.cpu_irq_critical_section_counter,"aw",%nobits
+ 577              	 .align 2
+ 580              	cpu_irq_critical_section_counter:
+ 581 0000 00000000 	 .space 4
+ 582              	 .text
+ 583              	.Letext0:
+ 584              	 .file 5 "/usr/lib/gcc/arm-none-eabi/14.2.1/include/stdint.h"
+ 585              	 .file 6 ".././hal//sam4s/inc/component/component_efc.h"
+ 586              	 .file 7 ".././hal//sam4s/inc/component/component_uart.h"
+ 587              	 .file 8 ".././hal//sam4s/inc/component/component_wdt.h"
+ 588              	 .file 9 ".././hal//sam4s/inc/interrupt/interrupt_sam_nvic.h"
+ 589              	 .file 10 ".././hal//sam4s/inc/uart.h"
+ 590              	 .file 11 ".././hal//sam4s/inc/pio.h"
+ 591              	 .file 12 ".././hal//sam4s/inc/pmc.h"
+ 592              	 .file 13 ".././hal//sam4s/inc/system_sam4s.h"
 DEFINED SYMBOLS
                             *ABS*:00000000 sam4s_hal.c
     {standard input}:19     .text.platform_init:00000000 $t
@@ -1474,27 +1473,27 @@ DEFINED SYMBOLS
     {standard input}:217    .text.platform_init:00000064 $d
     {standard input}:234    .text.init_uart:00000000 $t
     {standard input}:240    .text.init_uart:00000000 init_uart
-    {standard input}:315    .text.init_uart:00000044 $d
-    {standard input}:327    .text.putch:00000000 $t
-    {standard input}:333    .text.putch:00000000 putch
-    {standard input}:370    .text.putch:00000014 $d
-    {standard input}:376    .text.getch:00000000 $t
-    {standard input}:382    .text.getch:00000000 getch
-    {standard input}:419    .text.getch:0000001c $d
-    {standard input}:425    .text.trigger_setup:00000000 $t
-    {standard input}:431    .text.trigger_setup:00000000 trigger_setup
-    {standard input}:478    .text.trigger_setup:00000018 $d
-    {standard input}:484    .text.trigger_low:00000000 $t
-    {standard input}:490    .text.trigger_low:00000000 trigger_low
-    {standard input}:524    .text.trigger_low:00000018 $d
-    {standard input}:530    .text.trigger_high:00000000 $t
-    {standard input}:536    .text.trigger_high:00000000 trigger_high
-    {standard input}:570    .text.trigger_high:00000018 $d
-    {standard input}:578    .bss.cpu_irq_prev_interrupt_state:00000000 cpu_irq_prev_interrupt_state
-    {standard input}:579    .bss.cpu_irq_prev_interrupt_state:00000000 $d
-    {standard input}:581    .bss.cpu_irq_critical_section_counter:00000000 $d
-    {standard input}:584    .bss.cpu_irq_critical_section_counter:00000000 cpu_irq_critical_section_counter
-                           .group:00000000 wm4.0.ade4f9eb57a3e60dd8a456a9e838da1f
+    {standard input}:314    .text.init_uart:00000040 $d
+    {standard input}:326    .text.putch:00000000 $t
+    {standard input}:332    .text.putch:00000000 putch
+    {standard input}:368    .text.putch:00000014 $d
+    {standard input}:374    .text.getch:00000000 $t
+    {standard input}:380    .text.getch:00000000 getch
+    {standard input}:415    .text.getch:00000018 $d
+    {standard input}:421    .text.trigger_setup:00000000 $t
+    {standard input}:427    .text.trigger_setup:00000000 trigger_setup
+    {standard input}:474    .text.trigger_setup:00000018 $d
+    {standard input}:480    .text.trigger_low:00000000 $t
+    {standard input}:486    .text.trigger_low:00000000 trigger_low
+    {standard input}:520    .text.trigger_low:00000018 $d
+    {standard input}:526    .text.trigger_high:00000000 $t
+    {standard input}:532    .text.trigger_high:00000000 trigger_high
+    {standard input}:566    .text.trigger_high:00000018 $d
+    {standard input}:574    .bss.cpu_irq_prev_interrupt_state:00000000 cpu_irq_prev_interrupt_state
+    {standard input}:575    .bss.cpu_irq_prev_interrupt_state:00000000 $d
+    {standard input}:577    .bss.cpu_irq_critical_section_counter:00000000 $d
+    {standard input}:580    .bss.cpu_irq_critical_section_counter:00000000 cpu_irq_critical_section_counter
+                           .group:00000000 wm4.0.534b8d408cafabed4abbc6a1c4e55e02
                            .group:00000000 wm4.stdint.h.29.6d480f4ba0f60596e88234283d42444f
                            .group:00000000 wm4.parts.h.38.09ccce703cc30b12360b0e797fac8cb6
                            .group:00000000 wm4.stddef.h.39.38eb7ec030421799c657b13be5aa21c7
@@ -1562,23 +1561,23 @@ DEFINED SYMBOLS
                            .group:00000000 wm4.sam4s2b.h.313.04ed20c80f538f8fadb9388a8469283e
                            .group:00000000 wm4.pio_sam4s2b.h.36.e1b33fead6a6e1ee98b2f4cba4bb11b4
                            .group:00000000 wm4.sam4s2b.h.450.98a9c8ea67d90470c8554ffe87c8398a
-                           .group:00000000 wm4._newlib_version.h.4.411db44ea2338a62eca2f0777f81481b
+                           .group:00000000 wm4._newlib_version.h.4.0eb654b64686e2bd29646258853f6c22
                            .group:00000000 wm4.newlib.h.27.07bf1b8b16da454ae07478107717878b
-                           .group:00000000 wm4.ieeefp.h.77.fbf6f2f498a71d39a0aaf172d6680419
-                           .group:00000000 wm4.features.h.22.c11ecc6cb8b914ead0c0895c00b4b4d5
+                           .group:00000000 wm4.ieeefp.h.77.b6f5ce903562917fbd9193ee87d4fa47
+                           .group:00000000 wm4.features.h.22.03467e2205ec9ffbc20524d97cdbdf6a
                            .group:00000000 wm4.config.h.224.10ee1ad185d877c6e334e6581faab44d
                            .group:00000000 wm4._ansi.h.31.de524f58584151836e90d8620a16f8e8
                            .group:00000000 wm4.stdio.h.31.7c0e28c411445f3f9c5b11accf882760
                            .group:00000000 wm4._default_types.h.6.959254cf5f09734ea7516c89e8bb21bd
                            .group:00000000 wm4.stddef.h.158.eec8bf00b5213f43d095cb984c5f22e3
-                           .group:00000000 wm4.cdefs.h.49.a0dc0a4a6c7d01e2e5d0aade9399215f
+                           .group:00000000 wm4.cdefs.h.49.bafb023044e47a1dcdd854e4d6521f7d
                            .group:00000000 wm4.stdarg.h.34.3a23a216c0c293b3d2ea2e89281481e6
                            .group:00000000 wm4._types.h.20.dd0d04dca3800a0d2a6129b87f3adbb2
                            .group:00000000 wm4.stddef.h.158.6f8e08a347b1cff664332fa350bfceb3
                            .group:00000000 wm4._types.h.127.3bdfe3ff8ea2d0985b03d9cbe93480e3
                            .group:00000000 wm4.reent.h.18.25503cdc8b7e55dd0d6ea7b3e5af7a03
                            .group:00000000 wm4.lock.h.2.c0958401bd0ce484d507ee19aacab817
-                           .group:00000000 wm4.reent.h.78.7f0775353a33c852a1479c008f68cd03
+                           .group:00000000 wm4.reent.h.78.6b87466b04591b1f1cb88c14fdf2ba9e
                            .group:00000000 wm4.stdio.h.67.0cf8a9c281ab0b348aef5c02e7e48825
                            .group:00000000 wm4.stdio.h.2.4aa87247282eca6c8f36f9de33d8df1a
                            .group:00000000 wm4.stdio.h.87.a1e20d2651f9bfb66e51bfbe849db00a

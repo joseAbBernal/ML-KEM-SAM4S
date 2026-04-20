@@ -1,0 +1,1066 @@
+   1              	 .cpu cortex-m4
+   2              	 .arch armv7e-m
+   3              	 .fpu softvfp
+   4              	 .eabi_attribute 20,1
+   5              	 .eabi_attribute 21,1
+   6              	 .eabi_attribute 23,3
+   7              	 .eabi_attribute 24,1
+   8              	 .eabi_attribute 25,1
+   9              	 .eabi_attribute 26,1
+  10              	 .eabi_attribute 30,4
+  11              	 .eabi_attribute 34,1
+  12              	 .eabi_attribute 18,4
+  13              	 .file "ntt.c"
+  14              	 .text
+  15              	.Ltext0:
+  16              	 .cfi_sections .debug_frame
+  17              	 .file 1 "ntt.c"
+  18              	 .section .text.crypto_kem_kyber1024_ref_ntt,"ax",%progbits
+  19              	 .align 1
+  20              	 .global crypto_kem_kyber1024_ref_ntt
+  21              	 .syntax unified
+  22              	 .thumb
+  23              	 .thumb_func
+  25              	crypto_kem_kyber1024_ref_ntt:
+  26              	.LVL0:
+  27              	.LFB1:
+   1:ntt.c         **** #include <stdint.h>
+   2:ntt.c         **** #include "params.h"
+   3:ntt.c         **** #include "ntt.h"
+   4:ntt.c         **** #include "reduce.h"
+   5:ntt.c         **** 
+   6:ntt.c         **** /* Code to generate zetas and zetas_inv used in the number-theoretic transform:
+   7:ntt.c         **** 
+   8:ntt.c         **** #define KYBER_ROOT_OF_UNITY 17
+   9:ntt.c         **** 
+  10:ntt.c         **** static const uint16_t tree[128] = {
+  11:ntt.c         ****   0, 64, 32, 96, 16, 80, 48, 112, 8, 72, 40, 104, 24, 88, 56, 120,
+  12:ntt.c         ****   4, 68, 36, 100, 20, 84, 52, 116, 12, 76, 44, 108, 28, 92, 60, 124,
+  13:ntt.c         ****   2, 66, 34, 98, 18, 82, 50, 114, 10, 74, 42, 106, 26, 90, 58, 122,
+  14:ntt.c         ****   6, 70, 38, 102, 22, 86, 54, 118, 14, 78, 46, 110, 30, 94, 62, 126,
+  15:ntt.c         ****   1, 65, 33, 97, 17, 81, 49, 113, 9, 73, 41, 105, 25, 89, 57, 121,
+  16:ntt.c         ****   5, 69, 37, 101, 21, 85, 53, 117, 13, 77, 45, 109, 29, 93, 61, 125,
+  17:ntt.c         ****   3, 67, 35, 99, 19, 83, 51, 115, 11, 75, 43, 107, 27, 91, 59, 123,
+  18:ntt.c         ****   7, 71, 39, 103, 23, 87, 55, 119, 15, 79, 47, 111, 31, 95, 63, 127
+  19:ntt.c         **** };
+  20:ntt.c         **** 
+  21:ntt.c         **** void init_ntt() {
+  22:ntt.c         ****   unsigned int i, j, k;
+  23:ntt.c         ****   int16_t tmp[128];
+  24:ntt.c         **** 
+  25:ntt.c         ****   tmp[0] = MONT;
+  26:ntt.c         ****   for(i = 1; i < 128; ++i)
+  27:ntt.c         ****     tmp[i] = fqmul(tmp[i-1], KYBER_ROOT_OF_UNITY*MONT % KYBER_Q);
+  28:ntt.c         **** 
+  29:ntt.c         ****   for(i = 0; i < 128; ++i)
+  30:ntt.c         ****     zetas[i] = tmp[tree[i]];
+  31:ntt.c         **** 
+  32:ntt.c         ****   k = 0;
+  33:ntt.c         ****   for(i = 64; i >= 1; i >>= 1)
+  34:ntt.c         ****     for(j = i; j < 2*i; ++j)
+  35:ntt.c         ****       zetas_inv[k++] = -tmp[128 - tree[j]];
+  36:ntt.c         **** 
+  37:ntt.c         ****   zetas_inv[127] = MONT * (MONT * (KYBER_Q - 1) * ((KYBER_Q - 1)/128) % KYBER_Q) % KYBER_Q;
+  38:ntt.c         **** }
+  39:ntt.c         **** 
+  40:ntt.c         **** */
+  41:ntt.c         **** 
+  42:ntt.c         **** const int16_t zetas[128] = {
+  43:ntt.c         ****   2285, 2571, 2970, 1812, 1493, 1422, 287, 202, 3158, 622, 1577, 182, 962,
+  44:ntt.c         ****   2127, 1855, 1468, 573, 2004, 264, 383, 2500, 1458, 1727, 3199, 2648, 1017,
+  45:ntt.c         ****   732, 608, 1787, 411, 3124, 1758, 1223, 652, 2777, 1015, 2036, 1491, 3047,
+  46:ntt.c         ****   1785, 516, 3321, 3009, 2663, 1711, 2167, 126, 1469, 2476, 3239, 3058, 830,
+  47:ntt.c         ****   107, 1908, 3082, 2378, 2931, 961, 1821, 2604, 448, 2264, 677, 2054, 2226,
+  48:ntt.c         ****   430, 555, 843, 2078, 871, 1550, 105, 422, 587, 177, 3094, 3038, 2869, 1574,
+  49:ntt.c         ****   1653, 3083, 778, 1159, 3182, 2552, 1483, 2727, 1119, 1739, 644, 2457, 349,
+  50:ntt.c         ****   418, 329, 3173, 3254, 817, 1097, 603, 610, 1322, 2044, 1864, 384, 2114, 3193,
+  51:ntt.c         ****   1218, 1994, 2455, 220, 2142, 1670, 2144, 1799, 2051, 794, 1819, 2475, 2459,
+  52:ntt.c         ****   478, 3221, 3021, 996, 991, 958, 1869, 1522, 1628
+  53:ntt.c         **** };
+  54:ntt.c         **** 
+  55:ntt.c         **** const int16_t zetas_inv[128] = {
+  56:ntt.c         ****   1701, 1807, 1460, 2371, 2338, 2333, 308, 108, 2851, 870, 854, 1510, 2535,
+  57:ntt.c         ****   1278, 1530, 1185, 1659, 1187, 3109, 874, 1335, 2111, 136, 1215, 2945, 1465,
+  58:ntt.c         ****   1285, 2007, 2719, 2726, 2232, 2512, 75, 156, 3000, 2911, 2980, 872, 2685,
+  59:ntt.c         ****   1590, 2210, 602, 1846, 777, 147, 2170, 2551, 246, 1676, 1755, 460, 291, 235,
+  60:ntt.c         ****   3152, 2742, 2907, 3224, 1779, 2458, 1251, 2486, 2774, 2899, 1103, 1275, 2652,
+  61:ntt.c         ****   1065, 2881, 725, 1508, 2368, 398, 951, 247, 1421, 3222, 2499, 271, 90, 853,
+  62:ntt.c         ****   1860, 3203, 1162, 1618, 666, 320, 8, 2813, 1544, 282, 1838, 1293, 2314, 552,
+  63:ntt.c         ****   2677, 2106, 1571, 205, 2918, 1542, 2721, 2597, 2312, 681, 130, 1602, 1871,
+  64:ntt.c         ****   829, 2946, 3065, 1325, 2756, 1861, 1474, 1202, 2367, 3147, 1752, 2707, 171,
+  65:ntt.c         ****   3127, 3042, 1907, 1836, 1517, 359, 758, 1441
+  66:ntt.c         **** };
+  67:ntt.c         **** 
+  68:ntt.c         **** /*************************************************
+  69:ntt.c         **** * Name:        fqmul
+  70:ntt.c         **** *
+  71:ntt.c         **** * Description: Multiplication followed by Montgomery reduction
+  72:ntt.c         **** *
+  73:ntt.c         **** * Arguments:   - int16_t a: first factor
+  74:ntt.c         **** *              - int16_t b: second factor
+  75:ntt.c         **** *
+  76:ntt.c         **** * Returns 16-bit integer congruent to a*b*R^{-1} mod q
+  77:ntt.c         **** **************************************************/
+  78:ntt.c         **** static int16_t fqmul(int16_t a, int16_t b) {
+  79:ntt.c         ****   return montgomery_reduce((int32_t)a*b);
+  80:ntt.c         **** }
+  81:ntt.c         **** 
+  82:ntt.c         **** /*************************************************
+  83:ntt.c         **** * Name:        ntt
+  84:ntt.c         **** *
+  85:ntt.c         **** * Description: Inplace number-theoretic transform (NTT) in Rq
+  86:ntt.c         **** *              input is in standard order, output is in bitreversed order
+  87:ntt.c         **** *
+  88:ntt.c         **** * Arguments:   - int16_t r[256]: pointer to input/output vector of elements
+  89:ntt.c         **** *                                of Zq
+  90:ntt.c         **** **************************************************/
+  91:ntt.c         **** void ntt(int16_t r[256]) {
+  28              	 .loc 1 91 26 view-0
+  29              	 .cfi_startproc
+  30              	 
+  31              	 
+  92:ntt.c         ****   unsigned int len, start, j, k;
+  32              	 .loc 1 92 3 view .LVU1
+  93:ntt.c         ****   int16_t t, zeta;
+  33              	 .loc 1 93 3 view .LVU2
+  94:ntt.c         **** 
+  95:ntt.c         ****   k = 1;
+  34              	 .loc 1 95 3 view .LVU3
+  96:ntt.c         ****   for(len = 128; len >= 2; len >>= 1) {
+  35              	 .loc 1 96 3 view .LVU4
+  36              	 .loc 1 96 22 discriminator 1 view .LVU5
+  91:ntt.c         ****   unsigned int len, start, j, k;
+  37              	 .loc 1 91 26 is_stmt 0 view .LVU6
+  38 0000 2DE9F04F 	 push {r4,r5,r6,r7,r8,r9,r10,fp,lr}
+  39              	.LCFI0:
+  40              	 .cfi_def_cfa_offset 36
+  41              	 .cfi_offset 4,-36
+  42              	 .cfi_offset 5,-32
+  43              	 .cfi_offset 6,-28
+  44              	 .cfi_offset 7,-24
+  45              	 .cfi_offset 8,-20
+  46              	 .cfi_offset 9,-16
+  47              	 .cfi_offset 10,-12
+  48              	 .cfi_offset 11,-8
+  49              	 .cfi_offset 14,-4
+  50 0004 0646     	 mov r6,r0
+  51 0006 85B0     	 sub sp,sp,#20
+  52              	.LCFI1:
+  53              	 .cfi_def_cfa_offset 56
+  97:ntt.c         ****     for(start = 0; start < 256; start = j + len) {
+  98:ntt.c         ****       zeta = zetas[k++];
+  99:ntt.c         ****       for(j = start; j < start + len; ++j) {
+  54              	 .loc 1 99 13 view .LVU7
+  55 0008 4FF00709 	 mov r9,#7
+  95:ntt.c         ****   for(len = 128; len >= 2; len >>= 1) {
+  56              	 .loc 1 95 5 view .LVU8
+  57 000c 4FF00108 	 mov r8,#1
+  96:ntt.c         ****     for(start = 0; start < 256; start = j + len) {
+  58              	 .loc 1 96 11 view .LVU9
+  59 0010 8025     	 movs r5,#128
+  60              	.LVL1:
+  61              	.L2:
+  97:ntt.c         ****     for(start = 0; start < 256; start = j + len) {
+  62              	 .loc 1 97 26 is_stmt 1 discriminator 1 view .LVU10
+  63 0012 1F4B     	 ldr r3,.L8
+  64 0014 03EB4802 	 add r2,r3,r8,lsl#1
+  65 0018 6B1C     	 adds r3,r5,#1
+  97:ntt.c         ****     for(start = 0; start < 256; start = j + len) {
+  66              	 .loc 1 97 15 is_stmt 0 view .LVU11
+  67 001a 0024     	 movs r4,#0
+  68 001c 0093     	 str r3,[sp]
+  69              	.LVL2:
+  70              	.L4:
+  98:ntt.c         ****       for(j = start; j < start + len; ++j) {
+  71              	 .loc 1 98 7 is_stmt 1 view .LVU12
+  72              	 .loc 1 99 32 is_stmt 0 discriminator 1 view .LVU13
+  73 001e 05EB040A 	 add r10,r5,r4
+  98:ntt.c         ****       for(j = start; j < start + len; ++j) {
+  74              	 .loc 1 98 12 view .LVU14
+  75 0022 32F9021B 	 ldrsh r1,[r2],#2
+  98:ntt.c         ****       for(j = start; j < start + len; ++j) {
+  76              	 .loc 1 98 21 view .LVU15
+  77 0026 08F10108 	 add r8,r8,#1
+  78              	.LVL3:
+  79              	 .loc 1 99 7 is_stmt 1 view .LVU16
+  80              	 .loc 1 99 24 discriminator 1 view .LVU17
+  81 002a 06EB4A03 	 add r3,r6,r10,lsl#1
+  82 002e 06EB4407 	 add r7,r6,r4,lsl#1
+  83              	 .loc 1 99 13 is_stmt 0 view .LVU18
+  84 0032 A346     	 mov fp,r4
+  85              	.LVL4:
+  86              	.L3:
+ 100:ntt.c         ****         t = fqmul(zeta, r[j + len]);
+  87              	 .loc 1 100 13 view .LVU19
+  88 0034 B3F90000 	 ldrsh r0,[r3]
+  89 0038 0293     	 str r3,[sp,#8]
+  90              	.LBB18:
+  91              	.LBB19:
+  79:ntt.c         **** }
+  92              	 .loc 1 79 10 view .LVU20
+  93 003a 4843     	 muls r0,r1,r0
+  94 003c 154B     	 ldr r3,.L8+4
+  95 003e 0392     	 str r2,[sp,#12]
+  79:ntt.c         **** }
+  96              	 .loc 1 79 10 view .LVU21
+  97              	.LBE19:
+  98              	.LBE18:
+  99              	 .loc 1 100 9 is_stmt 1 view .LVU22
+ 100              	.LVL5:
+ 101              	.LBB21:
+ 102              	.LBI18:
+  78:ntt.c         ****   return montgomery_reduce((int32_t)a*b);
+ 103              	 .loc 1 78 16 view .LVU23
+ 104              	.LBB20:
+  79:ntt.c         **** }
+ 105              	 .loc 1 79 3 view .LVU24
+  79:ntt.c         **** }
+ 106              	 .loc 1 79 10 is_stmt 0 view .LVU25
+ 107 0040 0191     	 str r1,[sp,#4]
+ 108 0042 9847     	 blx r3
+ 109              	.LVL6:
+  79:ntt.c         **** }
+ 110              	 .loc 1 79 10 view .LVU26
+ 111              	.LBE20:
+ 112              	.LBE21:
+ 101:ntt.c         ****         r[j + len] = r[j] - t;
+ 113              	 .loc 1 101 9 is_stmt 1 view .LVU27
+ 114              	 .loc 1 101 23 is_stmt 0 view .LVU28
+ 115 0044 B7F900C0 	 ldrsh ip,[r7]
+ 116              	 .loc 1 101 20 view .LVU29
+ 117 0048 029B     	 ldr r3,[sp,#8]
+  99:ntt.c         ****         t = fqmul(zeta, r[j + len]);
+ 118              	 .loc 1 99 24 discriminator 1 view .LVU30
+ 119 004a 0199     	 ldr r1,[sp,#4]
+ 120 004c 039A     	 ldr r2,[sp,#12]
+ 121              	 .loc 1 101 27 view .LVU31
+ 122 004e 80B2     	 uxth r0,r0
+ 123              	 .loc 1 101 27 view .LVU32
+ 124 0050 ACEB000C 	 sub ip,ip,r0
+ 125              	 .loc 1 101 20 view .LVU33
+ 126 0054 23F802CB 	 strh ip,[r3],#2
+ 102:ntt.c         ****         r[j] = r[j] + t;
+ 127              	 .loc 1 102 9 is_stmt 1 view .LVU34
+ 128              	 .loc 1 102 21 is_stmt 0 view .LVU35
+ 129 0058 37F802CB 	 ldrh ip,[r7],#2
+  99:ntt.c         ****         t = fqmul(zeta, r[j + len]);
+ 130              	 .loc 1 99 39 discriminator 3 view .LVU36
+ 131 005c 0BF1010B 	 add fp,fp,#1
+ 132              	.LVL7:
+ 133              	 .loc 1 102 21 view .LVU37
+ 134 0060 6044     	 add r0,r0,ip
+ 135              	.LVL8:
+  99:ntt.c         ****         t = fqmul(zeta, r[j + len]);
+ 136              	 .loc 1 99 24 discriminator 1 view .LVU38
+ 137 0062 D345     	 cmp fp,r10
+ 138              	 .loc 1 102 14 view .LVU39
+ 139 0064 27F8020C 	 strh r0,[r7,#-2]
+  99:ntt.c         ****         t = fqmul(zeta, r[j + len]);
+ 140              	 .loc 1 99 39 is_stmt 1 discriminator 3 view .LVU40
+ 141              	.LVL9:
+  99:ntt.c         ****         t = fqmul(zeta, r[j + len]);
+ 142              	 .loc 1 99 24 discriminator 1 view .LVU41
+ 143 0068 E4D3     	 bcc .L3
+ 144 006a 611C     	 adds r1,r4,#1
+ 145 006c 6B1E     	 subs r3,r5,#1
+ 146 006e 8A45     	 cmp r10,r1
+ 147 0070 38BF     	 it cc
+ 148 0072 0023     	 movcc r3,#0
+ 149 0074 0099     	 ldr r1,[sp]
+ 150 0076 0C44     	 add r4,r4,r1
+ 151              	.LVL10:
+  97:ntt.c         ****       zeta = zetas[k++];
+ 152              	 .loc 1 97 39 discriminator 2 view .LVU42
+ 153 0078 1C44     	 add r4,r4,r3
+ 154              	.LVL11:
+  97:ntt.c         ****       zeta = zetas[k++];
+ 155              	 .loc 1 97 26 discriminator 1 view .LVU43
+ 156 007a FF2C     	 cmp r4,#255
+ 157 007c CFD9     	 bls .L4
+  96:ntt.c         ****     for(start = 0; start < 256; start = j + len) {
+ 158              	 .loc 1 96 32 discriminator 2 view .LVU44
+  96:ntt.c         ****     for(start = 0; start < 256; start = j + len) {
+ 159              	 .loc 1 96 22 is_stmt 0 discriminator 1 view .LVU45
+ 160 007e B9F10109 	 subs r9,r9,#1
+  96:ntt.c         ****     for(start = 0; start < 256; start = j + len) {
+ 161              	 .loc 1 96 32 discriminator 2 view .LVU46
+ 162 0082 4FEA5505 	 lsr r5,r5,#1
+ 163              	.LVL12:
+  96:ntt.c         ****     for(start = 0; start < 256; start = j + len) {
+ 164              	 .loc 1 96 22 is_stmt 1 discriminator 1 view .LVU47
+ 165 0086 C4D1     	 bne .L2
+ 103:ntt.c         ****       }
+ 104:ntt.c         ****     }
+ 105:ntt.c         ****   }
+ 106:ntt.c         **** }
+ 166              	 .loc 1 106 1 is_stmt 0 view .LVU48
+ 167 0088 05B0     	 add sp,sp,#20
+ 168              	.LCFI2:
+ 169              	 .cfi_def_cfa_offset 36
+ 170              	 
+ 171 008a BDE8F08F 	 pop {r4,r5,r6,r7,r8,r9,r10,fp,pc}
+ 172              	.LVL13:
+ 173              	.L9:
+ 174              	 .loc 1 106 1 view .LVU49
+ 175 008e 00BF     	 .align 2
+ 176              	.L8:
+ 177 0090 00000000 	 .word crypto_kem_kyber1024_ref_zetas
+ 178 0094 00000000 	 .word crypto_kem_kyber1024_ref_montgomery_reduce
+ 179              	 .cfi_endproc
+ 180              	.LFE1:
+ 182              	 .section .text.crypto_kem_kyber1024_ref_invntt,"ax",%progbits
+ 183              	 .align 1
+ 184              	 .global crypto_kem_kyber1024_ref_invntt
+ 185              	 .syntax unified
+ 186              	 .thumb
+ 187              	 .thumb_func
+ 189              	crypto_kem_kyber1024_ref_invntt:
+ 190              	.LVL14:
+ 191              	.LFB2:
+ 107:ntt.c         **** 
+ 108:ntt.c         **** /*************************************************
+ 109:ntt.c         **** * Name:        invntt_tomont
+ 110:ntt.c         **** *
+ 111:ntt.c         **** * Description: Inplace inverse number-theoretic transform in Rq and
+ 112:ntt.c         **** *              multiplication by Montgomery factor 2^16.
+ 113:ntt.c         **** *              Input is in bitreversed order, output is in standard order
+ 114:ntt.c         **** *
+ 115:ntt.c         **** * Arguments:   - int16_t r[256]: pointer to input/output vector of elements
+ 116:ntt.c         **** *                                of Zq
+ 117:ntt.c         **** **************************************************/
+ 118:ntt.c         **** void invntt(int16_t r[256]) {
+ 192              	 .loc 1 118 29 is_stmt 1 view-0
+ 193              	 .cfi_startproc
+ 194              	 
+ 195              	 
+ 119:ntt.c         ****   unsigned int start, len, j, k;
+ 196              	 .loc 1 119 3 view .LVU51
+ 120:ntt.c         ****   int16_t t, zeta;
+ 197              	 .loc 1 120 3 view .LVU52
+ 121:ntt.c         **** 
+ 122:ntt.c         ****   k = 0;
+ 198              	 .loc 1 122 3 view .LVU53
+ 123:ntt.c         ****   for(len = 2; len <= 128; len <<= 1) {
+ 199              	 .loc 1 123 3 view .LVU54
+ 200              	 .loc 1 123 20 discriminator 1 view .LVU55
+ 118:ntt.c         ****   unsigned int start, len, j, k;
+ 201              	 .loc 1 118 29 is_stmt 0 view .LVU56
+ 202 0000 2DE9F04F 	 push {r4,r5,r6,r7,r8,r9,r10,fp,lr}
+ 203              	.LCFI3:
+ 204              	 .cfi_def_cfa_offset 36
+ 205              	 .cfi_offset 4,-36
+ 206              	 .cfi_offset 5,-32
+ 207              	 .cfi_offset 6,-28
+ 208              	 .cfi_offset 7,-24
+ 209              	 .cfi_offset 8,-20
+ 210              	 .cfi_offset 9,-16
+ 211              	 .cfi_offset 10,-12
+ 212              	 .cfi_offset 11,-8
+ 213              	 .cfi_offset 14,-4
+ 214 0004 0446     	 mov r4,r0
+ 215 0006 85B0     	 sub sp,sp,#20
+ 216              	.LCFI4:
+ 217              	 .cfi_def_cfa_offset 56
+ 124:ntt.c         ****     for(start = 0; start < 256; start = j + len) {
+ 218              	 .loc 1 124 15 view .LVU57
+ 219 0008 4FF0070A 	 mov r10,#7
+ 122:ntt.c         ****   for(len = 2; len <= 128; len <<= 1) {
+ 220              	 .loc 1 122 5 view .LVU58
+ 221 000c 4FF00009 	 mov r9,#0
+ 123:ntt.c         ****     for(start = 0; start < 256; start = j + len) {
+ 222              	 .loc 1 123 11 view .LVU59
+ 223 0010 4FF00208 	 mov r8,#2
+ 224              	.LVL15:
+ 225              	.L11:
+ 226              	 .loc 1 124 26 is_stmt 1 discriminator 1 view .LVU60
+ 227 0014 224B     	 ldr r3,.L19
+ 228              	 .loc 1 124 15 is_stmt 0 view .LVU61
+ 229 0016 0025     	 movs r5,#0
+ 230 0018 03EB4901 	 add r1,r3,r9,lsl#1
+ 231              	.LVL16:
+ 232              	.L14:
+ 125:ntt.c         ****       zeta = zetas_inv[k++];
+ 233              	 .loc 1 125 7 is_stmt 1 view .LVU62
+ 234              	 .loc 1 125 12 is_stmt 0 view .LVU63
+ 235 001c 31F9023B 	 ldrsh r3,[r1],#2
+ 236 0020 0193     	 str r3,[sp,#4]
+ 237 0022 05EB0803 	 add r3,r5,r8
+ 238              	 .loc 1 125 25 view .LVU64
+ 239 0026 09F10109 	 add r9,r9,#1
+ 240              	.LVL17:
+ 126:ntt.c         ****       for(j = start; j < start + len; ++j) {
+ 241              	 .loc 1 126 7 is_stmt 1 view .LVU65
+ 242              	 .loc 1 126 7 is_stmt 0 view .LVU66
+ 243 002a 04EB450B 	 add fp,r4,r5,lsl#1
+ 244 002e 04EB4307 	 add r7,r4,r3,lsl#1
+ 245              	.LVL18:
+ 246              	.L12:
+ 247              	 .loc 1 126 24 is_stmt 1 discriminator 1 view .LVU67
+ 248 0032 9D42     	 cmp r5,r3
+ 249 0034 18D3     	 bcc .L13
+ 250 0036 08EB0305 	 add r5,r8,r3
+ 251              	.LVL19:
+ 124:ntt.c         ****       zeta = zetas_inv[k++];
+ 252              	 .loc 1 124 39 discriminator 2 view .LVU68
+ 124:ntt.c         ****       zeta = zetas_inv[k++];
+ 253              	 .loc 1 124 26 discriminator 1 view .LVU69
+ 254 003a FF2D     	 cmp r5,#255
+ 255 003c EED9     	 bls .L14
+ 123:ntt.c         ****     for(start = 0; start < 256; start = j + len) {
+ 256              	 .loc 1 123 32 discriminator 2 view .LVU70
+ 123:ntt.c         ****     for(start = 0; start < 256; start = j + len) {
+ 257              	 .loc 1 123 20 is_stmt 0 discriminator 1 view .LVU71
+ 258 003e BAF1010A 	 subs r10,r10,#1
+ 123:ntt.c         ****     for(start = 0; start < 256; start = j + len) {
+ 259              	 .loc 1 123 32 discriminator 2 view .LVU72
+ 260 0042 4FEA4808 	 lsl r8,r8,#1
+ 261              	.LVL20:
+ 123:ntt.c         ****     for(start = 0; start < 256; start = j + len) {
+ 262              	 .loc 1 123 20 is_stmt 1 discriminator 1 view .LVU73
+ 263 0046 E5D1     	 bne .L11
+ 264              	.LBB22:
+ 265              	.LBB23:
+  79:ntt.c         **** }
+ 266              	 .loc 1 79 10 is_stmt 0 view .LVU74
+ 267 0048 164E     	 ldr r6,.L19+4
+ 268 004a A51E     	 subs r5,r4,#2
+  79:ntt.c         **** }
+ 269              	 .loc 1 79 10 view .LVU75
+ 270 004c 40F2A157 	 movw r7,#1441
+ 271 0050 04F5FF74 	 add r4,r4,#510
+ 272              	.LVL21:
+ 273              	.L16:
+  79:ntt.c         **** }
+ 274              	 .loc 1 79 10 view .LVU76
+ 275              	.LBE23:
+ 276              	.LBE22:
+ 127:ntt.c         ****         t = r[j];
+ 128:ntt.c         ****         r[j] = barrett_reduce(t + r[j + len]);
+ 129:ntt.c         ****         r[j + len] = t - r[j + len];
+ 130:ntt.c         ****         r[j + len] = fqmul(zeta, r[j + len]);
+ 131:ntt.c         ****       }
+ 132:ntt.c         ****     }
+ 133:ntt.c         ****   }
+ 134:ntt.c         **** 
+ 135:ntt.c         ****   for(j = 0; j < 256; ++j)
+ 136:ntt.c         ****     r[j] = fqmul(r[j], zetas_inv[127]);
+ 277              	 .loc 1 136 5 is_stmt 1 view .LVU77
+ 278              	.LBB25:
+ 279              	.LBI22:
+  78:ntt.c         ****   return montgomery_reduce((int32_t)a*b);
+ 280              	 .loc 1 78 16 view .LVU78
+ 281              	.LBB24:
+  79:ntt.c         **** }
+ 282              	 .loc 1 79 3 view .LVU79
+  79:ntt.c         **** }
+ 283              	 .loc 1 79 10 is_stmt 0 view .LVU80
+ 284 0054 35F9020F 	 ldrsh r0,[r5,#2]!
+ 285              	.LVL22:
+  79:ntt.c         **** }
+ 286              	 .loc 1 79 10 view .LVU81
+ 287 0058 7843     	 muls r0,r7,r0
+ 288 005a B047     	 blx r6
+ 289              	.LVL23:
+  79:ntt.c         **** }
+ 290              	 .loc 1 79 10 view .LVU82
+ 291              	.LBE24:
+ 292              	.LBE25:
+ 135:ntt.c         ****     r[j] = fqmul(r[j], zetas_inv[127]);
+ 293              	 .loc 1 135 16 discriminator 1 view .LVU83
+ 294 005c A542     	 cmp r5,r4
+ 295              	 .loc 1 136 10 discriminator 1 view .LVU84
+ 296 005e 2880     	 strh r0,[r5]
+ 135:ntt.c         ****     r[j] = fqmul(r[j], zetas_inv[127]);
+ 297              	 .loc 1 135 23 is_stmt 1 discriminator 3 view .LVU85
+ 135:ntt.c         ****     r[j] = fqmul(r[j], zetas_inv[127]);
+ 298              	 .loc 1 135 16 discriminator 1 view .LVU86
+ 299 0060 F8D1     	 bne .L16
+ 137:ntt.c         **** }
+ 300              	 .loc 1 137 1 is_stmt 0 view .LVU87
+ 301 0062 05B0     	 add sp,sp,#20
+ 302              	.LCFI5:
+ 303              	 .cfi_remember_state
+ 304              	 .cfi_def_cfa_offset 36
+ 305              	 
+ 306 0064 BDE8F08F 	 pop {r4,r5,r6,r7,r8,r9,r10,fp,pc}
+ 307              	.LVL24:
+ 308              	.L13:
+ 309              	.LCFI6:
+ 310              	 .cfi_restore_state
+ 128:ntt.c         ****         r[j + len] = t - r[j + len];
+ 311              	 .loc 1 128 33 view .LVU88
+ 312 0068 BBF80060 	 ldrh r6,[fp]
+ 128:ntt.c         ****         r[j + len] = t - r[j + len];
+ 313              	 .loc 1 128 36 view .LVU89
+ 314 006c B7F90000 	 ldrsh r0,[r7]
+ 128:ntt.c         ****         r[j + len] = t - r[j + len];
+ 315              	 .loc 1 128 33 view .LVU90
+ 316 0070 3044     	 add r0,r0,r6
+ 317 0072 CDE90231 	 strd r3,r1,[sp,#8]
+ 127:ntt.c         ****         r[j] = barrett_reduce(t + r[j + len]);
+ 318              	 .loc 1 127 9 is_stmt 1 view .LVU91
+ 319              	.LVL25:
+ 128:ntt.c         ****         r[j + len] = t - r[j + len];
+ 320              	 .loc 1 128 9 view .LVU92
+ 128:ntt.c         ****         r[j + len] = t - r[j + len];
+ 321              	 .loc 1 128 16 is_stmt 0 view .LVU93
+ 322 0076 00B2     	 sxth r0,r0
+ 323 0078 0B4B     	 ldr r3,.L19+8
+ 324 007a 9847     	 blx r3
+ 325              	.LVL26:
+ 128:ntt.c         ****         r[j + len] = t - r[j + len];
+ 326              	 .loc 1 128 14 discriminator 1 view .LVU94
+ 327 007c 2BF8020B 	 strh r0,[fp],#2
+ 129:ntt.c         ****         r[j + len] = fqmul(zeta, r[j + len]);
+ 328              	 .loc 1 129 9 is_stmt 1 view .LVU95
+ 129:ntt.c         ****         r[j + len] = fqmul(zeta, r[j + len]);
+ 329              	 .loc 1 129 24 is_stmt 0 view .LVU96
+ 330 0080 37F8020B 	 ldrh r0,[r7],#2
+ 331              	.LBB26:
+ 332              	.LBB27:
+  79:ntt.c         **** }
+ 333              	 .loc 1 79 10 view .LVU97
+ 334 0084 019B     	 ldr r3,[sp,#4]
+ 335              	.LBE27:
+ 336              	.LBE26:
+ 129:ntt.c         ****         r[j + len] = fqmul(zeta, r[j + len]);
+ 337              	 .loc 1 129 24 view .LVU98
+ 338 0086 301A     	 subs r0,r6,r0
+ 339 0088 00B2     	 sxth r0,r0
+ 129:ntt.c         ****         r[j + len] = fqmul(zeta, r[j + len]);
+ 340              	 .loc 1 129 20 view .LVU99
+ 341 008a 27F8020C 	 strh r0,[r7,#-2]
+ 130:ntt.c         ****       }
+ 342              	 .loc 1 130 9 is_stmt 1 view .LVU100
+ 343              	.LVL27:
+ 344              	.LBB29:
+ 345              	.LBI26:
+  78:ntt.c         ****   return montgomery_reduce((int32_t)a*b);
+ 346              	 .loc 1 78 16 view .LVU101
+ 347              	.LBB28:
+  79:ntt.c         **** }
+ 348              	 .loc 1 79 3 view .LVU102
+  79:ntt.c         **** }
+ 349              	 .loc 1 79 10 is_stmt 0 view .LVU103
+ 350 008e 5843     	 muls r0,r3,r0
+ 351              	.LVL28:
+  79:ntt.c         **** }
+ 352              	 .loc 1 79 10 view .LVU104
+ 353 0090 044B     	 ldr r3,.L19+4
+ 354 0092 9847     	 blx r3
+ 355              	.LVL29:
+  79:ntt.c         **** }
+ 356              	 .loc 1 79 10 view .LVU105
+ 357              	.LBE28:
+ 358              	.LBE29:
+ 126:ntt.c         ****         t = r[j];
+ 359              	 .loc 1 126 39 discriminator 3 view .LVU106
+ 360 0094 0135     	 adds r5,r5,#1
+ 361              	.LVL30:
+ 126:ntt.c         ****         t = r[j];
+ 362              	 .loc 1 126 39 discriminator 3 view .LVU107
+ 363 0096 DDE90231 	 ldrd r3,r1,[sp,#8]
+ 130:ntt.c         ****       }
+ 364              	 .loc 1 130 20 discriminator 1 view .LVU108
+ 365 009a 27F8020C 	 strh r0,[r7,#-2]
+ 126:ntt.c         ****         t = r[j];
+ 366              	 .loc 1 126 39 is_stmt 1 discriminator 3 view .LVU109
+ 367 009e C8E7     	 b .L12
+ 368              	.L20:
+ 369              	 .align 2
+ 370              	.L19:
+ 371 00a0 00000000 	 .word crypto_kem_kyber1024_ref_zetas_inv
+ 372 00a4 00000000 	 .word crypto_kem_kyber1024_ref_montgomery_reduce
+ 373 00a8 00000000 	 .word crypto_kem_kyber1024_ref_barrett_reduce
+ 374              	 .cfi_endproc
+ 375              	.LFE2:
+ 377              	 .section .text.crypto_kem_kyber1024_ref_basemul,"ax",%progbits
+ 378              	 .align 1
+ 379              	 .global crypto_kem_kyber1024_ref_basemul
+ 380              	 .syntax unified
+ 381              	 .thumb
+ 382              	 .thumb_func
+ 384              	crypto_kem_kyber1024_ref_basemul:
+ 385              	.LVL31:
+ 386              	.LFB3:
+ 138:ntt.c         **** 
+ 139:ntt.c         **** /*************************************************
+ 140:ntt.c         **** * Name:        basemul
+ 141:ntt.c         **** *
+ 142:ntt.c         **** * Description: Multiplication of polynomials in Zq[X]/(X^2-zeta)
+ 143:ntt.c         **** *              used for multiplication of elements in Rq in NTT domain
+ 144:ntt.c         **** *
+ 145:ntt.c         **** * Arguments:   - int16_t r[2]:       pointer to the output polynomial
+ 146:ntt.c         **** *              - const int16_t a[2]: pointer to the first factor
+ 147:ntt.c         **** *              - const int16_t b[2]: pointer to the second factor
+ 148:ntt.c         **** *              - int16_t zeta:       integer defining the reduction polynomial
+ 149:ntt.c         **** **************************************************/
+ 150:ntt.c         **** void basemul(int16_t r[2],
+ 151:ntt.c         ****              const int16_t a[2],
+ 152:ntt.c         ****              const int16_t b[2],
+ 153:ntt.c         ****              int16_t zeta)
+ 154:ntt.c         **** {
+ 387              	 .loc 1 154 1 view-0
+ 388              	 .cfi_startproc
+ 389              	 
+ 390              	 
+ 155:ntt.c         ****   r[0]  = fqmul(a[1], b[1]);
+ 391              	 .loc 1 155 3 view .LVU111
+ 392              	.LBB30:
+ 393              	.LBI30:
+  78:ntt.c         ****   return montgomery_reduce((int32_t)a*b);
+ 394              	 .loc 1 78 16 view .LVU112
+ 395              	.LBB31:
+  79:ntt.c         **** }
+ 396              	 .loc 1 79 3 view .LVU113
+ 397              	.LBE31:
+ 398              	.LBE30:
+ 154:ntt.c         ****   r[0]  = fqmul(a[1], b[1]);
+ 399              	 .loc 1 154 1 is_stmt 0 view .LVU114
+ 400 0000 2DE9F041 	 push {r4,r5,r6,r7,r8,lr}
+ 401              	.LCFI7:
+ 402              	 .cfi_def_cfa_offset 24
+ 403              	 .cfi_offset 4,-24
+ 404              	 .cfi_offset 5,-20
+ 405              	 .cfi_offset 6,-16
+ 406              	 .cfi_offset 7,-12
+ 407              	 .cfi_offset 8,-8
+ 408              	 .cfi_offset 14,-4
+ 154:ntt.c         ****   r[0]  = fqmul(a[1], b[1]);
+ 409              	 .loc 1 154 1 view .LVU115
+ 410 0004 0446     	 mov r4,r0
+ 411 0006 9846     	 mov r8,r3
+ 412              	.LBB34:
+ 413              	.LBB32:
+  79:ntt.c         **** }
+ 414              	 .loc 1 79 10 view .LVU116
+ 415 0008 4888     	 ldrh r0,[r1,#2]
+ 416              	.LVL32:
+  79:ntt.c         **** }
+ 417              	 .loc 1 79 10 view .LVU117
+ 418 000a 5388     	 ldrh r3,[r2,#2]
+ 419              	.LVL33:
+  79:ntt.c         **** }
+ 420              	 .loc 1 79 10 view .LVU118
+ 421 000c 114F     	 ldr r7,.L22
+ 422 000e 10FB03F0 	 smulbb r0,r0,r3
+ 423              	.LBE32:
+ 424              	.LBE34:
+ 154:ntt.c         ****   r[0]  = fqmul(a[1], b[1]);
+ 425              	 .loc 1 154 1 view .LVU119
+ 426 0012 0E46     	 mov r6,r1
+ 427 0014 1546     	 mov r5,r2
+ 428              	.LBB35:
+ 429              	.LBB33:
+  79:ntt.c         **** }
+ 430              	 .loc 1 79 10 view .LVU120
+ 431 0016 B847     	 blx r7
+ 432              	.LVL34:
+  79:ntt.c         **** }
+ 433              	 .loc 1 79 10 view .LVU121
+ 434              	.LBE33:
+ 435              	.LBE35:
+ 436              	 .loc 1 155 9 discriminator 1 view .LVU122
+ 437 0018 2080     	 strh r0,[r4]
+ 156:ntt.c         ****   r[0]  = fqmul(r[0], zeta);
+ 438              	 .loc 1 156 3 is_stmt 1 view .LVU123
+ 439              	.LVL35:
+ 440              	.LBB36:
+ 441              	.LBI36:
+  78:ntt.c         ****   return montgomery_reduce((int32_t)a*b);
+ 442              	 .loc 1 78 16 view .LVU124
+ 443              	.LBB37:
+  79:ntt.c         **** }
+ 444              	 .loc 1 79 3 view .LVU125
+  79:ntt.c         **** }
+ 445              	 .loc 1 79 10 is_stmt 0 view .LVU126
+ 446 001a 00FB08F0 	 mul r0,r0,r8
+ 447              	.LVL36:
+  79:ntt.c         **** }
+ 448              	 .loc 1 79 10 view .LVU127
+ 449 001e B847     	 blx r7
+ 450              	.LVL37:
+  79:ntt.c         **** }
+ 451              	 .loc 1 79 10 view .LVU128
+ 452              	.LBE37:
+ 453              	.LBE36:
+ 454              	 .loc 1 156 9 discriminator 1 view .LVU129
+ 455 0020 2080     	 strh r0,[r4]
+ 157:ntt.c         ****   r[0] += fqmul(a[0], b[0]);
+ 456              	 .loc 1 157 3 is_stmt 1 view .LVU130
+ 457              	.LVL38:
+ 458              	.LBB38:
+ 459              	.LBI38:
+  78:ntt.c         ****   return montgomery_reduce((int32_t)a*b);
+ 460              	 .loc 1 78 16 view .LVU131
+ 461              	.LBB39:
+  79:ntt.c         **** }
+ 462              	 .loc 1 79 3 view .LVU132
+  79:ntt.c         **** }
+ 463              	 .loc 1 79 10 is_stmt 0 view .LVU133
+ 464 0022 2B88     	 ldrh r3,[r5]
+ 465 0024 3088     	 ldrh r0,[r6]
+ 466 0026 10FB03F0 	 smulbb r0,r0,r3
+ 467 002a B847     	 blx r7
+ 468              	.LVL39:
+  79:ntt.c         **** }
+ 469              	 .loc 1 79 10 view .LVU134
+ 470              	.LBE39:
+ 471              	.LBE38:
+ 472              	 .loc 1 157 8 discriminator 1 view .LVU135
+ 473 002c 2388     	 ldrh r3,[r4]
+ 474 002e 1844     	 add r0,r0,r3
+ 475 0030 2080     	 strh r0,[r4]
+ 158:ntt.c         **** 
+ 159:ntt.c         ****   r[1]  = fqmul(a[0], b[1]);
+ 476              	 .loc 1 159 3 is_stmt 1 view .LVU136
+ 477              	.LVL40:
+ 478              	.LBB40:
+ 479              	.LBI40:
+  78:ntt.c         ****   return montgomery_reduce((int32_t)a*b);
+ 480              	 .loc 1 78 16 view .LVU137
+ 481              	.LBB41:
+  79:ntt.c         **** }
+ 482              	 .loc 1 79 3 view .LVU138
+  79:ntt.c         **** }
+ 483              	 .loc 1 79 10 is_stmt 0 view .LVU139
+ 484 0032 6B88     	 ldrh r3,[r5,#2]
+ 485 0034 3088     	 ldrh r0,[r6]
+ 486 0036 10FB03F0 	 smulbb r0,r0,r3
+ 487 003a B847     	 blx r7
+ 488              	.LVL41:
+  79:ntt.c         **** }
+ 489              	 .loc 1 79 10 view .LVU140
+ 490              	.LBE41:
+ 491              	.LBE40:
+ 492              	 .loc 1 159 9 discriminator 1 view .LVU141
+ 493 003c 6080     	 strh r0,[r4,#2]
+ 160:ntt.c         ****   r[1] += fqmul(a[1], b[0]);
+ 494              	 .loc 1 160 3 is_stmt 1 view .LVU142
+ 495              	.LVL42:
+ 496              	.LBB42:
+ 497              	.LBI42:
+  78:ntt.c         ****   return montgomery_reduce((int32_t)a*b);
+ 498              	 .loc 1 78 16 view .LVU143
+ 499              	.LBB43:
+  79:ntt.c         **** }
+ 500              	 .loc 1 79 3 view .LVU144
+  79:ntt.c         **** }
+ 501              	 .loc 1 79 10 is_stmt 0 view .LVU145
+ 502 003e 2B88     	 ldrh r3,[r5]
+ 503 0040 7088     	 ldrh r0,[r6,#2]
+ 504 0042 10FB03F0 	 smulbb r0,r0,r3
+ 505 0046 B847     	 blx r7
+ 506              	.LVL43:
+  79:ntt.c         **** }
+ 507              	 .loc 1 79 10 view .LVU146
+ 508              	.LBE43:
+ 509              	.LBE42:
+ 510              	 .loc 1 160 8 discriminator 1 view .LVU147
+ 511 0048 6388     	 ldrh r3,[r4,#2]
+ 512 004a 1844     	 add r0,r0,r3
+ 513 004c 6080     	 strh r0,[r4,#2]
+ 161:ntt.c         **** }
+ 514              	 .loc 1 161 1 view .LVU148
+ 515 004e BDE8F081 	 pop {r4,r5,r6,r7,r8,pc}
+ 516              	.LVL44:
+ 517              	.L23:
+ 518              	 .loc 1 161 1 view .LVU149
+ 519 0052 00BF     	 .align 2
+ 520              	.L22:
+ 521 0054 00000000 	 .word crypto_kem_kyber1024_ref_montgomery_reduce
+ 522              	 .cfi_endproc
+ 523              	.LFE3:
+ 525              	 .global crypto_kem_kyber1024_ref_zetas_inv
+ 526              	 .section .rodata.crypto_kem_kyber1024_ref_zetas_inv,"a"
+ 527              	 .align 1
+ 530              	crypto_kem_kyber1024_ref_zetas_inv:
+ 531 0000 A506     	 .short 1701
+ 532 0002 0F07     	 .short 1807
+ 533 0004 B405     	 .short 1460
+ 534 0006 4309     	 .short 2371
+ 535 0008 2209     	 .short 2338
+ 536 000a 1D09     	 .short 2333
+ 537 000c 3401     	 .short 308
+ 538 000e 6C00     	 .short 108
+ 539 0010 230B     	 .short 2851
+ 540 0012 6603     	 .short 870
+ 541 0014 5603     	 .short 854
+ 542 0016 E605     	 .short 1510
+ 543 0018 E709     	 .short 2535
+ 544 001a FE04     	 .short 1278
+ 545 001c FA05     	 .short 1530
+ 546 001e A104     	 .short 1185
+ 547 0020 7B06     	 .short 1659
+ 548 0022 A304     	 .short 1187
+ 549 0024 250C     	 .short 3109
+ 550 0026 6A03     	 .short 874
+ 551 0028 3705     	 .short 1335
+ 552 002a 3F08     	 .short 2111
+ 553 002c 8800     	 .short 136
+ 554 002e BF04     	 .short 1215
+ 555 0030 810B     	 .short 2945
+ 556 0032 B905     	 .short 1465
+ 557 0034 0505     	 .short 1285
+ 558 0036 D707     	 .short 2007
+ 559 0038 9F0A     	 .short 2719
+ 560 003a A60A     	 .short 2726
+ 561 003c B808     	 .short 2232
+ 562 003e D009     	 .short 2512
+ 563 0040 4B00     	 .short 75
+ 564 0042 9C00     	 .short 156
+ 565 0044 B80B     	 .short 3000
+ 566 0046 5F0B     	 .short 2911
+ 567 0048 A40B     	 .short 2980
+ 568 004a 6803     	 .short 872
+ 569 004c 7D0A     	 .short 2685
+ 570 004e 3606     	 .short 1590
+ 571 0050 A208     	 .short 2210
+ 572 0052 5A02     	 .short 602
+ 573 0054 3607     	 .short 1846
+ 574 0056 0903     	 .short 777
+ 575 0058 9300     	 .short 147
+ 576 005a 7A08     	 .short 2170
+ 577 005c F709     	 .short 2551
+ 578 005e F600     	 .short 246
+ 579 0060 8C06     	 .short 1676
+ 580 0062 DB06     	 .short 1755
+ 581 0064 CC01     	 .short 460
+ 582 0066 2301     	 .short 291
+ 583 0068 EB00     	 .short 235
+ 584 006a 500C     	 .short 3152
+ 585 006c B60A     	 .short 2742
+ 586 006e 5B0B     	 .short 2907
+ 587 0070 980C     	 .short 3224
+ 588 0072 F306     	 .short 1779
+ 589 0074 9A09     	 .short 2458
+ 590 0076 E304     	 .short 1251
+ 591 0078 B609     	 .short 2486
+ 592 007a D60A     	 .short 2774
+ 593 007c 530B     	 .short 2899
+ 594 007e 4F04     	 .short 1103
+ 595 0080 FB04     	 .short 1275
+ 596 0082 5C0A     	 .short 2652
+ 597 0084 2904     	 .short 1065
+ 598 0086 410B     	 .short 2881
+ 599 0088 D502     	 .short 725
+ 600 008a E405     	 .short 1508
+ 601 008c 4009     	 .short 2368
+ 602 008e 8E01     	 .short 398
+ 603 0090 B703     	 .short 951
+ 604 0092 F700     	 .short 247
+ 605 0094 8D05     	 .short 1421
+ 606 0096 960C     	 .short 3222
+ 607 0098 C309     	 .short 2499
+ 608 009a 0F01     	 .short 271
+ 609 009c 5A00     	 .short 90
+ 610 009e 5503     	 .short 853
+ 611 00a0 4407     	 .short 1860
+ 612 00a2 830C     	 .short 3203
+ 613 00a4 8A04     	 .short 1162
+ 614 00a6 5206     	 .short 1618
+ 615 00a8 9A02     	 .short 666
+ 616 00aa 4001     	 .short 320
+ 617 00ac 0800     	 .short 8
+ 618 00ae FD0A     	 .short 2813
+ 619 00b0 0806     	 .short 1544
+ 620 00b2 1A01     	 .short 282
+ 621 00b4 2E07     	 .short 1838
+ 622 00b6 0D05     	 .short 1293
+ 623 00b8 0A09     	 .short 2314
+ 624 00ba 2802     	 .short 552
+ 625 00bc 750A     	 .short 2677
+ 626 00be 3A08     	 .short 2106
+ 627 00c0 2306     	 .short 1571
+ 628 00c2 CD00     	 .short 205
+ 629 00c4 660B     	 .short 2918
+ 630 00c6 0606     	 .short 1542
+ 631 00c8 A10A     	 .short 2721
+ 632 00ca 250A     	 .short 2597
+ 633 00cc 0809     	 .short 2312
+ 634 00ce A902     	 .short 681
+ 635 00d0 8200     	 .short 130
+ 636 00d2 4206     	 .short 1602
+ 637 00d4 4F07     	 .short 1871
+ 638 00d6 3D03     	 .short 829
+ 639 00d8 820B     	 .short 2946
+ 640 00da F90B     	 .short 3065
+ 641 00dc 2D05     	 .short 1325
+ 642 00de C40A     	 .short 2756
+ 643 00e0 4507     	 .short 1861
+ 644 00e2 C205     	 .short 1474
+ 645 00e4 B204     	 .short 1202
+ 646 00e6 3F09     	 .short 2367
+ 647 00e8 4B0C     	 .short 3147
+ 648 00ea D806     	 .short 1752
+ 649 00ec 930A     	 .short 2707
+ 650 00ee AB00     	 .short 171
+ 651 00f0 370C     	 .short 3127
+ 652 00f2 E20B     	 .short 3042
+ 653 00f4 7307     	 .short 1907
+ 654 00f6 2C07     	 .short 1836
+ 655 00f8 ED05     	 .short 1517
+ 656 00fa 6701     	 .short 359
+ 657 00fc F602     	 .short 758
+ 658 00fe A105     	 .short 1441
+ 659              	 .global crypto_kem_kyber1024_ref_zetas
+ 660              	 .section .rodata.crypto_kem_kyber1024_ref_zetas,"a"
+ 661              	 .align 1
+ 664              	crypto_kem_kyber1024_ref_zetas:
+ 665 0000 ED08     	 .short 2285
+ 666 0002 0B0A     	 .short 2571
+ 667 0004 9A0B     	 .short 2970
+ 668 0006 1407     	 .short 1812
+ 669 0008 D505     	 .short 1493
+ 670 000a 8E05     	 .short 1422
+ 671 000c 1F01     	 .short 287
+ 672 000e CA00     	 .short 202
+ 673 0010 560C     	 .short 3158
+ 674 0012 6E02     	 .short 622
+ 675 0014 2906     	 .short 1577
+ 676 0016 B600     	 .short 182
+ 677 0018 C203     	 .short 962
+ 678 001a 4F08     	 .short 2127
+ 679 001c 3F07     	 .short 1855
+ 680 001e BC05     	 .short 1468
+ 681 0020 3D02     	 .short 573
+ 682 0022 D407     	 .short 2004
+ 683 0024 0801     	 .short 264
+ 684 0026 7F01     	 .short 383
+ 685 0028 C409     	 .short 2500
+ 686 002a B205     	 .short 1458
+ 687 002c BF06     	 .short 1727
+ 688 002e 7F0C     	 .short 3199
+ 689 0030 580A     	 .short 2648
+ 690 0032 F903     	 .short 1017
+ 691 0034 DC02     	 .short 732
+ 692 0036 6002     	 .short 608
+ 693 0038 FB06     	 .short 1787
+ 694 003a 9B01     	 .short 411
+ 695 003c 340C     	 .short 3124
+ 696 003e DE06     	 .short 1758
+ 697 0040 C704     	 .short 1223
+ 698 0042 8C02     	 .short 652
+ 699 0044 D90A     	 .short 2777
+ 700 0046 F703     	 .short 1015
+ 701 0048 F407     	 .short 2036
+ 702 004a D305     	 .short 1491
+ 703 004c E70B     	 .short 3047
+ 704 004e F906     	 .short 1785
+ 705 0050 0402     	 .short 516
+ 706 0052 F90C     	 .short 3321
+ 707 0054 C10B     	 .short 3009
+ 708 0056 670A     	 .short 2663
+ 709 0058 AF06     	 .short 1711
+ 710 005a 7708     	 .short 2167
+ 711 005c 7E00     	 .short 126
+ 712 005e BD05     	 .short 1469
+ 713 0060 AC09     	 .short 2476
+ 714 0062 A70C     	 .short 3239
+ 715 0064 F20B     	 .short 3058
+ 716 0066 3E03     	 .short 830
+ 717 0068 6B00     	 .short 107
+ 718 006a 7407     	 .short 1908
+ 719 006c 0A0C     	 .short 3082
+ 720 006e 4A09     	 .short 2378
+ 721 0070 730B     	 .short 2931
+ 722 0072 C103     	 .short 961
+ 723 0074 1D07     	 .short 1821
+ 724 0076 2C0A     	 .short 2604
+ 725 0078 C001     	 .short 448
+ 726 007a D808     	 .short 2264
+ 727 007c A502     	 .short 677
+ 728 007e 0608     	 .short 2054
+ 729 0080 B208     	 .short 2226
+ 730 0082 AE01     	 .short 430
+ 731 0084 2B02     	 .short 555
+ 732 0086 4B03     	 .short 843
+ 733 0088 1E08     	 .short 2078
+ 734 008a 6703     	 .short 871
+ 735 008c 0E06     	 .short 1550
+ 736 008e 6900     	 .short 105
+ 737 0090 A601     	 .short 422
+ 738 0092 4B02     	 .short 587
+ 739 0094 B100     	 .short 177
+ 740 0096 160C     	 .short 3094
+ 741 0098 DE0B     	 .short 3038
+ 742 009a 350B     	 .short 2869
+ 743 009c 2606     	 .short 1574
+ 744 009e 7506     	 .short 1653
+ 745 00a0 0B0C     	 .short 3083
+ 746 00a2 0A03     	 .short 778
+ 747 00a4 8704     	 .short 1159
+ 748 00a6 6E0C     	 .short 3182
+ 749 00a8 F809     	 .short 2552
+ 750 00aa CB05     	 .short 1483
+ 751 00ac A70A     	 .short 2727
+ 752 00ae 5F04     	 .short 1119
+ 753 00b0 CB06     	 .short 1739
+ 754 00b2 8402     	 .short 644
+ 755 00b4 9909     	 .short 2457
+ 756 00b6 5D01     	 .short 349
+ 757 00b8 A201     	 .short 418
+ 758 00ba 4901     	 .short 329
+ 759 00bc 650C     	 .short 3173
+ 760 00be B60C     	 .short 3254
+ 761 00c0 3103     	 .short 817
+ 762 00c2 4904     	 .short 1097
+ 763 00c4 5B02     	 .short 603
+ 764 00c6 6202     	 .short 610
+ 765 00c8 2A05     	 .short 1322
+ 766 00ca FC07     	 .short 2044
+ 767 00cc 4807     	 .short 1864
+ 768 00ce 8001     	 .short 384
+ 769 00d0 4208     	 .short 2114
+ 770 00d2 790C     	 .short 3193
+ 771 00d4 C204     	 .short 1218
+ 772 00d6 CA07     	 .short 1994
+ 773 00d8 9709     	 .short 2455
+ 774 00da DC00     	 .short 220
+ 775 00dc 5E08     	 .short 2142
+ 776 00de 8606     	 .short 1670
+ 777 00e0 6008     	 .short 2144
+ 778 00e2 0707     	 .short 1799
+ 779 00e4 0308     	 .short 2051
+ 780 00e6 1A03     	 .short 794
+ 781 00e8 1B07     	 .short 1819
+ 782 00ea AB09     	 .short 2475
+ 783 00ec 9B09     	 .short 2459
+ 784 00ee DE01     	 .short 478
+ 785 00f0 950C     	 .short 3221
+ 786 00f2 CD0B     	 .short 3021
+ 787 00f4 E403     	 .short 996
+ 788 00f6 DF03     	 .short 991
+ 789 00f8 BE03     	 .short 958
+ 790 00fa 4D07     	 .short 1869
+ 791 00fc F205     	 .short 1522
+ 792 00fe 5C06     	 .short 1628
+ 793              	 .text
+ 794              	.Letext0:
+ 795              	 .file 2 "/usr/lib/gcc/arm-none-eabi/14.2.1/include/stdint.h"
+ 796              	 .file 3 "ntt.h"
+ 797              	 .file 4 "reduce.h"
+DEFINED SYMBOLS
+                            *ABS*:00000000 ntt.c
+    {standard input}:19     .text.crypto_kem_kyber1024_ref_ntt:00000000 $t
+    {standard input}:25     .text.crypto_kem_kyber1024_ref_ntt:00000000 crypto_kem_kyber1024_ref_ntt
+    {standard input}:177    .text.crypto_kem_kyber1024_ref_ntt:00000090 $d
+    {standard input}:664    .rodata.crypto_kem_kyber1024_ref_zetas:00000000 crypto_kem_kyber1024_ref_zetas
+    {standard input}:183    .text.crypto_kem_kyber1024_ref_invntt:00000000 $t
+    {standard input}:189    .text.crypto_kem_kyber1024_ref_invntt:00000000 crypto_kem_kyber1024_ref_invntt
+    {standard input}:371    .text.crypto_kem_kyber1024_ref_invntt:000000a0 $d
+    {standard input}:530    .rodata.crypto_kem_kyber1024_ref_zetas_inv:00000000 crypto_kem_kyber1024_ref_zetas_inv
+    {standard input}:378    .text.crypto_kem_kyber1024_ref_basemul:00000000 $t
+    {standard input}:384    .text.crypto_kem_kyber1024_ref_basemul:00000000 crypto_kem_kyber1024_ref_basemul
+    {standard input}:521    .text.crypto_kem_kyber1024_ref_basemul:00000054 $d
+    {standard input}:527    .rodata.crypto_kem_kyber1024_ref_zetas_inv:00000000 $d
+    {standard input}:661    .rodata.crypto_kem_kyber1024_ref_zetas:00000000 $d
+                           .group:00000000 wm4.0.9f3a4c6b5812d20634d55e39ed31011a
+                           .group:00000000 wm4.stdint.h.29.6d480f4ba0f60596e88234283d42444f
+                           .group:00000000 wm4.params.h.2.424e8b69daf74be3d402b39ff8b011f8
+                           .group:00000000 wm4.ntt.h.2.897e2440bcde6b9a3d89d32fabc9dbcf
+                           .group:00000000 wm4.reduce.h.2.2aa0dc60c9bf1e8d9898cffaf25fbf0d
+
+UNDEFINED SYMBOLS
+crypto_kem_kyber1024_ref_montgomery_reduce
+crypto_kem_kyber1024_ref_barrett_reduce

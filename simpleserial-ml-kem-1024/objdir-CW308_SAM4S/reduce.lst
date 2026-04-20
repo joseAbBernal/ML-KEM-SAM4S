@@ -1,0 +1,211 @@
+   1              	 .cpu cortex-m4
+   2              	 .arch armv7e-m
+   3              	 .fpu softvfp
+   4              	 .eabi_attribute 20,1
+   5              	 .eabi_attribute 21,1
+   6              	 .eabi_attribute 23,3
+   7              	 .eabi_attribute 24,1
+   8              	 .eabi_attribute 25,1
+   9              	 .eabi_attribute 26,1
+  10              	 .eabi_attribute 30,4
+  11              	 .eabi_attribute 34,1
+  12              	 .eabi_attribute 18,4
+  13              	 .file "reduce.c"
+  14              	 .text
+  15              	.Ltext0:
+  16              	 .cfi_sections .debug_frame
+  17              	 .file 1 "reduce.c"
+  18              	 .section .text.crypto_kem_kyber1024_ref_montgomery_reduce,"ax",%progbits
+  19              	 .align 1
+  20              	 .global crypto_kem_kyber1024_ref_montgomery_reduce
+  21              	 .syntax unified
+  22              	 .thumb
+  23              	 .thumb_func
+  25              	crypto_kem_kyber1024_ref_montgomery_reduce:
+  26              	.LVL0:
+  27              	.LFB0:
+   1:reduce.c      **** #include <stdint.h>
+   2:reduce.c      **** #include "params.h"
+   3:reduce.c      **** #include "reduce.h"
+   4:reduce.c      **** 
+   5:reduce.c      **** /*************************************************
+   6:reduce.c      **** * Name:        montgomery_reduce
+   7:reduce.c      **** *
+   8:reduce.c      **** * Description: Montgomery reduction; given a 32-bit integer a, computes
+   9:reduce.c      **** *              16-bit integer congruent to a * R^-1 mod q,
+  10:reduce.c      **** *              where R=2^16
+  11:reduce.c      **** *
+  12:reduce.c      **** * Arguments:   - int32_t a: input integer to be reduced;
+  13:reduce.c      **** *                           has to be in {-q2^15,...,q2^15-1}
+  14:reduce.c      **** *
+  15:reduce.c      **** * Returns:     integer in {-q+1,...,q-1} congruent to a * R^-1 modulo q.
+  16:reduce.c      **** **************************************************/
+  17:reduce.c      **** int16_t montgomery_reduce(int32_t a)
+  18:reduce.c      **** {
+  28              	 .loc 1 18 1 view-0
+  29              	 .cfi_startproc
+  30              	 
+  31              	 
+  32              	 
+  19:reduce.c      ****   int32_t t;
+  33              	 .loc 1 19 3 view .LVU1
+  20:reduce.c      ****   int16_t u;
+  34              	 .loc 1 20 3 view .LVU2
+  21:reduce.c      **** 
+  22:reduce.c      ****   u = a*QINV;
+  35              	 .loc 1 22 3 view .LVU3
+  23:reduce.c      ****   t = (int32_t)u*KYBER_Q;
+  36              	 .loc 1 23 3 view .LVU4
+  22:reduce.c      ****   t = (int32_t)u*KYBER_Q;
+  37              	 .loc 1 22 5 is_stmt 0 view .LVU5
+  38 0000 00EB4003 	 add r3,r0,r0,lsl#1
+  39 0004 03EBC303 	 add r3,r3,r3,lsl#3
+  40 0008 03EBC303 	 add r3,r3,r3,lsl#3
+  41 000c 00EB0323 	 add r3,r0,r3,lsl#8
+  42              	 .loc 1 23 5 view .LVU6
+  43 0010 40F60152 	 movw r2,#3329
+  44 0014 13FB02F3 	 smulbb r3,r3,r2
+  45              	.LVL1:
+  24:reduce.c      ****   t = a - t;
+  46              	 .loc 1 24 3 is_stmt 1 view .LVU7
+  47              	 .loc 1 24 5 is_stmt 0 view .LVU8
+  48 0018 C01A     	 subs r0,r0,r3
+  49              	.LVL2:
+  25:reduce.c      ****   t >>= 16;
+  50              	 .loc 1 25 3 is_stmt 1 view .LVU9
+  26:reduce.c      ****   return t;
+  51              	 .loc 1 26 3 view .LVU10
+  27:reduce.c      **** }
+  52              	 .loc 1 27 1 is_stmt 0 view .LVU11
+  53 001a 0014     	 asrs r0,r0,#16
+  54              	.LVL3:
+  55              	 .loc 1 27 1 view .LVU12
+  56 001c 7047     	 bx lr
+  57              	 .cfi_endproc
+  58              	.LFE0:
+  60              	 .section .text.crypto_kem_kyber1024_ref_barrett_reduce,"ax",%progbits
+  61              	 .align 1
+  62              	 .global crypto_kem_kyber1024_ref_barrett_reduce
+  63              	 .syntax unified
+  64              	 .thumb
+  65              	 .thumb_func
+  67              	crypto_kem_kyber1024_ref_barrett_reduce:
+  68              	.LVL4:
+  69              	.LFB1:
+  28:reduce.c      **** 
+  29:reduce.c      **** /*************************************************
+  30:reduce.c      **** * Name:        barrett_reduce
+  31:reduce.c      **** *
+  32:reduce.c      **** * Description: Barrett reduction; given a 16-bit integer a, computes
+  33:reduce.c      **** *              16-bit integer congruent to a mod q in {0,...,q}
+  34:reduce.c      **** *
+  35:reduce.c      **** * Arguments:   - int16_t a: input integer to be reduced
+  36:reduce.c      **** *
+  37:reduce.c      **** * Returns:     integer in {0,...,q} congruent to a modulo q.
+  38:reduce.c      **** **************************************************/
+  39:reduce.c      **** int16_t barrett_reduce(int16_t a) {
+  70              	 .loc 1 39 35 is_stmt 1 view-0
+  71              	 .cfi_startproc
+  72              	 
+  73              	 
+  74              	 
+  40:reduce.c      ****   int16_t t;
+  75              	 .loc 1 40 3 view .LVU14
+  41:reduce.c      ****   const int16_t v = ((1U << 26) + KYBER_Q/2)/KYBER_Q;
+  76              	 .loc 1 41 3 view .LVU15
+  42:reduce.c      **** 
+  43:reduce.c      ****   t  = (int32_t)v*a >> 26;
+  77              	 .loc 1 43 3 view .LVU16
+  44:reduce.c      ****   t *= KYBER_Q;
+  78              	 .loc 1 44 3 view .LVU17
+  45:reduce.c      ****   return a - t;
+  79              	 .loc 1 45 3 view .LVU18
+  43:reduce.c      ****   t *= KYBER_Q;
+  80              	 .loc 1 43 18 is_stmt 0 view .LVU19
+  81 0000 44F6BF63 	 movw r3,#20159
+  82 0004 10FB03F3 	 smulbb r3,r0,r3
+  43:reduce.c      ****   t *= KYBER_Q;
+  83              	 .loc 1 43 21 view .LVU20
+  84 0008 9B16     	 asrs r3,r3,#26
+  44:reduce.c      ****   t *= KYBER_Q;
+  85              	 .loc 1 44 5 view .LVU21
+  86 000a 03EB4302 	 add r2,r3,r3,lsl#1
+  87 000e 03EB8202 	 add r2,r3,r2,lsl#2
+  88 0012 03EB0223 	 add r3,r3,r2,lsl#8
+  89              	 .loc 1 45 12 view .LVU22
+  90 0016 C01A     	 subs r0,r0,r3
+  91              	.LVL5:
+  46:reduce.c      **** }
+  92              	 .loc 1 46 1 view .LVU23
+  93 0018 00B2     	 sxth r0,r0
+  94 001a 7047     	 bx lr
+  95              	 .cfi_endproc
+  96              	.LFE1:
+  98              	 .section .text.crypto_kem_kyber1024_ref_csubq,"ax",%progbits
+  99              	 .align 1
+ 100              	 .global crypto_kem_kyber1024_ref_csubq
+ 101              	 .syntax unified
+ 102              	 .thumb
+ 103              	 .thumb_func
+ 105              	crypto_kem_kyber1024_ref_csubq:
+ 106              	.LVL6:
+ 107              	.LFB2:
+  47:reduce.c      **** 
+  48:reduce.c      **** /*************************************************
+  49:reduce.c      **** * Name:        csubq
+  50:reduce.c      **** *
+  51:reduce.c      **** * Description: Conditionallly subtract q
+  52:reduce.c      **** *
+  53:reduce.c      **** * Arguments:   - int16_t x: input integer
+  54:reduce.c      **** *
+  55:reduce.c      **** * Returns:     a - q if a >= q, else a
+  56:reduce.c      **** **************************************************/
+  57:reduce.c      **** int16_t csubq(int16_t a) {
+ 108              	 .loc 1 57 26 is_stmt 1 view-0
+ 109              	 .cfi_startproc
+ 110              	 
+ 111              	 
+ 112              	 
+  58:reduce.c      ****   a -= KYBER_Q;
+ 113              	 .loc 1 58 3 view .LVU25
+ 114              	 .loc 1 58 5 is_stmt 0 view .LVU26
+ 115 0000 6FF45063 	 mvn r3,#3328
+ 116 0004 1844     	 add r0,r0,r3
+ 117              	.LVL7:
+  59:reduce.c      ****   a += (a >> 15) & KYBER_Q;
+ 118              	 .loc 1 59 3 is_stmt 1 view .LVU27
+ 119              	 .loc 1 59 18 is_stmt 0 view .LVU28
+ 120 0006 40F3C033 	 sbfx r3,r0,#15,#1
+ 121 000a 23F43F73 	 bic r3,r3,#764
+ 122 000e 23F00203 	 bic r3,r3,#2
+ 123 0012 1B05     	 lsls r3,r3,#20
+ 124 0014 1B0D     	 lsrs r3,r3,#20
+ 125              	 .loc 1 59 5 view .LVU29
+ 126 0016 13FA80F0 	 uxtah r0,r3,r0
+ 127              	.LVL8:
+  60:reduce.c      ****   return a;
+ 128              	 .loc 1 60 3 is_stmt 1 view .LVU30
+  61:reduce.c      **** }
+ 129              	 .loc 1 61 1 is_stmt 0 view .LVU31
+ 130 001a 00B2     	 sxth r0,r0
+ 131              	 .loc 1 61 1 view .LVU32
+ 132 001c 7047     	 bx lr
+ 133              	 .cfi_endproc
+ 134              	.LFE2:
+ 136              	 .text
+ 137              	.Letext0:
+ 138              	 .file 2 "/usr/lib/gcc/arm-none-eabi/14.2.1/include/stdint.h"
+DEFINED SYMBOLS
+                            *ABS*:00000000 reduce.c
+    {standard input}:19     .text.crypto_kem_kyber1024_ref_montgomery_reduce:00000000 $t
+    {standard input}:25     .text.crypto_kem_kyber1024_ref_montgomery_reduce:00000000 crypto_kem_kyber1024_ref_montgomery_reduce
+    {standard input}:61     .text.crypto_kem_kyber1024_ref_barrett_reduce:00000000 $t
+    {standard input}:67     .text.crypto_kem_kyber1024_ref_barrett_reduce:00000000 crypto_kem_kyber1024_ref_barrett_reduce
+    {standard input}:99     .text.crypto_kem_kyber1024_ref_csubq:00000000 $t
+    {standard input}:105    .text.crypto_kem_kyber1024_ref_csubq:00000000 crypto_kem_kyber1024_ref_csubq
+                           .group:00000000 wm4.0.9f3a4c6b5812d20634d55e39ed31011a
+                           .group:00000000 wm4.stdint.h.29.6d480f4ba0f60596e88234283d42444f
+                           .group:00000000 wm4.params.h.2.424e8b69daf74be3d402b39ff8b011f8
+                           .group:00000000 wm4.reduce.h.2.2aa0dc60c9bf1e8d9898cffaf25fbf0d
+
+NO UNDEFINED SYMBOLS

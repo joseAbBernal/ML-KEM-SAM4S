@@ -1,0 +1,3903 @@
+   1              	 .cpu cortex-m4
+   2              	 .arch armv7e-m
+   3              	 .fpu softvfp
+   4              	 .eabi_attribute 20,1
+   5              	 .eabi_attribute 21,1
+   6              	 .eabi_attribute 23,3
+   7              	 .eabi_attribute 24,1
+   8              	 .eabi_attribute 25,1
+   9              	 .eabi_attribute 26,1
+  10              	 .eabi_attribute 30,4
+  11              	 .eabi_attribute 34,1
+  12              	 .eabi_attribute 18,4
+  13              	 .file "fips202.c"
+  14              	 .text
+  15              	.Ltext0:
+  16              	 .cfi_sections .debug_frame
+  17              	 .file 1 "fips202.c"
+  18              	 .section .text.keccak_inc_init,"ax",%progbits
+  19              	 .align 1
+  20              	 .syntax unified
+  21              	 .thumb
+  22              	 .thumb_func
+  24              	keccak_inc_init:
+  25              	.LVL0:
+  26              	.LFB2:
+   1:fips202.c     **** // SPDX-License-Identifier: Apache-2.0 or CC0-1.0
+   2:fips202.c     **** /* Based on the public domain implementation in
+   3:fips202.c     ****  * crypto_hash/keccakc512/simple/ from http://bench.cr.yp.to/supercop.html
+   4:fips202.c     ****  * by Ronny Van Keer
+   5:fips202.c     ****  * and the public domain "TweetFips202" implementation
+   6:fips202.c     ****  * from https://twitter.com/tweetfips202
+   7:fips202.c     ****  * by Gilles Van Assche, Daniel J. Bernstein, and Peter Schwabe */
+   8:fips202.c     **** 
+   9:fips202.c     **** #include <stddef.h>
+  10:fips202.c     **** #include <stdint.h>
+  11:fips202.c     **** #include <string.h>
+  12:fips202.c     **** 
+  13:fips202.c     **** #include "fips202.h"
+  14:fips202.c     **** #include "keccakf1600.h"
+  15:fips202.c     **** 
+  16:fips202.c     **** #define NROUNDS 24
+  17:fips202.c     **** #define ROL(a, offset) (((a) << (offset)) ^ ((a) >> (64 - (offset))))
+  18:fips202.c     **** 
+  19:fips202.c     **** #ifdef PROFILE_HASHING
+  20:fips202.c     **** #include "hal.h"
+  21:fips202.c     **** extern unsigned long long hash_cycles;
+  22:fips202.c     **** #endif
+  23:fips202.c     **** 
+  24:fips202.c     **** 
+  25:fips202.c     **** /*************************************************
+  26:fips202.c     ****  * Name:        keccak_absorb
+  27:fips202.c     ****  *
+  28:fips202.c     ****  * Description: Absorb step of Keccak;
+  29:fips202.c     ****  *              non-incremental, starts by zeroeing the state.
+  30:fips202.c     ****  *
+  31:fips202.c     ****  * Arguments:   - uint64_t *s:       pointer to (uninitialized) output Keccak state
+  32:fips202.c     ****  *              - uint32_t r:        rate in bytes (e.g., 168 for SHAKE128)
+  33:fips202.c     ****  *              - const uint8_t *m:  pointer to input to be absorbed into s
+  34:fips202.c     ****  *              - size_t mlen:       length of input in bytes
+  35:fips202.c     ****  *              - uint8_t p:         domain-separation byte for different Keccak-derived functions
+  36:fips202.c     ****  **************************************************/
+  37:fips202.c     **** static void keccak_absorb(uint64_t *s,
+  38:fips202.c     ****     uint32_t r,
+  39:fips202.c     ****     const uint8_t *m, size_t mlen,
+  40:fips202.c     ****     uint8_t p)
+  41:fips202.c     **** {
+  42:fips202.c     ****   while (mlen >= r)
+  43:fips202.c     ****   {
+  44:fips202.c     ****     KeccakF1600_StateXORBytes(s, m, 0, r);
+  45:fips202.c     ****     KeccakF1600_StatePermute(s);
+  46:fips202.c     ****     mlen -= r;
+  47:fips202.c     ****     m += r;
+  48:fips202.c     ****   }
+  49:fips202.c     **** 
+  50:fips202.c     ****   if(mlen > 0){
+  51:fips202.c     ****     KeccakF1600_StateXORBytes(s, m, 0, mlen);
+  52:fips202.c     ****   }
+  53:fips202.c     **** 
+  54:fips202.c     ****   if(mlen == r-1){
+  55:fips202.c     ****     p |= 128;
+  56:fips202.c     ****     KeccakF1600_StateXORBytes(s, &p, mlen, 1);
+  57:fips202.c     ****   } else {
+  58:fips202.c     ****     KeccakF1600_StateXORBytes(s, &p, mlen, 1);
+  59:fips202.c     ****     p = 128;
+  60:fips202.c     ****     KeccakF1600_StateXORBytes(s, &p, r-1, 1);
+  61:fips202.c     ****   }
+  62:fips202.c     **** }
+  63:fips202.c     **** 
+  64:fips202.c     **** 
+  65:fips202.c     **** /*************************************************
+  66:fips202.c     ****  * Name:        keccak_squeezeblocks
+  67:fips202.c     ****  *
+  68:fips202.c     ****  * Description: Squeeze step of Keccak. Squeezes full blocks of r bytes each.
+  69:fips202.c     ****  *              Modifies the state. Can be called multiple times to keep squeezing,
+  70:fips202.c     ****  *              i.e., is incremental.
+  71:fips202.c     ****  *
+  72:fips202.c     ****  * Arguments:   - uint8_t *h:     pointer to output blocks
+  73:fips202.c     ****  *              - size_t nblocks: number of blocks to be squeezed (written to h)
+  74:fips202.c     ****  *              - uint64_t *s:    pointer to in/output Keccak state
+  75:fips202.c     ****  *              - uint32_t r:     rate in bytes (e.g., 168 for SHAKE128)
+  76:fips202.c     ****  **************************************************/
+  77:fips202.c     **** static void keccak_squeezeblocks(uint8_t *h, size_t nblocks,
+  78:fips202.c     ****     uint64_t *s,
+  79:fips202.c     ****     uint32_t r)
+  80:fips202.c     **** {
+  81:fips202.c     ****   while(nblocks > 0)
+  82:fips202.c     ****   {
+  83:fips202.c     ****     KeccakF1600_StatePermute(s);
+  84:fips202.c     ****     KeccakF1600_StateExtractBytes(s, h, 0, r);
+  85:fips202.c     ****     h += r;
+  86:fips202.c     ****     nblocks--;
+  87:fips202.c     ****   }
+  88:fips202.c     **** }
+  89:fips202.c     **** 
+  90:fips202.c     **** /*************************************************
+  91:fips202.c     ****  * Name:        keccak_inc_init
+  92:fips202.c     ****  *
+  93:fips202.c     ****  * Description: Initializes the incremental Keccak state to zero.
+  94:fips202.c     ****  *
+  95:fips202.c     ****  * Arguments:   - uint64_t *s_inc: pointer to input/output incremental state
+  96:fips202.c     ****  *                First 25 values represent Keccak state.
+  97:fips202.c     ****  *                26th value represents either the number of absorbed bytes
+  98:fips202.c     ****  *                that have not been permuted, or not-yet-squeezed bytes.
+  99:fips202.c     ****  **************************************************/
+ 100:fips202.c     **** static void keccak_inc_init(uint64_t *s_inc) {
+  27              	 .loc 1 100 46 view-0
+  28              	 .cfi_startproc
+  29              	 
+  30              	 
+ 101:fips202.c     ****     size_t i;
+  31              	 .loc 1 101 5 view .LVU1
+ 102:fips202.c     **** 
+ 103:fips202.c     ****     for (i = 0; i < 25; ++i) {
+  32              	 .loc 1 103 5 view .LVU2
+  33              	 .loc 1 103 19 discriminator 1 view .LVU3
+ 100:fips202.c     ****     size_t i;
+  34              	 .loc 1 100 46 is_stmt 0 view .LVU4
+  35 0000 10B5     	 push {r4,lr}
+  36              	.LCFI0:
+  37              	 .cfi_def_cfa_offset 8
+  38              	 .cfi_offset 4,-8
+  39              	 .cfi_offset 14,-4
+ 104:fips202.c     ****         s_inc[i] = 0;
+  40              	 .loc 1 104 18 view .LVU5
+  41 0002 054B     	 ldr r3,.L2
+  42 0004 C822     	 movs r2,#200
+  43 0006 0021     	 movs r1,#0
+ 100:fips202.c     ****     size_t i;
+  44              	 .loc 1 100 46 view .LVU6
+  45 0008 0446     	 mov r4,r0
+  46              	 .loc 1 104 18 view .LVU7
+  47 000a 9847     	 blx r3
+  48              	.LVL1:
+ 105:fips202.c     ****     }
+ 106:fips202.c     ****     s_inc[25] = 0;
+  49              	 .loc 1 106 5 is_stmt 1 view .LVU8
+  50              	 .loc 1 106 15 is_stmt 0 view .LVU9
+  51 000c 0022     	 movs r2,#0
+  52 000e 0023     	 movs r3,#0
+  53 0010 C4E93223 	 strd r2,[r4,#200]
+ 107:fips202.c     **** }
+  54              	 .loc 1 107 1 view .LVU10
+  55 0014 10BD     	 pop {r4,pc}
+  56              	.LVL2:
+  57              	.L3:
+  58              	 .loc 1 107 1 view .LVU11
+  59 0016 00BF     	 .align 2
+  60              	.L2:
+  61 0018 00000000 	 .word memset
+  62              	 .cfi_endproc
+  63              	.LFE2:
+  65              	 .section .text.keccak_inc_finalize,"ax",%progbits
+  66              	 .align 1
+  67              	 .syntax unified
+  68              	 .thumb
+  69              	 .thumb_func
+  71              	keccak_inc_finalize:
+  72              	.LVL3:
+  73              	.LFB4:
+ 108:fips202.c     **** /*************************************************
+ 109:fips202.c     ****  * Name:        keccak_inc_absorb
+ 110:fips202.c     ****  *
+ 111:fips202.c     ****  * Description: Incremental keccak absorb
+ 112:fips202.c     ****  *              Preceded by keccak_inc_init, succeeded by keccak_inc_finalize
+ 113:fips202.c     ****  *
+ 114:fips202.c     ****  * Arguments:   - uint64_t *s_inc: pointer to input/output incremental state
+ 115:fips202.c     ****  *                First 25 values represent Keccak state.
+ 116:fips202.c     ****  *                26th value represents either the number of absorbed bytes
+ 117:fips202.c     ****  *                that have not been permuted, or not-yet-squeezed bytes.
+ 118:fips202.c     ****  *              - uint32_t r: rate in bytes (e.g., 168 for SHAKE128)
+ 119:fips202.c     ****  *              - const uint8_t *m: pointer to input to be absorbed into s_inc
+ 120:fips202.c     ****  *              - size_t mlen: length of input in bytes
+ 121:fips202.c     ****  **************************************************/
+ 122:fips202.c     **** static void keccak_inc_absorb(uint64_t *s_inc, uint32_t r, const uint8_t *m,
+ 123:fips202.c     ****                               size_t mlen) {
+ 124:fips202.c     ****     /* Recall that s_inc[25] is the non-absorbed bytes xored into the state */
+ 125:fips202.c     ****     while (mlen + s_inc[25] >= r) {
+ 126:fips202.c     **** 
+ 127:fips202.c     ****         KeccakF1600_StateXORBytes(s_inc, m, s_inc[25], r-s_inc[25]);
+ 128:fips202.c     ****         mlen -= (size_t)(r - s_inc[25]);
+ 129:fips202.c     ****         m += r - s_inc[25];
+ 130:fips202.c     ****         s_inc[25] = 0;
+ 131:fips202.c     **** 
+ 132:fips202.c     ****         KeccakF1600_StatePermute(s_inc);
+ 133:fips202.c     ****     }
+ 134:fips202.c     **** 
+ 135:fips202.c     ****     KeccakF1600_StateXORBytes(s_inc, m, s_inc[25], mlen);
+ 136:fips202.c     ****     s_inc[25] += mlen;
+ 137:fips202.c     **** }
+ 138:fips202.c     **** 
+ 139:fips202.c     **** /*************************************************
+ 140:fips202.c     ****  * Name:        keccak_inc_finalize
+ 141:fips202.c     ****  *
+ 142:fips202.c     ****  * Description: Finalizes Keccak absorb phase, prepares for squeezing
+ 143:fips202.c     ****  *
+ 144:fips202.c     ****  * Arguments:   - uint64_t *s_inc: pointer to input/output incremental state
+ 145:fips202.c     ****  *                First 25 values represent Keccak state.
+ 146:fips202.c     ****  *                26th value represents either the number of absorbed bytes
+ 147:fips202.c     ****  *                that have not been permuted, or not-yet-squeezed bytes.
+ 148:fips202.c     ****  *              - uint32_t r: rate in bytes (e.g., 168 for SHAKE128)
+ 149:fips202.c     ****  *              - uint8_t p: domain-separation byte for different
+ 150:fips202.c     ****  *                                 Keccak-derived functions
+ 151:fips202.c     ****  **************************************************/
+ 152:fips202.c     **** static void keccak_inc_finalize(uint64_t *s_inc, uint32_t r, uint8_t p) {
+  74              	 .loc 1 152 73 is_stmt 1 view-0
+  75              	 .cfi_startproc
+  76              	 
+  77              	 
+ 153:fips202.c     ****     /* After keccak_inc_absorb, we are guaranteed that s_inc[25] < r,
+ 154:fips202.c     ****        so we can always use one more byte for p in the current state. */
+ 155:fips202.c     ****     if(s_inc[25] == r-1){
+  78              	 .loc 1 155 5 view .LVU13
+ 152:fips202.c     ****     /* After keccak_inc_absorb, we are guaranteed that s_inc[25] < r,
+  79              	 .loc 1 152 73 is_stmt 0 view .LVU14
+  80 0000 73B5     	 push {r0,r1,r4,r5,r6,lr}
+  81              	.LCFI1:
+  82              	 .cfi_def_cfa_offset 24
+  83              	 .cfi_offset 4,-16
+  84              	 .cfi_offset 5,-12
+  85              	 .cfi_offset 6,-8
+  86              	 .cfi_offset 14,-4
+ 152:fips202.c     ****     /* After keccak_inc_absorb, we are guaranteed that s_inc[25] < r,
+  87              	 .loc 1 152 73 view .LVU15
+  88 0002 8DF80720 	 strb r2,[sp,#7]
+  89              	 .loc 1 155 13 view .LVU16
+  90 0006 D0E93223 	 ldrd r2,r3,[r0,#200]
+  91              	.LVL4:
+  92              	 .loc 1 155 22 view .LVU17
+  93 000a 4D1E     	 subs r5,r1,#1
+  94              	 .loc 1 155 7 view .LVU18
+  95 000c 002B     	 cmp r3,#0
+  96 000e 08BF     	 it eq
+  97 0010 AA42     	 cmpeq r2,r5
+  98 0012 104E     	 ldr r6,.L8
+ 152:fips202.c     ****     /* After keccak_inc_absorb, we are guaranteed that s_inc[25] < r,
+  99              	 .loc 1 152 73 view .LVU19
+ 100 0014 0446     	 mov r4,r0
+ 101              	 .loc 1 155 7 view .LVU20
+ 102 0016 0FD1     	 bne .L5
+ 156:fips202.c     ****       p |= 128;
+ 103              	 .loc 1 156 7 is_stmt 1 view .LVU21
+ 104              	 .loc 1 156 9 is_stmt 0 view .LVU22
+ 105 0018 9DF80730 	 ldrb r3,[sp,#7]
+ 106 001c 63F07F03 	 orn r3,r3,#127
+ 107 0020 8DF80730 	 strb r3,[sp,#7]
+ 108              	.LVL5:
+ 157:fips202.c     ****       KeccakF1600_StateXORBytes(s_inc, &p, s_inc[25], 1);
+ 109              	 .loc 1 157 7 is_stmt 1 view .LVU23
+ 110 0024 0DF10701 	 add r1,sp,#7
+ 111              	.LVL6:
+ 112              	 .loc 1 157 7 is_stmt 0 view .LVU24
+ 113 0028 0123     	 movs r3,#1
+ 114              	.LVL7:
+ 115              	.L7:
+ 158:fips202.c     ****     } else {
+ 159:fips202.c     ****       KeccakF1600_StateXORBytes(s_inc, &p, s_inc[25], 1);
+ 160:fips202.c     ****       p = 128;
+ 161:fips202.c     ****       KeccakF1600_StateXORBytes(s_inc, &p, r-1, 1);
+ 116              	 .loc 1 161 7 view .LVU25
+ 117 002a B047     	 blx r6
+ 118              	.LVL8:
+ 162:fips202.c     ****     }
+ 163:fips202.c     ****     s_inc[25] = 0;
+ 119              	 .loc 1 163 5 is_stmt 1 view .LVU26
+ 120              	 .loc 1 163 15 is_stmt 0 view .LVU27
+ 121 002c 0022     	 movs r2,#0
+ 122 002e 0023     	 movs r3,#0
+ 123 0030 C4E93223 	 strd r2,[r4,#200]
+ 164:fips202.c     **** }
+ 124              	 .loc 1 164 1 view .LVU28
+ 125 0034 02B0     	 add sp,sp,#8
+ 126              	.LCFI2:
+ 127              	 .cfi_remember_state
+ 128              	 .cfi_def_cfa_offset 16
+ 129              	 
+ 130 0036 70BD     	 pop {r4,r5,r6,pc}
+ 131              	.LVL9:
+ 132              	.L5:
+ 133              	.LCFI3:
+ 134              	 .cfi_restore_state
+ 159:fips202.c     ****       p = 128;
+ 135              	 .loc 1 159 7 is_stmt 1 view .LVU29
+ 136 0038 0123     	 movs r3,#1
+ 137 003a 0DF10701 	 add r1,sp,#7
+ 138              	.LVL10:
+ 159:fips202.c     ****       p = 128;
+ 139              	 .loc 1 159 7 is_stmt 0 view .LVU30
+ 140 003e B047     	 blx r6
+ 141              	.LVL11:
+ 160:fips202.c     ****       KeccakF1600_StateXORBytes(s_inc, &p, r-1, 1);
+ 142              	 .loc 1 160 7 is_stmt 1 view .LVU31
+ 160:fips202.c     ****       KeccakF1600_StateXORBytes(s_inc, &p, r-1, 1);
+ 143              	 .loc 1 160 9 is_stmt 0 view .LVU32
+ 144 0040 8023     	 movs r3,#128
+ 145 0042 8DF80730 	 strb r3,[sp,#7]
+ 161:fips202.c     ****     }
+ 146              	 .loc 1 161 7 is_stmt 1 view .LVU33
+ 147 0046 2A46     	 mov r2,r5
+ 148 0048 0123     	 movs r3,#1
+ 149 004a 0DF10701 	 add r1,sp,#7
+ 150 004e 2046     	 mov r0,r4
+ 151 0050 EBE7     	 b .L7
+ 152              	.L9:
+ 153 0052 00BF     	 .align 2
+ 154              	.L8:
+ 155 0054 00000000 	 .word KeccakF1600_StateXORBytes
+ 156              	 .cfi_endproc
+ 157              	.LFE4:
+ 159              	 .section .text.keccak_inc_absorb,"ax",%progbits
+ 160              	 .align 1
+ 161              	 .syntax unified
+ 162              	 .thumb
+ 163              	 .thumb_func
+ 165              	keccak_inc_absorb:
+ 166              	.LVL12:
+ 167              	.LFB3:
+ 123:fips202.c     ****     /* Recall that s_inc[25] is the non-absorbed bytes xored into the state */
+ 168              	 .loc 1 123 44 view-0
+ 169              	 .cfi_startproc
+ 170              	 
+ 171              	 
+ 125:fips202.c     **** 
+ 172              	 .loc 1 125 5 view .LVU35
+ 123:fips202.c     ****     /* Recall that s_inc[25] is the non-absorbed bytes xored into the state */
+ 173              	 .loc 1 123 44 is_stmt 0 view .LVU36
+ 174 0000 2DE9F84F 	 push {r3,r4,r5,r6,r7,r8,r9,r10,fp,lr}
+ 175              	.LCFI4:
+ 176              	 .cfi_def_cfa_offset 40
+ 177              	 .cfi_offset 3,-40
+ 178              	 .cfi_offset 4,-36
+ 179              	 .cfi_offset 5,-32
+ 180              	 .cfi_offset 6,-28
+ 181              	 .cfi_offset 7,-24
+ 182              	 .cfi_offset 8,-20
+ 183              	 .cfi_offset 9,-16
+ 184              	 .cfi_offset 10,-12
+ 185              	 .cfi_offset 11,-8
+ 186              	 .cfi_offset 14,-4
+ 187 0004 DFF860A0 	 ldr r10,.L13
+ 132:fips202.c     ****     }
+ 188              	 .loc 1 132 9 view .LVU37
+ 189 0008 DFF860B0 	 ldr fp,.L13+4
+ 123:fips202.c     ****     /* Recall that s_inc[25] is the non-absorbed bytes xored into the state */
+ 190              	 .loc 1 123 44 view .LVU38
+ 191 000c 0446     	 mov r4,r0
+ 192 000e 0F46     	 mov r7,r1
+ 193 0010 1646     	 mov r6,r2
+ 194 0012 1D46     	 mov r5,r3
+ 130:fips202.c     **** 
+ 195              	 .loc 1 130 19 view .LVU39
+ 196 0014 4FF00008 	 mov r8,#0
+ 197 0018 4FF00009 	 mov r9,#0
+ 198              	.LVL13:
+ 199              	.L11:
+ 125:fips202.c     **** 
+ 200              	 .loc 1 125 29 is_stmt 1 view .LVU40
+ 125:fips202.c     **** 
+ 201              	 .loc 1 125 24 is_stmt 0 view .LVU41
+ 202 001c D4E93223 	 ldrd r2,r3,[r4,#200]
+ 125:fips202.c     **** 
+ 203              	 .loc 1 125 17 view .LVU42
+ 204 0020 A918     	 adds r1,r5,r2
+ 205 0022 43F10003 	 adc r3,r3,#0
+ 125:fips202.c     **** 
+ 206              	 .loc 1 125 29 view .LVU43
+ 207 0026 B942     	 cmp r1,r7
+ 208 0028 73F10003 	 sbcs r3,r3,#0
+ 209 002c 0CD2     	 bcs .L12
+ 135:fips202.c     ****     s_inc[25] += mlen;
+ 210              	 .loc 1 135 5 is_stmt 1 view .LVU44
+ 211 002e 2B46     	 mov r3,r5
+ 212 0030 3146     	 mov r1,r6
+ 213 0032 2046     	 mov r0,r4
+ 214 0034 D047     	 blx r10
+ 215              	.LVL14:
+ 136:fips202.c     **** }
+ 216              	 .loc 1 136 5 view .LVU45
+ 136:fips202.c     **** }
+ 217              	 .loc 1 136 15 is_stmt 0 view .LVU46
+ 218 0036 D4E93232 	 ldrd r3,r2,[r4,#200]
+ 219 003a 5B19     	 adds r3,r3,r5
+ 220 003c 42F10002 	 adc r2,r2,#0
+ 221 0040 C4E93232 	 strd r3,r2,[r4,#200]
+ 137:fips202.c     **** 
+ 222              	 .loc 1 137 1 view .LVU47
+ 223 0044 BDE8F88F 	 pop {r3,r4,r5,r6,r7,r8,r9,r10,fp,pc}
+ 224              	.LVL15:
+ 225              	.L12:
+ 127:fips202.c     ****         mlen -= (size_t)(r - s_inc[25]);
+ 226              	 .loc 1 127 9 is_stmt 1 view .LVU48
+ 227 0048 BB1A     	 subs r3,r7,r2
+ 228 004a 3146     	 mov r1,r6
+ 229 004c 2046     	 mov r0,r4
+ 230 004e D047     	 blx r10
+ 231              	.LVL16:
+ 128:fips202.c     ****         m += r - s_inc[25];
+ 232              	 .loc 1 128 9 view .LVU49
+ 128:fips202.c     ****         m += r - s_inc[25];
+ 233              	 .loc 1 128 17 is_stmt 0 view .LVU50
+ 234 0050 D4F8C830 	 ldr r3,[r4,#200]
+ 132:fips202.c     ****     }
+ 235              	 .loc 1 132 9 view .LVU51
+ 236 0054 2046     	 mov r0,r4
+ 128:fips202.c     ****         m += r - s_inc[25];
+ 237              	 .loc 1 128 17 view .LVU52
+ 238 0056 DA1B     	 subs r2,r3,r7
+ 130:fips202.c     **** 
+ 239              	 .loc 1 130 19 view .LVU53
+ 240 0058 C4E93289 	 strd r8,[r4,#200]
+ 129:fips202.c     ****         s_inc[25] = 0;
+ 241              	 .loc 1 129 16 view .LVU54
+ 242 005c FB1A     	 subs r3,r7,r3
+ 128:fips202.c     ****         m += r - s_inc[25];
+ 243              	 .loc 1 128 14 view .LVU55
+ 244 005e 1544     	 add r5,r5,r2
+ 245              	.LVL17:
+ 129:fips202.c     ****         s_inc[25] = 0;
+ 246              	 .loc 1 129 9 is_stmt 1 view .LVU56
+ 129:fips202.c     ****         s_inc[25] = 0;
+ 247              	 .loc 1 129 11 is_stmt 0 view .LVU57
+ 248 0060 1E44     	 add r6,r6,r3
+ 249              	.LVL18:
+ 130:fips202.c     **** 
+ 250              	 .loc 1 130 9 is_stmt 1 view .LVU58
+ 132:fips202.c     ****     }
+ 251              	 .loc 1 132 9 view .LVU59
+ 252 0062 D847     	 blx fp
+ 253              	.LVL19:
+ 254 0064 DAE7     	 b .L11
+ 255              	.L14:
+ 256 0066 00BF     	 .align 2
+ 257              	.L13:
+ 258 0068 00000000 	 .word KeccakF1600_StateXORBytes
+ 259 006c 00000000 	 .word KeccakF1600_StatePermute
+ 260              	 .cfi_endproc
+ 261              	.LFE3:
+ 263              	 .section .text.keccak_absorb,"ax",%progbits
+ 264              	 .align 1
+ 265              	 .syntax unified
+ 266              	 .thumb
+ 267              	 .thumb_func
+ 269              	keccak_absorb:
+ 270              	.LVL20:
+ 271              	.LFB0:
+  41:fips202.c     ****   while (mlen >= r)
+ 272              	 .loc 1 41 1 view-0
+ 273              	 .cfi_startproc
+ 274              	 
+ 275              	 
+  42:fips202.c     ****   {
+ 276              	 .loc 1 42 3 view .LVU61
+  41:fips202.c     ****   while (mlen >= r)
+ 277              	 .loc 1 41 1 is_stmt 0 view .LVU62
+ 278 0000 2DE9F843 	 push {r3,r4,r5,r6,r7,r8,r9,lr}
+ 279              	.LCFI5:
+ 280              	 .cfi_def_cfa_offset 32
+ 281              	 .cfi_offset 3,-32
+ 282              	 .cfi_offset 4,-28
+ 283              	 .cfi_offset 5,-24
+ 284              	 .cfi_offset 6,-20
+ 285              	 .cfi_offset 7,-16
+ 286              	 .cfi_offset 8,-12
+ 287              	 .cfi_offset 9,-8
+ 288              	 .cfi_offset 14,-4
+ 289 0004 DFF86880 	 ldr r8,.L24
+  45:fips202.c     ****     mlen -= r;
+ 290              	 .loc 1 45 5 view .LVU63
+ 291 0008 DFF86890 	 ldr r9,.L24+4
+  41:fips202.c     ****   while (mlen >= r)
+ 292              	 .loc 1 41 1 view .LVU64
+ 293 000c 0646     	 mov r6,r0
+ 294 000e 0C46     	 mov r4,r1
+ 295 0010 1746     	 mov r7,r2
+ 296 0012 1D46     	 mov r5,r3
+ 297              	.LVL21:
+ 298              	.L16:
+  42:fips202.c     ****   {
+ 299              	 .loc 1 42 15 is_stmt 1 view .LVU65
+ 300 0014 A542     	 cmp r5,r4
+ 301 0016 15D2     	 bcs .L17
+  50:fips202.c     ****     KeccakF1600_StateXORBytes(s, m, 0, mlen);
+ 302              	 .loc 1 50 3 view .LVU66
+  54:fips202.c     ****     p |= 128;
+ 303              	 .loc 1 54 15 is_stmt 0 view .LVU67
+ 304 0018 013C     	 subs r4,r4,#1
+ 305              	.LVL22:
+  50:fips202.c     ****     KeccakF1600_StateXORBytes(s, m, 0, mlen);
+ 306              	 .loc 1 50 5 view .LVU68
+ 307 001a EDB1     	 cbz r5,.L18
+  51:fips202.c     ****   }
+ 308              	 .loc 1 51 5 is_stmt 1 view .LVU69
+ 309 001c 2B46     	 mov r3,r5
+ 310 001e 0022     	 movs r2,#0
+ 311 0020 3946     	 mov r1,r7
+ 312 0022 3046     	 mov r0,r6
+ 313 0024 C047     	 blx r8
+ 314              	.LVL23:
+  54:fips202.c     ****     p |= 128;
+ 315              	 .loc 1 54 3 view .LVU70
+  54:fips202.c     ****     p |= 128;
+ 316              	 .loc 1 54 5 is_stmt 0 view .LVU71
+ 317 0026 A542     	 cmp r5,r4
+ 318 0028 16D1     	 bne .L18
+  55:fips202.c     ****     KeccakF1600_StateXORBytes(s, &p, mlen, 1);
+ 319              	 .loc 1 55 5 is_stmt 1 view .LVU72
+  55:fips202.c     ****     KeccakF1600_StateXORBytes(s, &p, mlen, 1);
+ 320              	 .loc 1 55 7 is_stmt 0 view .LVU73
+ 321 002a 9DF82030 	 ldrb r3,[sp,#32]
+ 322 002e 63F07F03 	 orn r3,r3,#127
+ 323 0032 8DF82030 	 strb r3,[sp,#32]
+  56:fips202.c     ****   } else {
+ 324              	 .loc 1 56 5 is_stmt 1 view .LVU74
+ 325 0036 2A46     	 mov r2,r5
+ 326 0038 0123     	 movs r3,#1
+ 327              	.L23:
+  60:fips202.c     ****   }
+ 328              	 .loc 1 60 5 is_stmt 0 view .LVU75
+ 329 003a 08A9     	 add r1,sp,#32
+ 330 003c 3046     	 mov r0,r6
+ 331 003e C047     	 blx r8
+ 332              	.LVL24:
+  62:fips202.c     **** 
+ 333              	 .loc 1 62 1 view .LVU76
+ 334 0040 BDE8F883 	 pop {r3,r4,r5,r6,r7,r8,r9,pc}
+ 335              	.LVL25:
+ 336              	.L17:
+  44:fips202.c     ****     KeccakF1600_StatePermute(s);
+ 337              	 .loc 1 44 5 is_stmt 1 view .LVU77
+ 338 0044 3946     	 mov r1,r7
+ 339 0046 2346     	 mov r3,r4
+ 340 0048 0022     	 movs r2,#0
+ 341 004a 3046     	 mov r0,r6
+ 342 004c C047     	 blx r8
+ 343              	.LVL26:
+  45:fips202.c     ****     mlen -= r;
+ 344              	 .loc 1 45 5 view .LVU78
+ 345 004e 3046     	 mov r0,r6
+ 346 0050 C847     	 blx r9
+ 347              	.LVL27:
+  46:fips202.c     ****     m += r;
+ 348              	 .loc 1 46 5 view .LVU79
+  46:fips202.c     ****     m += r;
+ 349              	 .loc 1 46 10 is_stmt 0 view .LVU80
+ 350 0052 2D1B     	 subs r5,r5,r4
+ 351              	.LVL28:
+  47:fips202.c     ****   }
+ 352              	 .loc 1 47 5 is_stmt 1 view .LVU81
+  47:fips202.c     ****   }
+ 353              	 .loc 1 47 7 is_stmt 0 view .LVU82
+ 354 0054 2744     	 add r7,r7,r4
+ 355              	.LVL29:
+  47:fips202.c     ****   }
+ 356              	 .loc 1 47 7 view .LVU83
+ 357 0056 DDE7     	 b .L16
+ 358              	.LVL30:
+ 359              	.L18:
+  58:fips202.c     ****     p = 128;
+ 360              	 .loc 1 58 5 is_stmt 1 view .LVU84
+ 361 0058 0123     	 movs r3,#1
+ 362 005a 2A46     	 mov r2,r5
+ 363 005c 08A9     	 add r1,sp,#32
+ 364 005e 3046     	 mov r0,r6
+ 365 0060 C047     	 blx r8
+ 366              	.LVL31:
+  59:fips202.c     ****     KeccakF1600_StateXORBytes(s, &p, r-1, 1);
+ 367              	 .loc 1 59 5 view .LVU85
+  59:fips202.c     ****     KeccakF1600_StateXORBytes(s, &p, r-1, 1);
+ 368              	 .loc 1 59 7 is_stmt 0 view .LVU86
+ 369 0062 8023     	 movs r3,#128
+ 370 0064 8DF82030 	 strb r3,[sp,#32]
+  60:fips202.c     ****   }
+ 371              	 .loc 1 60 5 is_stmt 1 view .LVU87
+ 372 0068 2246     	 mov r2,r4
+ 373 006a 0123     	 movs r3,#1
+ 374 006c E5E7     	 b .L23
+ 375              	.L25:
+ 376 006e 00BF     	 .align 2
+ 377              	.L24:
+ 378 0070 00000000 	 .word KeccakF1600_StateXORBytes
+ 379 0074 00000000 	 .word KeccakF1600_StatePermute
+ 380              	 .cfi_endproc
+ 381              	.LFE0:
+ 383              	 .section .text.keccak_inc_squeeze,"ax",%progbits
+ 384              	 .align 1
+ 385              	 .syntax unified
+ 386              	 .thumb
+ 387              	 .thumb_func
+ 389              	keccak_inc_squeeze:
+ 390              	.LVL32:
+ 391              	.LFB5:
+ 165:fips202.c     **** 
+ 166:fips202.c     **** /*************************************************
+ 167:fips202.c     ****  * Name:        keccak_inc_squeeze
+ 168:fips202.c     ****  *
+ 169:fips202.c     ****  * Description: Incremental Keccak squeeze; can be called on byte-level
+ 170:fips202.c     ****  *
+ 171:fips202.c     ****  * Arguments:   - uint8_t *h: pointer to output bytes
+ 172:fips202.c     ****  *              - size_t outlen: number of bytes to be squeezed
+ 173:fips202.c     ****  *              - uint64_t *s_inc: pointer to input/output incremental state
+ 174:fips202.c     ****  *                First 25 values represent Keccak state.
+ 175:fips202.c     ****  *                26th value represents either the number of absorbed bytes
+ 176:fips202.c     ****  *                that have not been permuted, or not-yet-squeezed bytes.
+ 177:fips202.c     ****  *              - uint32_t r: rate in bytes (e.g., 168 for SHAKE128)
+ 178:fips202.c     ****  **************************************************/
+ 179:fips202.c     **** static void keccak_inc_squeeze(uint8_t *h, size_t outlen,
+ 180:fips202.c     ****                                uint64_t *s_inc, uint32_t r) {
+ 392              	 .loc 1 180 61 view-0
+ 393              	 .cfi_startproc
+ 394              	 
+ 395              	 
+ 181:fips202.c     ****     size_t len;
+ 396              	 .loc 1 181 5 view .LVU89
+ 182:fips202.c     ****     if(outlen < s_inc[25])
+ 397              	 .loc 1 182 5 view .LVU90
+ 180:fips202.c     ****     size_t len;
+ 398              	 .loc 1 180 61 is_stmt 0 view .LVU91
+ 399 0000 2DE9F047 	 push {r4,r5,r6,r7,r8,r9,r10,lr}
+ 400              	.LCFI6:
+ 401              	 .cfi_def_cfa_offset 32
+ 402              	 .cfi_offset 4,-32
+ 403              	 .cfi_offset 5,-28
+ 404              	 .cfi_offset 6,-24
+ 405              	 .cfi_offset 7,-20
+ 406              	 .cfi_offset 8,-16
+ 407              	 .cfi_offset 9,-12
+ 408              	 .cfi_offset 10,-8
+ 409              	 .cfi_offset 14,-4
+ 180:fips202.c     ****     size_t len;
+ 410              	 .loc 1 180 61 view .LVU92
+ 411 0004 0D46     	 mov r5,r1
+ 412 0006 1446     	 mov r4,r2
+ 413              	 .loc 1 182 22 view .LVU93
+ 414 0008 D2E93221 	 ldrd r2,r1,[r2,#200]
+ 415              	.LVL33:
+ 180:fips202.c     ****     size_t len;
+ 416              	 .loc 1 180 61 view .LVU94
+ 417 000c 9846     	 mov r8,r3
+ 418              	 .loc 1 182 7 view .LVU95
+ 419 000e 9542     	 cmp r5,r2
+ 420 0010 4FF00003 	 mov r3,#0
+ 421              	.LVL34:
+ 422              	 .loc 1 182 7 view .LVU96
+ 423 0014 8B41     	 sbcs r3,r3,r1
+ 183:fips202.c     ****     {
+ 184:fips202.c     ****         len = outlen;
+ 185:fips202.c     ****     }
+ 186:fips202.c     ****     else
+ 187:fips202.c     ****     {
+ 188:fips202.c     ****         len = s_inc[25];
+ 424              	 .loc 1 188 13 view .LVU97
+ 425 0016 2CBF     	 ite cs
+ 426 0018 9246     	 movcs r10,r2
+ 184:fips202.c     ****     }
+ 427              	 .loc 1 184 13 view .LVU98
+ 428 001a AA46     	 movcc r10,r5
+ 429              	.LVL35:
+ 189:fips202.c     ****     }
+ 190:fips202.c     **** 
+ 191:fips202.c     ****     KeccakF1600_StateExtractBytes(s_inc, h, r-s_inc[25], len);
+ 430              	 .loc 1 191 5 is_stmt 1 view .LVU99
+ 180:fips202.c     ****     size_t len;
+ 431              	 .loc 1 180 61 is_stmt 0 view .LVU100
+ 432 001c 0746     	 mov r7,r0
+ 433              	 .loc 1 191 5 view .LVU101
+ 434 001e 5346     	 mov r3,r10
+ 435 0020 A8EB0202 	 sub r2,r8,r2
+ 436 0024 0146     	 mov r1,r0
+ 437 0026 DFF84890 	 ldr r9,.L31
+ 438 002a 2046     	 mov r0,r4
+ 439              	.LVL36:
+ 440              	 .loc 1 191 5 view .LVU102
+ 441 002c C847     	 blx r9
+ 442              	.LVL37:
+ 192:fips202.c     ****     h += len;
+ 443              	 .loc 1 192 5 is_stmt 1 view .LVU103
+ 193:fips202.c     ****     outlen -= len;
+ 194:fips202.c     ****     s_inc[25] -= len;
+ 444              	 .loc 1 194 15 is_stmt 0 view .LVU104
+ 445 002e D4E93262 	 ldrd r6,r2,[r4,#200]
+ 192:fips202.c     ****     h += len;
+ 446              	 .loc 1 192 7 view .LVU105
+ 447 0032 5744     	 add r7,r7,r10
+ 448              	.LVL38:
+ 193:fips202.c     ****     outlen -= len;
+ 449              	 .loc 1 193 5 is_stmt 1 view .LVU106
+ 450              	 .loc 1 194 15 is_stmt 0 view .LVU107
+ 451 0034 B6EB0A06 	 subs r6,r6,r10
+ 193:fips202.c     ****     outlen -= len;
+ 452              	 .loc 1 193 12 view .LVU108
+ 453 0038 A5EB0A05 	 sub r5,r5,r10
+ 454              	.LVL39:
+ 455              	 .loc 1 194 5 is_stmt 1 view .LVU109
+ 195:fips202.c     **** 
+ 196:fips202.c     ****     /* Then squeeze the remaining necessary blocks */
+ 197:fips202.c     ****     while (outlen > 0) {
+ 198:fips202.c     ****         KeccakF1600_StatePermute(s_inc);
+ 456              	 .loc 1 198 9 is_stmt 0 view .LVU110
+ 457 003c DFF834A0 	 ldr r10,.L31+4
+ 458              	.LVL40:
+ 194:fips202.c     **** 
+ 459              	 .loc 1 194 15 view .LVU111
+ 460 0040 62F10002 	 sbc r2,r2,#0
+ 197:fips202.c     ****         KeccakF1600_StatePermute(s_inc);
+ 461              	 .loc 1 197 5 is_stmt 1 view .LVU112
+ 462              	.LVL41:
+ 463              	.L28:
+ 194:fips202.c     **** 
+ 464              	 .loc 1 194 15 is_stmt 0 view .LVU113
+ 465 0044 C4E93262 	 strd r6,r2,[r4,#200]
+ 197:fips202.c     ****         KeccakF1600_StatePermute(s_inc);
+ 466              	 .loc 1 197 19 is_stmt 1 view .LVU114
+ 467 0048 0DB9     	 cbnz r5,.L29
+ 199:fips202.c     **** 
+ 200:fips202.c     ****         if(outlen < r)
+ 201:fips202.c     ****         {
+ 202:fips202.c     ****             len = outlen;
+ 203:fips202.c     ****         }
+ 204:fips202.c     ****         else
+ 205:fips202.c     ****         {
+ 206:fips202.c     ****             len = r;
+ 207:fips202.c     ****         }
+ 208:fips202.c     ****         KeccakF1600_StateExtractBytes(s_inc, h, 0, len);
+ 209:fips202.c     ****         h += len;
+ 210:fips202.c     ****         outlen -= len;
+ 211:fips202.c     ****         s_inc[25] = r - len;
+ 212:fips202.c     ****     }
+ 213:fips202.c     **** }
+ 468              	 .loc 1 213 1 is_stmt 0 view .LVU115
+ 469 004a BDE8F087 	 pop {r4,r5,r6,r7,r8,r9,r10,pc}
+ 470              	.LVL42:
+ 471              	.L29:
+ 198:fips202.c     **** 
+ 472              	 .loc 1 198 9 is_stmt 1 view .LVU116
+ 473 004e 2046     	 mov r0,r4
+ 474 0050 D047     	 blx r10
+ 475              	.LVL43:
+ 200:fips202.c     ****         {
+ 476              	 .loc 1 200 9 view .LVU117
+ 200:fips202.c     ****         {
+ 477              	 .loc 1 200 11 is_stmt 0 view .LVU118
+ 478 0052 4545     	 cmp r5,r8
+ 479 0054 2E46     	 mov r6,r5
+ 480 0056 28BF     	 it cs
+ 481 0058 4646     	 movcs r6,r8
+ 482              	.LVL44:
+ 208:fips202.c     ****         h += len;
+ 483              	 .loc 1 208 9 is_stmt 1 view .LVU119
+ 484 005a 3346     	 mov r3,r6
+ 485 005c 0022     	 movs r2,#0
+ 486 005e 3946     	 mov r1,r7
+ 487 0060 2046     	 mov r0,r4
+ 488 0062 C847     	 blx r9
+ 489              	.LVL45:
+ 209:fips202.c     ****         outlen -= len;
+ 490              	 .loc 1 209 9 view .LVU120
+ 209:fips202.c     ****         outlen -= len;
+ 491              	 .loc 1 209 11 is_stmt 0 view .LVU121
+ 492 0064 3744     	 add r7,r7,r6
+ 493              	.LVL46:
+ 210:fips202.c     ****         s_inc[25] = r - len;
+ 494              	 .loc 1 210 9 is_stmt 1 view .LVU122
+ 210:fips202.c     ****         s_inc[25] = r - len;
+ 495              	 .loc 1 210 16 is_stmt 0 view .LVU123
+ 496 0066 AD1B     	 subs r5,r5,r6
+ 497              	.LVL47:
+ 211:fips202.c     ****     }
+ 498              	 .loc 1 211 9 is_stmt 1 view .LVU124
+ 211:fips202.c     ****     }
+ 499              	 .loc 1 211 23 is_stmt 0 view .LVU125
+ 500 0068 0022     	 movs r2,#0
+ 501 006a A8EB0606 	 sub r6,r8,r6
+ 502              	.LVL48:
+ 211:fips202.c     ****     }
+ 503              	 .loc 1 211 23 view .LVU126
+ 504 006e E9E7     	 b .L28
+ 505              	.L32:
+ 506              	 .align 2
+ 507              	.L31:
+ 508 0070 00000000 	 .word KeccakF1600_StateExtractBytes
+ 509 0074 00000000 	 .word KeccakF1600_StatePermute
+ 510              	 .cfi_endproc
+ 511              	.LFE5:
+ 513              	 .section .text.keccak_squeezeblocks,"ax",%progbits
+ 514              	 .align 1
+ 515              	 .syntax unified
+ 516              	 .thumb
+ 517              	 .thumb_func
+ 519              	keccak_squeezeblocks:
+ 520              	.LVL49:
+ 521              	.LFB1:
+  80:fips202.c     ****   while(nblocks > 0)
+ 522              	 .loc 1 80 1 is_stmt 1 view-0
+ 523              	 .cfi_startproc
+ 524              	 
+ 525              	 
+  81:fips202.c     ****   {
+ 526              	 .loc 1 81 3 view .LVU128
+  80:fips202.c     ****   while(nblocks > 0)
+ 527              	 .loc 1 80 1 is_stmt 0 view .LVU129
+ 528 0000 2DE9F843 	 push {r3,r4,r5,r6,r7,r8,r9,lr}
+ 529              	.LCFI7:
+ 530              	 .cfi_def_cfa_offset 32
+ 531              	 .cfi_offset 3,-32
+ 532              	 .cfi_offset 4,-28
+ 533              	 .cfi_offset 5,-24
+ 534              	 .cfi_offset 6,-20
+ 535              	 .cfi_offset 7,-16
+ 536              	 .cfi_offset 8,-12
+ 537              	 .cfi_offset 9,-8
+ 538              	 .cfi_offset 14,-4
+  83:fips202.c     ****     KeccakF1600_StateExtractBytes(s, h, 0, r);
+ 539              	 .loc 1 83 5 view .LVU130
+ 540 0004 DFF82880 	 ldr r8,.L36
+  84:fips202.c     ****     h += r;
+ 541              	 .loc 1 84 5 view .LVU131
+ 542 0008 DFF82890 	 ldr r9,.L36+4
+  80:fips202.c     ****   while(nblocks > 0)
+ 543              	 .loc 1 80 1 view .LVU132
+ 544 000c 0546     	 mov r5,r0
+ 545 000e 0C46     	 mov r4,r1
+ 546 0010 1646     	 mov r6,r2
+ 547 0012 1F46     	 mov r7,r3
+ 548              	.LVL50:
+ 549              	.L34:
+  81:fips202.c     ****   {
+ 550              	 .loc 1 81 17 is_stmt 1 view .LVU133
+ 551 0014 0CB9     	 cbnz r4,.L35
+  88:fips202.c     **** 
+ 552              	 .loc 1 88 1 is_stmt 0 view .LVU134
+ 553 0016 BDE8F883 	 pop {r3,r4,r5,r6,r7,r8,r9,pc}
+ 554              	.LVL51:
+ 555              	.L35:
+  83:fips202.c     ****     KeccakF1600_StateExtractBytes(s, h, 0, r);
+ 556              	 .loc 1 83 5 is_stmt 1 view .LVU135
+ 557 001a 3046     	 mov r0,r6
+ 558 001c C047     	 blx r8
+ 559              	.LVL52:
+  84:fips202.c     ****     h += r;
+ 560              	 .loc 1 84 5 view .LVU136
+ 561 001e 2946     	 mov r1,r5
+ 562 0020 3B46     	 mov r3,r7
+ 563 0022 0022     	 movs r2,#0
+ 564 0024 3046     	 mov r0,r6
+ 565 0026 C847     	 blx r9
+ 566              	.LVL53:
+  85:fips202.c     ****     nblocks--;
+ 567              	 .loc 1 85 5 view .LVU137
+  85:fips202.c     ****     nblocks--;
+ 568              	 .loc 1 85 7 is_stmt 0 view .LVU138
+ 569 0028 3D44     	 add r5,r5,r7
+ 570              	.LVL54:
+  86:fips202.c     ****   }
+ 571              	 .loc 1 86 5 is_stmt 1 view .LVU139
+  86:fips202.c     ****   }
+ 572              	 .loc 1 86 12 is_stmt 0 view .LVU140
+ 573 002a 013C     	 subs r4,r4,#1
+ 574              	.LVL55:
+  86:fips202.c     ****   }
+ 575              	 .loc 1 86 12 view .LVU141
+ 576 002c F2E7     	 b .L34
+ 577              	.L37:
+ 578 002e 00BF     	 .align 2
+ 579              	.L36:
+ 580 0030 00000000 	 .word KeccakF1600_StatePermute
+ 581 0034 00000000 	 .word KeccakF1600_StateExtractBytes
+ 582              	 .cfi_endproc
+ 583              	.LFE1:
+ 585              	 .section .text.shake128_inc_init,"ax",%progbits
+ 586              	 .align 1
+ 587              	 .global shake128_inc_init
+ 588              	 .syntax unified
+ 589              	 .thumb
+ 590              	 .thumb_func
+ 592              	shake128_inc_init:
+ 593              	.LVL56:
+ 594              	.LFB6:
+ 214:fips202.c     **** 
+ 215:fips202.c     **** void shake128_inc_init(shake128incctx *state) {
+ 595              	 .loc 1 215 47 is_stmt 1 view-0
+ 596              	 .cfi_startproc
+ 597              	 
+ 598              	 
+ 599              	 
+ 216:fips202.c     **** #ifdef PROFILE_HASHING
+ 217:fips202.c     ****   uint64_t t0 = hal_get_time();
+ 218:fips202.c     **** #endif
+ 219:fips202.c     ****     keccak_inc_init(state->ctx);
+ 600              	 .loc 1 219 5 view .LVU143
+ 601 0000 004B     	 ldr r3,.L39
+ 602 0002 1847     	 bx r3
+ 603              	.LVL57:
+ 604              	.L40:
+ 605              	 .loc 1 219 5 is_stmt 0 view .LVU144
+ 606              	 .align 2
+ 607              	.L39:
+ 608 0004 00000000 	 .word keccak_inc_init
+ 609              	 .cfi_endproc
+ 610              	.LFE6:
+ 612              	 .section .text.shake128_inc_absorb,"ax",%progbits
+ 613              	 .align 1
+ 614              	 .global shake128_inc_absorb
+ 615              	 .syntax unified
+ 616              	 .thumb
+ 617              	 .thumb_func
+ 619              	shake128_inc_absorb:
+ 620              	.LVL58:
+ 621              	.LFB7:
+ 220:fips202.c     **** #ifdef PROFILE_HASHING
+ 221:fips202.c     ****   uint64_t t1 = hal_get_time();
+ 222:fips202.c     ****   hash_cycles += (t1-t0);
+ 223:fips202.c     **** #endif
+ 224:fips202.c     **** }
+ 225:fips202.c     **** 
+ 226:fips202.c     **** void shake128_inc_absorb(shake128incctx *state, const uint8_t *input, size_t inlen) {
+ 622              	 .loc 1 226 85 is_stmt 1 view-0
+ 623              	 .cfi_startproc
+ 624              	 
+ 625              	 
+ 626              	 
+ 227:fips202.c     **** #ifdef PROFILE_HASHING
+ 228:fips202.c     ****   uint64_t t0 = hal_get_time();
+ 229:fips202.c     **** #endif
+ 230:fips202.c     ****     keccak_inc_absorb(state->ctx, SHAKE128_RATE, input, inlen);
+ 627              	 .loc 1 230 5 view .LVU146
+ 226:fips202.c     **** #ifdef PROFILE_HASHING
+ 628              	 .loc 1 226 85 is_stmt 0 view .LVU147
+ 629 0000 10B4     	 push {r4}
+ 630              	.LCFI8:
+ 631              	 .cfi_def_cfa_offset 4
+ 632              	 .cfi_offset 4,-4
+ 633              	 .loc 1 230 5 view .LVU148
+ 634 0002 034C     	 ldr r4,.L42
+ 226:fips202.c     **** #ifdef PROFILE_HASHING
+ 635              	 .loc 1 226 85 view .LVU149
+ 636 0004 1346     	 mov r3,r2
+ 637              	 .loc 1 230 5 view .LVU150
+ 638 0006 A446     	 mov ip,r4
+ 639 0008 0A46     	 mov r2,r1
+ 640              	.LVL59:
+ 231:fips202.c     **** #ifdef PROFILE_HASHING
+ 232:fips202.c     ****   uint64_t t1 = hal_get_time();
+ 233:fips202.c     ****   hash_cycles += (t1-t0);
+ 234:fips202.c     **** #endif
+ 235:fips202.c     **** }
+ 641              	 .loc 1 235 1 view .LVU151
+ 642 000a 10BC     	 pop {r4}
+ 643              	.LCFI9:
+ 644              	 .cfi_restore 4
+ 645              	 .cfi_def_cfa_offset 0
+ 230:fips202.c     **** #ifdef PROFILE_HASHING
+ 646              	 .loc 1 230 5 view .LVU152
+ 647 000c A821     	 movs r1,#168
+ 648              	.LVL60:
+ 230:fips202.c     **** #ifdef PROFILE_HASHING
+ 649              	 .loc 1 230 5 view .LVU153
+ 650 000e 6047     	 bx ip
+ 651              	.LVL61:
+ 652              	.L43:
+ 230:fips202.c     **** #ifdef PROFILE_HASHING
+ 653              	 .loc 1 230 5 view .LVU154
+ 654              	 .align 2
+ 655              	.L42:
+ 656 0010 00000000 	 .word keccak_inc_absorb
+ 657              	 .cfi_endproc
+ 658              	.LFE7:
+ 660              	 .section .text.shake128_inc_finalize,"ax",%progbits
+ 661              	 .align 1
+ 662              	 .global shake128_inc_finalize
+ 663              	 .syntax unified
+ 664              	 .thumb
+ 665              	 .thumb_func
+ 667              	shake128_inc_finalize:
+ 668              	.LVL62:
+ 669              	.LFB8:
+ 236:fips202.c     **** 
+ 237:fips202.c     **** void shake128_inc_finalize(shake128incctx *state) {
+ 670              	 .loc 1 237 51 is_stmt 1 view-0
+ 671              	 .cfi_startproc
+ 672              	 
+ 673              	 
+ 674              	 
+ 238:fips202.c     **** #ifdef PROFILE_HASHING
+ 239:fips202.c     ****   uint64_t t0 = hal_get_time();
+ 240:fips202.c     **** #endif
+ 241:fips202.c     ****     keccak_inc_finalize(state->ctx, SHAKE128_RATE, 0x1F);
+ 675              	 .loc 1 241 5 view .LVU156
+ 676 0000 014B     	 ldr r3,.L45
+ 677 0002 1F22     	 movs r2,#31
+ 678 0004 A821     	 movs r1,#168
+ 679 0006 1847     	 bx r3
+ 680              	.LVL63:
+ 681              	.L46:
+ 682              	 .loc 1 241 5 is_stmt 0 view .LVU157
+ 683              	 .align 2
+ 684              	.L45:
+ 685 0008 00000000 	 .word keccak_inc_finalize
+ 686              	 .cfi_endproc
+ 687              	.LFE8:
+ 689              	 .section .text.shake128_inc_squeeze,"ax",%progbits
+ 690              	 .align 1
+ 691              	 .global shake128_inc_squeeze
+ 692              	 .syntax unified
+ 693              	 .thumb
+ 694              	 .thumb_func
+ 696              	shake128_inc_squeeze:
+ 697              	.LVL64:
+ 698              	.LFB9:
+ 242:fips202.c     **** #ifdef PROFILE_HASHING
+ 243:fips202.c     ****   uint64_t t1 = hal_get_time();
+ 244:fips202.c     ****   hash_cycles += (t1-t0);
+ 245:fips202.c     **** #endif
+ 246:fips202.c     **** }
+ 247:fips202.c     **** 
+ 248:fips202.c     **** void shake128_inc_squeeze(uint8_t *output, size_t outlen, shake128incctx *state) {
+ 699              	 .loc 1 248 82 is_stmt 1 view-0
+ 700              	 .cfi_startproc
+ 701              	 
+ 702              	 
+ 703              	 
+ 249:fips202.c     **** #ifdef PROFILE_HASHING
+ 250:fips202.c     ****   uint64_t t0 = hal_get_time();
+ 251:fips202.c     **** #endif
+ 252:fips202.c     ****     keccak_inc_squeeze(output, outlen, state->ctx, SHAKE128_RATE);
+ 704              	 .loc 1 252 5 view .LVU159
+ 248:fips202.c     **** #ifdef PROFILE_HASHING
+ 705              	 .loc 1 248 82 is_stmt 0 view .LVU160
+ 706 0000 10B4     	 push {r4}
+ 707              	.LCFI10:
+ 708              	 .cfi_def_cfa_offset 4
+ 709              	 .cfi_offset 4,-4
+ 710              	 .loc 1 252 5 view .LVU161
+ 711 0002 024C     	 ldr r4,.L48
+ 712 0004 A823     	 movs r3,#168
+ 713 0006 A446     	 mov ip,r4
+ 253:fips202.c     **** #ifdef PROFILE_HASHING
+ 254:fips202.c     ****   uint64_t t1 = hal_get_time();
+ 255:fips202.c     ****   hash_cycles += (t1-t0);
+ 256:fips202.c     **** #endif
+ 257:fips202.c     **** }
+ 714              	 .loc 1 257 1 view .LVU162
+ 715 0008 10BC     	 pop {r4}
+ 716              	.LCFI11:
+ 717              	 .cfi_restore 4
+ 718              	 .cfi_def_cfa_offset 0
+ 252:fips202.c     **** #ifdef PROFILE_HASHING
+ 719              	 .loc 1 252 5 view .LVU163
+ 720 000a 6047     	 bx ip
+ 721              	.LVL65:
+ 722              	.L49:
+ 252:fips202.c     **** #ifdef PROFILE_HASHING
+ 723              	 .loc 1 252 5 view .LVU164
+ 724              	 .align 2
+ 725              	.L48:
+ 726 000c 00000000 	 .word keccak_inc_squeeze
+ 727              	 .cfi_endproc
+ 728              	.LFE9:
+ 730              	 .section .text.shake128_inc_ctx_clone,"ax",%progbits
+ 731              	 .align 1
+ 732              	 .global shake128_inc_ctx_clone
+ 733              	 .syntax unified
+ 734              	 .thumb
+ 735              	 .thumb_func
+ 737              	shake128_inc_ctx_clone:
+ 738              	.LVL66:
+ 739              	.LFB10:
+ 258:fips202.c     **** 
+ 259:fips202.c     **** void shake128_inc_ctx_clone(shake128incctx* dest, const shake128incctx *src) {
+ 740              	 .loc 1 259 78 is_stmt 1 view-0
+ 741              	 .cfi_startproc
+ 742              	 
+ 743              	 
+ 744              	 
+ 260:fips202.c     ****     memcpy(dest, src, sizeof(shake128incctx));
+ 745              	 .loc 1 260 5 view .LVU166
+ 746 0000 014B     	 ldr r3,.L51
+ 747 0002 D022     	 movs r2,#208
+ 748 0004 1847     	 bx r3
+ 749              	.LVL67:
+ 750              	.L52:
+ 751              	 .loc 1 260 5 is_stmt 0 view .LVU167
+ 752 0006 00BF     	 .align 2
+ 753              	.L51:
+ 754 0008 00000000 	 .word memcpy
+ 755              	 .cfi_endproc
+ 756              	.LFE10:
+ 758              	 .section .text.shake128_inc_ctx_release,"ax",%progbits
+ 759              	 .align 1
+ 760              	 .global shake128_inc_ctx_release
+ 761              	 .syntax unified
+ 762              	 .thumb
+ 763              	 .thumb_func
+ 765              	shake128_inc_ctx_release:
+ 766              	.LFB55:
+ 767              	 .cfi_startproc
+ 261:fips202.c     **** }
+ 262:fips202.c     **** 
+ 263:fips202.c     **** void shake128_inc_ctx_release(shake128incctx *state) {
+ 768              	 .loc 1 263 6 is_stmt 1 view-0
+ 769              	 
+ 770              	 
+ 771              	 
+ 772 0000 7047     	 bx lr
+ 773              	 .cfi_endproc
+ 774              	.LFE55:
+ 776              	 .section .text.shake256_inc_init,"ax",%progbits
+ 777              	 .align 1
+ 778              	 .global shake256_inc_init
+ 779              	 .syntax unified
+ 780              	 .thumb
+ 781              	 .thumb_func
+ 783              	shake256_inc_init:
+ 784              	.LFB69:
+ 785              	 .cfi_startproc
+ 264:fips202.c     ****     (void) state;
+ 265:fips202.c     **** }
+ 266:fips202.c     **** 
+ 267:fips202.c     **** void shake256_inc_init(shake256incctx *state) {
+ 786              	 .loc 1 267 6 view-0
+ 787              	 
+ 788              	 
+ 789              	 
+ 790 0000 004B     	 ldr r3,.L55
+ 791 0002 1847     	 bx r3
+ 792              	.L56:
+ 793              	 .align 2
+ 794              	.L55:
+ 795 0004 00000000 	 .word keccak_inc_init
+ 796              	 .cfi_endproc
+ 797              	.LFE69:
+ 799              	 .section .text.shake256_inc_absorb,"ax",%progbits
+ 800              	 .align 1
+ 801              	 .global shake256_inc_absorb
+ 802              	 .syntax unified
+ 803              	 .thumb
+ 804              	 .thumb_func
+ 806              	shake256_inc_absorb:
+ 807              	.LVL68:
+ 808              	.LFB13:
+ 268:fips202.c     **** #ifdef PROFILE_HASHING
+ 269:fips202.c     ****   uint64_t t0 = hal_get_time();
+ 270:fips202.c     **** #endif
+ 271:fips202.c     ****     keccak_inc_init(state->ctx);
+ 272:fips202.c     **** #ifdef PROFILE_HASHING
+ 273:fips202.c     ****   uint64_t t1 = hal_get_time();
+ 274:fips202.c     ****   hash_cycles += (t1-t0);
+ 275:fips202.c     **** #endif
+ 276:fips202.c     **** }
+ 277:fips202.c     **** 
+ 278:fips202.c     **** void shake256_inc_absorb(shake256incctx *state, const uint8_t *input, size_t inlen) {
+ 809              	 .loc 1 278 85 view-0
+ 810              	 .cfi_startproc
+ 811              	 
+ 812              	 
+ 813              	 
+ 279:fips202.c     **** #ifdef PROFILE_HASHING
+ 280:fips202.c     ****   uint64_t t0 = hal_get_time();
+ 281:fips202.c     **** #endif
+ 282:fips202.c     ****     keccak_inc_absorb(state->ctx, SHAKE256_RATE, input, inlen);
+ 814              	 .loc 1 282 5 view .LVU171
+ 278:fips202.c     **** #ifdef PROFILE_HASHING
+ 815              	 .loc 1 278 85 is_stmt 0 view .LVU172
+ 816 0000 10B4     	 push {r4}
+ 817              	.LCFI12:
+ 818              	 .cfi_def_cfa_offset 4
+ 819              	 .cfi_offset 4,-4
+ 820              	 .loc 1 282 5 view .LVU173
+ 821 0002 034C     	 ldr r4,.L58
+ 278:fips202.c     **** #ifdef PROFILE_HASHING
+ 822              	 .loc 1 278 85 view .LVU174
+ 823 0004 1346     	 mov r3,r2
+ 824              	 .loc 1 282 5 view .LVU175
+ 825 0006 A446     	 mov ip,r4
+ 826 0008 0A46     	 mov r2,r1
+ 827              	.LVL69:
+ 283:fips202.c     **** #ifdef PROFILE_HASHING
+ 284:fips202.c     ****   uint64_t t1 = hal_get_time();
+ 285:fips202.c     ****   hash_cycles += (t1-t0);
+ 286:fips202.c     **** #endif
+ 287:fips202.c     **** }
+ 828              	 .loc 1 287 1 view .LVU176
+ 829 000a 10BC     	 pop {r4}
+ 830              	.LCFI13:
+ 831              	 .cfi_restore 4
+ 832              	 .cfi_def_cfa_offset 0
+ 282:fips202.c     **** #ifdef PROFILE_HASHING
+ 833              	 .loc 1 282 5 view .LVU177
+ 834 000c 8821     	 movs r1,#136
+ 835              	.LVL70:
+ 282:fips202.c     **** #ifdef PROFILE_HASHING
+ 836              	 .loc 1 282 5 view .LVU178
+ 837 000e 6047     	 bx ip
+ 838              	.LVL71:
+ 839              	.L59:
+ 282:fips202.c     **** #ifdef PROFILE_HASHING
+ 840              	 .loc 1 282 5 view .LVU179
+ 841              	 .align 2
+ 842              	.L58:
+ 843 0010 00000000 	 .word keccak_inc_absorb
+ 844              	 .cfi_endproc
+ 845              	.LFE13:
+ 847              	 .section .text.shake256_inc_finalize,"ax",%progbits
+ 848              	 .align 1
+ 849              	 .global shake256_inc_finalize
+ 850              	 .syntax unified
+ 851              	 .thumb
+ 852              	 .thumb_func
+ 854              	shake256_inc_finalize:
+ 855              	.LVL72:
+ 856              	.LFB14:
+ 288:fips202.c     **** 
+ 289:fips202.c     **** void shake256_inc_finalize(shake256incctx *state) {
+ 857              	 .loc 1 289 51 is_stmt 1 view-0
+ 858              	 .cfi_startproc
+ 859              	 
+ 860              	 
+ 861              	 
+ 290:fips202.c     **** #ifdef PROFILE_HASHING
+ 291:fips202.c     ****   uint64_t t0 = hal_get_time();
+ 292:fips202.c     **** #endif
+ 293:fips202.c     ****     keccak_inc_finalize(state->ctx, SHAKE256_RATE, 0x1F);
+ 862              	 .loc 1 293 5 view .LVU181
+ 863 0000 014B     	 ldr r3,.L61
+ 864 0002 1F22     	 movs r2,#31
+ 865 0004 8821     	 movs r1,#136
+ 866 0006 1847     	 bx r3
+ 867              	.LVL73:
+ 868              	.L62:
+ 869              	 .loc 1 293 5 is_stmt 0 view .LVU182
+ 870              	 .align 2
+ 871              	.L61:
+ 872 0008 00000000 	 .word keccak_inc_finalize
+ 873              	 .cfi_endproc
+ 874              	.LFE14:
+ 876              	 .section .text.shake256_inc_squeeze,"ax",%progbits
+ 877              	 .align 1
+ 878              	 .global shake256_inc_squeeze
+ 879              	 .syntax unified
+ 880              	 .thumb
+ 881              	 .thumb_func
+ 883              	shake256_inc_squeeze:
+ 884              	.LVL74:
+ 885              	.LFB15:
+ 294:fips202.c     **** #ifdef PROFILE_HASHING
+ 295:fips202.c     ****   uint64_t t1 = hal_get_time();
+ 296:fips202.c     ****   hash_cycles += (t1-t0);
+ 297:fips202.c     **** #endif
+ 298:fips202.c     **** }
+ 299:fips202.c     **** 
+ 300:fips202.c     **** void shake256_inc_squeeze(uint8_t *output, size_t outlen, shake256incctx *state) {
+ 886              	 .loc 1 300 82 is_stmt 1 view-0
+ 887              	 .cfi_startproc
+ 888              	 
+ 889              	 
+ 890              	 
+ 301:fips202.c     **** #ifdef PROFILE_HASHING
+ 302:fips202.c     ****   uint64_t t0 = hal_get_time();
+ 303:fips202.c     **** #endif
+ 304:fips202.c     ****     keccak_inc_squeeze(output, outlen, state->ctx, SHAKE256_RATE);
+ 891              	 .loc 1 304 5 view .LVU184
+ 300:fips202.c     **** #ifdef PROFILE_HASHING
+ 892              	 .loc 1 300 82 is_stmt 0 view .LVU185
+ 893 0000 10B4     	 push {r4}
+ 894              	.LCFI14:
+ 895              	 .cfi_def_cfa_offset 4
+ 896              	 .cfi_offset 4,-4
+ 897              	 .loc 1 304 5 view .LVU186
+ 898 0002 024C     	 ldr r4,.L64
+ 899 0004 8823     	 movs r3,#136
+ 900 0006 A446     	 mov ip,r4
+ 305:fips202.c     **** #ifdef PROFILE_HASHING
+ 306:fips202.c     ****   uint64_t t1 = hal_get_time();
+ 307:fips202.c     ****   hash_cycles += (t1-t0);
+ 308:fips202.c     **** #endif
+ 309:fips202.c     **** }
+ 901              	 .loc 1 309 1 view .LVU187
+ 902 0008 10BC     	 pop {r4}
+ 903              	.LCFI15:
+ 904              	 .cfi_restore 4
+ 905              	 .cfi_def_cfa_offset 0
+ 304:fips202.c     **** #ifdef PROFILE_HASHING
+ 906              	 .loc 1 304 5 view .LVU188
+ 907 000a 6047     	 bx ip
+ 908              	.LVL75:
+ 909              	.L65:
+ 304:fips202.c     **** #ifdef PROFILE_HASHING
+ 910              	 .loc 1 304 5 view .LVU189
+ 911              	 .align 2
+ 912              	.L64:
+ 913 000c 00000000 	 .word keccak_inc_squeeze
+ 914              	 .cfi_endproc
+ 915              	.LFE15:
+ 917              	 .section .text.shake256_inc_ctx_clone,"ax",%progbits
+ 918              	 .align 1
+ 919              	 .global shake256_inc_ctx_clone
+ 920              	 .syntax unified
+ 921              	 .thumb
+ 922              	 .thumb_func
+ 924              	shake256_inc_ctx_clone:
+ 925              	.LFB77:
+ 926              	 .cfi_startproc
+ 310:fips202.c     **** 
+ 311:fips202.c     **** void shake256_inc_ctx_clone(shake256incctx* dest, const shake256incctx *src) {
+ 927              	 .loc 1 311 6 is_stmt 1 view-0
+ 928              	 
+ 929              	 
+ 930              	 
+ 931 0000 004B     	 ldr r3,.L67
+ 932 0002 1847     	 bx r3
+ 933              	.L68:
+ 934              	 .align 2
+ 935              	.L67:
+ 936 0004 00000000 	 .word shake128_inc_ctx_clone
+ 937              	 .cfi_endproc
+ 938              	.LFE77:
+ 940              	 .section .text.shake256_inc_ctx_release,"ax",%progbits
+ 941              	 .align 1
+ 942              	 .global shake256_inc_ctx_release
+ 943              	 .syntax unified
+ 944              	 .thumb
+ 945              	 .thumb_func
+ 947              	shake256_inc_ctx_release:
+ 948              	.LFB59:
+ 949              	 .cfi_startproc
+ 312:fips202.c     ****     memcpy(dest, src, sizeof(shake256incctx));
+ 313:fips202.c     **** }
+ 314:fips202.c     **** 
+ 315:fips202.c     **** void shake256_inc_ctx_release(shake256incctx *state) {
+ 950              	 .loc 1 315 6 view-0
+ 951              	 
+ 952              	 
+ 953              	 
+ 954 0000 7047     	 bx lr
+ 955              	 .cfi_endproc
+ 956              	.LFE59:
+ 958              	 .section .text.cshake128_simple_absorb,"ax",%progbits
+ 959              	 .align 1
+ 960              	 .global cshake128_simple_absorb
+ 961              	 .syntax unified
+ 962              	 .thumb
+ 963              	 .thumb_func
+ 965              	cshake128_simple_absorb:
+ 966              	.LVL76:
+ 967              	.LFB18:
+ 316:fips202.c     ****     (void) state;
+ 317:fips202.c     **** }
+ 318:fips202.c     **** 
+ 319:fips202.c     **** /********** cSHAKE128 ***********/
+ 320:fips202.c     **** 
+ 321:fips202.c     **** void cshake128_simple_absorb(shake128ctx *state, uint16_t cstm, const uint8_t *in, size_t inlen)
+ 322:fips202.c     **** {
+ 968              	 .loc 1 322 1 view-0
+ 969              	 .cfi_startproc
+ 970              	 
+ 971              	 
+ 323:fips202.c     **** #ifdef PROFILE_HASHING
+ 324:fips202.c     ****   uint64_t t0 = hal_get_time();
+ 325:fips202.c     **** #endif
+ 326:fips202.c     **** 
+ 327:fips202.c     **** 
+ 328:fips202.c     ****   uint8_t sep[8];
+ 972              	 .loc 1 328 3 view .LVU193
+ 329:fips202.c     ****   size_t i;
+ 973              	 .loc 1 329 3 view .LVU194
+ 330:fips202.c     **** 
+ 331:fips202.c     ****   for (i = 0; i < 25; i++)
+ 974              	 .loc 1 331 3 view .LVU195
+ 975              	 .loc 1 331 17 discriminator 1 view .LVU196
+ 322:fips202.c     **** #ifdef PROFILE_HASHING
+ 976              	 .loc 1 322 1 is_stmt 0 view .LVU197
+ 977 0000 F0B5     	 push {r4,r5,r6,r7,lr}
+ 978              	.LCFI16:
+ 979              	 .cfi_def_cfa_offset 20
+ 980              	 .cfi_offset 4,-20
+ 981              	 .cfi_offset 5,-16
+ 982              	 .cfi_offset 6,-12
+ 983              	 .cfi_offset 7,-8
+ 984              	 .cfi_offset 14,-4
+ 985 0002 0F46     	 mov r7,r1
+ 986 0004 85B0     	 sub sp,sp,#20
+ 987              	.LCFI17:
+ 988              	 .cfi_def_cfa_offset 40
+ 322:fips202.c     **** #ifdef PROFILE_HASHING
+ 989              	 .loc 1 322 1 view .LVU198
+ 990 0006 1546     	 mov r5,r2
+ 991 0008 1E46     	 mov r6,r3
+ 332:fips202.c     ****     state->ctx[i] = 0;
+ 992              	 .loc 1 332 19 view .LVU199
+ 993 000a C822     	 movs r2,#200
+ 994              	.LVL77:
+ 995              	 .loc 1 332 19 view .LVU200
+ 996 000c 0F4B     	 ldr r3,.L71
+ 997              	.LVL78:
+ 998              	 .loc 1 332 19 view .LVU201
+ 999 000e 0021     	 movs r1,#0
+ 1000              	.LVL79:
+ 322:fips202.c     **** #ifdef PROFILE_HASHING
+ 1001              	 .loc 1 322 1 view .LVU202
+ 1002 0010 0446     	 mov r4,r0
+ 1003              	 .loc 1 332 19 view .LVU203
+ 1004 0012 9847     	 blx r3
+ 1005              	.LVL80:
+ 333:fips202.c     **** 
+ 334:fips202.c     ****   /* Absorb customization (domain-separation) string */
+ 335:fips202.c     ****   sep[0] = 0x01;
+ 1006              	 .loc 1 335 3 is_stmt 1 view .LVU204
+ 336:fips202.c     ****   sep[1] = 0xa8;
+ 1007              	 .loc 1 336 3 view .LVU205
+ 337:fips202.c     ****   sep[2] = 0x01;
+ 1008              	 .loc 1 337 3 view .LVU206
+ 338:fips202.c     ****   sep[3] = 0x00;
+ 1009              	 .loc 1 338 3 view .LVU207
+ 339:fips202.c     ****   sep[4] = 0x01;
+ 1010              	 .loc 1 339 3 view .LVU208
+ 340:fips202.c     ****   sep[5] = 16; // fixed bitlen of cstm
+ 1011              	 .loc 1 340 3 view .LVU209
+ 335:fips202.c     ****   sep[1] = 0xa8;
+ 1012              	 .loc 1 335 10 is_stmt 0 view .LVU210
+ 1013 0014 0E4B     	 ldr r3,.L71+4
+ 1014 0016 0293     	 str r3,[sp,#8]
+ 339:fips202.c     ****   sep[4] = 0x01;
+ 1015              	 .loc 1 339 10 view .LVU211
+ 1016 0018 41F20103 	 movw r3,#4097
+ 1017 001c ADF80C30 	 strh r3,[sp,#12]
+ 341:fips202.c     ****   sep[6] = cstm & 0xff;
+ 1018              	 .loc 1 341 3 is_stmt 1 view .LVU212
+ 342:fips202.c     ****   sep[7] = cstm >> 8;
+ 1019              	 .loc 1 342 3 view .LVU213
+ 343:fips202.c     **** 
+ 344:fips202.c     ****   KeccakF1600_StateXORBytes(state->ctx, sep, 0, 8);
+ 1020              	 .loc 1 344 3 is_stmt 0 view .LVU214
+ 1021 0020 0823     	 movs r3,#8
+ 1022 0022 0DEB0301 	 add r1,sp,r3
+ 341:fips202.c     ****   sep[7] = cstm >> 8;
+ 1023              	 .loc 1 341 10 view .LVU215
+ 1024 0026 ADF80E70 	 strh r7,[sp,#14]
+ 1025              	 .loc 1 344 3 is_stmt 1 view .LVU216
+ 1026 002a 0022     	 movs r2,#0
+ 1027 002c 2046     	 mov r0,r4
+ 1028 002e 094F     	 ldr r7,.L71+8
+ 1029              	.LVL81:
+ 1030              	 .loc 1 344 3 is_stmt 0 view .LVU217
+ 1031 0030 B847     	 blx r7
+ 1032              	.LVL82:
+ 345:fips202.c     ****   KeccakF1600_StatePermute(state->ctx);
+ 1033              	 .loc 1 345 3 is_stmt 1 view .LVU218
+ 1034 0032 2046     	 mov r0,r4
+ 1035 0034 084B     	 ldr r3,.L71+12
+ 1036 0036 9847     	 blx r3
+ 1037              	.LVL83:
+ 346:fips202.c     **** 
+ 347:fips202.c     ****   /* Absorb input */
+ 348:fips202.c     ****   keccak_absorb(state->ctx, SHAKE128_RATE, in, inlen, 0x04);
+ 1038              	 .loc 1 348 3 view .LVU219
+ 1039 0038 0423     	 movs r3,#4
+ 1040 003a 0093     	 str r3,[sp]
+ 1041 003c 2046     	 mov r0,r4
+ 1042 003e 3346     	 mov r3,r6
+ 1043 0040 064C     	 ldr r4,.L71+16
+ 1044              	.LVL84:
+ 1045              	 .loc 1 348 3 is_stmt 0 view .LVU220
+ 1046 0042 2A46     	 mov r2,r5
+ 1047 0044 A821     	 movs r1,#168
+ 1048 0046 A047     	 blx r4
+ 1049              	.LVL85:
+ 349:fips202.c     **** 
+ 350:fips202.c     **** #ifdef PROFILE_HASHING
+ 351:fips202.c     ****   uint64_t t1 = hal_get_time();
+ 352:fips202.c     ****   hash_cycles += (t1-t0);
+ 353:fips202.c     **** #endif
+ 354:fips202.c     **** 
+ 355:fips202.c     **** }
+ 1050              	 .loc 1 355 1 view .LVU221
+ 1051 0048 05B0     	 add sp,sp,#20
+ 1052              	.LCFI18:
+ 1053              	 .cfi_def_cfa_offset 20
+ 1054              	 
+ 1055 004a F0BD     	 pop {r4,r5,r6,r7,pc}
+ 1056              	.LVL86:
+ 1057              	.L72:
+ 1058              	 .loc 1 355 1 view .LVU222
+ 1059              	 .align 2
+ 1060              	.L71:
+ 1061 004c 00000000 	 .word memset
+ 1062 0050 01A80100 	 .word 108545
+ 1063 0054 00000000 	 .word KeccakF1600_StateXORBytes
+ 1064 0058 00000000 	 .word KeccakF1600_StatePermute
+ 1065 005c 00000000 	 .word keccak_absorb
+ 1066              	 .cfi_endproc
+ 1067              	.LFE18:
+ 1069              	 .section .text.cshake128_simple,"ax",%progbits
+ 1070              	 .align 1
+ 1071              	 .global cshake128_simple
+ 1072              	 .syntax unified
+ 1073              	 .thumb
+ 1074              	 .thumb_func
+ 1076              	cshake128_simple:
+ 1077              	.LVL87:
+ 1078              	.LFB20:
+ 356:fips202.c     **** 
+ 357:fips202.c     **** 
+ 358:fips202.c     **** void cshake128_simple_squeezeblocks(uint8_t *output, size_t nblocks, shake128ctx *state)
+ 359:fips202.c     **** {
+ 360:fips202.c     **** #ifdef PROFILE_HASHING
+ 361:fips202.c     ****   uint64_t t0 = hal_get_time();
+ 362:fips202.c     **** #endif
+ 363:fips202.c     ****   keccak_squeezeblocks(output, nblocks, state->ctx, SHAKE128_RATE);
+ 364:fips202.c     **** #ifdef PROFILE_HASHING
+ 365:fips202.c     ****   uint64_t t1 = hal_get_time();
+ 366:fips202.c     ****   hash_cycles += (t1-t0);
+ 367:fips202.c     **** #endif
+ 368:fips202.c     **** }
+ 369:fips202.c     **** 
+ 370:fips202.c     **** 
+ 371:fips202.c     **** void cshake128_simple(uint8_t *output, size_t outlen, uint16_t cstm, const uint8_t *in, size_t inle
+ 372:fips202.c     **** {
+ 1079              	 .loc 1 372 1 is_stmt 1 view-0
+ 1080              	 .cfi_startproc
+ 1081              	 
+ 1082              	 
+ 373:fips202.c     ****   shake128incctx state;
+ 1083              	 .loc 1 373 3 view .LVU224
+ 374:fips202.c     ****   uint8_t sep[8];
+ 1084              	 .loc 1 374 3 view .LVU225
+ 375:fips202.c     **** #ifdef PROFILE_HASHING
+ 376:fips202.c     ****   uint64_t t0 = hal_get_time();
+ 377:fips202.c     **** #endif
+ 378:fips202.c     **** 
+ 379:fips202.c     ****   keccak_inc_init(state.ctx);
+ 1085              	 .loc 1 379 3 view .LVU226
+ 372:fips202.c     ****   shake128incctx state;
+ 1086              	 .loc 1 372 1 is_stmt 0 view .LVU227
+ 1087 0000 F0B5     	 push {r4,r5,r6,r7,lr}
+ 1088              	.LCFI19:
+ 1089              	 .cfi_def_cfa_offset 20
+ 1090              	 .cfi_offset 4,-20
+ 1091              	 .cfi_offset 5,-16
+ 1092              	 .cfi_offset 6,-12
+ 1093              	 .cfi_offset 7,-8
+ 1094              	 .cfi_offset 14,-4
+ 1095 0002 B7B0     	 sub sp,sp,#220
+ 1096              	.LCFI20:
+ 1097              	 .cfi_def_cfa_offset 240
+ 372:fips202.c     ****   shake128incctx state;
+ 1098              	 .loc 1 372 1 view .LVU228
+ 1099 0004 0446     	 mov r4,r0
+ 1100 0006 1E46     	 mov r6,r3
+ 1101              	 .loc 1 379 3 view .LVU229
+ 1102 0008 02A8     	 add r0,sp,#8
+ 1103              	.LVL88:
+ 1104              	 .loc 1 379 3 view .LVU230
+ 1105 000a 144B     	 ldr r3,.L74
+ 1106              	.LVL89:
+ 372:fips202.c     ****   shake128incctx state;
+ 1107              	 .loc 1 372 1 view .LVU231
+ 1108 000c 0D46     	 mov r5,r1
+ 1109 000e 1746     	 mov r7,r2
+ 1110              	 .loc 1 379 3 view .LVU232
+ 1111 0010 9847     	 blx r3
+ 1112              	.LVL90:
+ 380:fips202.c     **** 
+ 381:fips202.c     ****   /* Absorb customization (domain-separation) string */
+ 382:fips202.c     ****   sep[0] = 0x01;
+ 1113              	 .loc 1 382 3 is_stmt 1 view .LVU233
+ 383:fips202.c     ****   sep[1] = 0xa8;
+ 1114              	 .loc 1 383 3 view .LVU234
+ 384:fips202.c     ****   sep[2] = 0x01;
+ 1115              	 .loc 1 384 3 view .LVU235
+ 385:fips202.c     ****   sep[3] = 0x00;
+ 1116              	 .loc 1 385 3 view .LVU236
+ 386:fips202.c     ****   sep[4] = 0x01;
+ 1117              	 .loc 1 386 3 view .LVU237
+ 387:fips202.c     ****   sep[5] = 16; // fixed bitlen of cstm
+ 1118              	 .loc 1 387 3 view .LVU238
+ 382:fips202.c     ****   sep[1] = 0xa8;
+ 1119              	 .loc 1 382 10 is_stmt 0 view .LVU239
+ 1120 0012 134B     	 ldr r3,.L74+4
+ 1121 0014 0093     	 str r3,[sp]
+ 386:fips202.c     ****   sep[4] = 0x01;
+ 1122              	 .loc 1 386 10 view .LVU240
+ 1123 0016 41F20103 	 movw r3,#4097
+ 1124 001a ADF80430 	 strh r3,[sp,#4]
+ 388:fips202.c     ****   sep[6] = cstm & 0xff;
+ 1125              	 .loc 1 388 3 is_stmt 1 view .LVU241
+ 389:fips202.c     ****   sep[7] = cstm >> 8;
+ 1126              	 .loc 1 389 3 view .LVU242
+ 390:fips202.c     **** 
+ 391:fips202.c     ****   KeccakF1600_StateXORBytes(state.ctx, sep, 0, 8);
+ 1127              	 .loc 1 391 3 is_stmt 0 view .LVU243
+ 1128 001e 0823     	 movs r3,#8
+ 1129 0020 6946     	 mov r1,sp
+ 1130 0022 0DEB0300 	 add r0,sp,r3
+ 388:fips202.c     ****   sep[7] = cstm >> 8;
+ 1131              	 .loc 1 388 10 view .LVU244
+ 1132 0026 ADF80670 	 strh r7,[sp,#6]
+ 1133              	 .loc 1 391 3 is_stmt 1 view .LVU245
+ 1134 002a 0022     	 movs r2,#0
+ 1135 002c 0D4F     	 ldr r7,.L74+8
+ 1136              	.LVL91:
+ 1137              	 .loc 1 391 3 is_stmt 0 view .LVU246
+ 1138 002e B847     	 blx r7
+ 1139              	.LVL92:
+ 392:fips202.c     ****   KeccakF1600_StatePermute(state.ctx);
+ 1140              	 .loc 1 392 3 is_stmt 1 view .LVU247
+ 1141 0030 02A8     	 add r0,sp,#8
+ 1142 0032 0D4B     	 ldr r3,.L74+12
+ 1143 0034 9847     	 blx r3
+ 1144              	.LVL93:
+ 393:fips202.c     **** 
+ 394:fips202.c     ****   /* Absorb input */
+ 395:fips202.c     ****   keccak_inc_absorb(state.ctx, SHAKE128_RATE, in, inlen);
+ 1145              	 .loc 1 395 3 view .LVU248
+ 1146 0036 3C9B     	 ldr r3,[sp,#240]
+ 1147 0038 3246     	 mov r2,r6
+ 1148 003a 02A8     	 add r0,sp,#8
+ 1149 003c 0B4E     	 ldr r6,.L74+16
+ 1150              	.LVL94:
+ 1151              	 .loc 1 395 3 is_stmt 0 view .LVU249
+ 1152 003e A821     	 movs r1,#168
+ 1153 0040 B047     	 blx r6
+ 1154              	.LVL95:
+ 396:fips202.c     ****   keccak_inc_finalize(state.ctx, SHAKE128_RATE, 0x04);
+ 1155              	 .loc 1 396 3 is_stmt 1 view .LVU250
+ 1156 0042 02A8     	 add r0,sp,#8
+ 1157 0044 0A4B     	 ldr r3,.L74+20
+ 1158 0046 0422     	 movs r2,#4
+ 1159 0048 A821     	 movs r1,#168
+ 1160 004a 9847     	 blx r3
+ 1161              	.LVL96:
+ 397:fips202.c     **** 
+ 398:fips202.c     ****   /* Squeeze output */
+ 399:fips202.c     ****   keccak_inc_squeeze(output, outlen, state.ctx, SHAKE128_RATE);
+ 1162              	 .loc 1 399 3 view .LVU251
+ 1163 004c 2046     	 mov r0,r4
+ 1164 004e A823     	 movs r3,#168
+ 1165 0050 084C     	 ldr r4,.L74+24
+ 1166              	.LVL97:
+ 1167              	 .loc 1 399 3 is_stmt 0 view .LVU252
+ 1168 0052 02AA     	 add r2,sp,#8
+ 1169 0054 2946     	 mov r1,r5
+ 1170 0056 A047     	 blx r4
+ 1171              	.LVL98:
+ 400:fips202.c     **** #ifdef PROFILE_HASHING
+ 401:fips202.c     ****   uint64_t t1 = hal_get_time();
+ 402:fips202.c     ****   hash_cycles += (t1-t0);
+ 403:fips202.c     **** #endif
+ 404:fips202.c     **** }
+ 1172              	 .loc 1 404 1 view .LVU253
+ 1173 0058 37B0     	 add sp,sp,#220
+ 1174              	.LCFI21:
+ 1175              	 .cfi_def_cfa_offset 20
+ 1176              	 
+ 1177 005a F0BD     	 pop {r4,r5,r6,r7,pc}
+ 1178              	.LVL99:
+ 1179              	.L75:
+ 1180              	 .loc 1 404 1 view .LVU254
+ 1181              	 .align 2
+ 1182              	.L74:
+ 1183 005c 00000000 	 .word keccak_inc_init
+ 1184 0060 01A80100 	 .word 108545
+ 1185 0064 00000000 	 .word KeccakF1600_StateXORBytes
+ 1186 0068 00000000 	 .word KeccakF1600_StatePermute
+ 1187 006c 00000000 	 .word keccak_inc_absorb
+ 1188 0070 00000000 	 .word keccak_inc_finalize
+ 1189 0074 00000000 	 .word keccak_inc_squeeze
+ 1190              	 .cfi_endproc
+ 1191              	.LFE20:
+ 1193              	 .section .text.shake128_absorb,"ax",%progbits
+ 1194              	 .align 1
+ 1195              	 .global shake128_absorb
+ 1196              	 .syntax unified
+ 1197              	 .thumb
+ 1198              	 .thumb_func
+ 1200              	shake128_absorb:
+ 1201              	.LVL100:
+ 1202              	.LFB21:
+ 405:fips202.c     **** 
+ 406:fips202.c     **** 
+ 407:fips202.c     **** 
+ 408:fips202.c     **** /*************************************************
+ 409:fips202.c     ****  * Name:        shake128_absorb
+ 410:fips202.c     ****  *
+ 411:fips202.c     ****  * Description: Absorb step of the SHAKE128 XOF.
+ 412:fips202.c     ****  *              non-incremental, starts by zeroeing the state.
+ 413:fips202.c     ****  *
+ 414:fips202.c     ****  * Arguments:   - uint64_t *state:      pointer to (uninitialized) output Keccak state
+ 415:fips202.c     ****  *              - const uint8_t *input: pointer to input to be absorbed into state
+ 416:fips202.c     ****  *              - size_t inlen:         length of input in bytes
+ 417:fips202.c     ****  **************************************************/
+ 418:fips202.c     **** void shake128_absorb(shake128ctx *state, const uint8_t *input, size_t inlen)
+ 419:fips202.c     **** {
+ 1203              	 .loc 1 419 1 is_stmt 1 view-0
+ 1204              	 .cfi_startproc
+ 1205              	 
+ 1206              	 
+ 420:fips202.c     **** #ifdef PROFILE_HASHING
+ 421:fips202.c     ****   uint64_t t0 = hal_get_time();
+ 422:fips202.c     **** #endif
+ 423:fips202.c     ****   int i;
+ 1207              	 .loc 1 423 3 view .LVU256
+ 424:fips202.c     ****   for (i = 0; i < 25; i++)
+ 1208              	 .loc 1 424 3 view .LVU257
+ 1209              	 .loc 1 424 17 discriminator 1 view .LVU258
+ 419:fips202.c     **** #ifdef PROFILE_HASHING
+ 1210              	 .loc 1 419 1 is_stmt 0 view .LVU259
+ 1211 0000 73B5     	 push {r0,r1,r4,r5,r6,lr}
+ 1212              	.LCFI22:
+ 1213              	 .cfi_def_cfa_offset 24
+ 1214              	 .cfi_offset 4,-16
+ 1215              	 .cfi_offset 5,-12
+ 1216              	 .cfi_offset 6,-8
+ 1217              	 .cfi_offset 14,-4
+ 425:fips202.c     ****     state->ctx[i] = 0;
+ 1218              	 .loc 1 425 19 view .LVU260
+ 1219 0002 084B     	 ldr r3,.L77
+ 419:fips202.c     **** #ifdef PROFILE_HASHING
+ 1220              	 .loc 1 419 1 view .LVU261
+ 1221 0004 0D46     	 mov r5,r1
+ 1222 0006 1646     	 mov r6,r2
+ 1223              	 .loc 1 425 19 view .LVU262
+ 1224 0008 0021     	 movs r1,#0
+ 1225              	.LVL101:
+ 1226              	 .loc 1 425 19 view .LVU263
+ 1227 000a C822     	 movs r2,#200
+ 1228              	.LVL102:
+ 419:fips202.c     **** #ifdef PROFILE_HASHING
+ 1229              	 .loc 1 419 1 view .LVU264
+ 1230 000c 0446     	 mov r4,r0
+ 1231              	 .loc 1 425 19 view .LVU265
+ 1232 000e 9847     	 blx r3
+ 1233              	.LVL103:
+ 426:fips202.c     **** 
+ 427:fips202.c     ****   keccak_absorb(state->ctx, SHAKE128_RATE, input, inlen, 0x1F);
+ 1234              	 .loc 1 427 3 is_stmt 1 view .LVU266
+ 1235 0010 1F23     	 movs r3,#31
+ 1236 0012 0093     	 str r3,[sp]
+ 1237 0014 2046     	 mov r0,r4
+ 1238 0016 3346     	 mov r3,r6
+ 1239 0018 034C     	 ldr r4,.L77+4
+ 1240              	.LVL104:
+ 1241              	 .loc 1 427 3 is_stmt 0 view .LVU267
+ 1242 001a 2A46     	 mov r2,r5
+ 1243 001c A821     	 movs r1,#168
+ 1244 001e A047     	 blx r4
+ 1245              	.LVL105:
+ 428:fips202.c     **** #ifdef PROFILE_HASHING
+ 429:fips202.c     ****   uint64_t t1 = hal_get_time();
+ 430:fips202.c     ****   hash_cycles += (t1-t0);
+ 431:fips202.c     **** #endif
+ 432:fips202.c     **** }
+ 1246              	 .loc 1 432 1 view .LVU268
+ 1247 0020 02B0     	 add sp,sp,#8
+ 1248              	.LCFI23:
+ 1249              	 .cfi_def_cfa_offset 16
+ 1250              	 
+ 1251 0022 70BD     	 pop {r4,r5,r6,pc}
+ 1252              	.LVL106:
+ 1253              	.L78:
+ 1254              	 .loc 1 432 1 view .LVU269
+ 1255              	 .align 2
+ 1256              	.L77:
+ 1257 0024 00000000 	 .word memset
+ 1258 0028 00000000 	 .word keccak_absorb
+ 1259              	 .cfi_endproc
+ 1260              	.LFE21:
+ 1262              	 .section .text.shake128_squeezeblocks,"ax",%progbits
+ 1263              	 .align 1
+ 1264              	 .global shake128_squeezeblocks
+ 1265              	 .syntax unified
+ 1266              	 .thumb
+ 1267              	 .thumb_func
+ 1269              	shake128_squeezeblocks:
+ 1270              	.LVL107:
+ 1271              	.LFB22:
+ 433:fips202.c     **** 
+ 434:fips202.c     **** /*************************************************
+ 435:fips202.c     ****  * Name:        shake128_squeezeblocks
+ 436:fips202.c     ****  *
+ 437:fips202.c     ****  * Description: Squeeze step of SHAKE128 XOF. Squeezes full blocks of SHAKE128_RATE bytes each.
+ 438:fips202.c     ****  *              Modifies the state. Can be called multiple times to keep squeezing,
+ 439:fips202.c     ****  *              i.e., is incremental.
+ 440:fips202.c     ****  *
+ 441:fips202.c     ****  * Arguments:   - uint8_t *output:     pointer to output blocks
+ 442:fips202.c     ****  *              - size_t nblocks:      number of blocks to be squeezed (written to output)
+ 443:fips202.c     ****  *              - shake128ctx *state:  pointer to in/output Keccak state
+ 444:fips202.c     ****  **************************************************/
+ 445:fips202.c     **** void shake128_squeezeblocks(uint8_t *output, size_t nblocks, shake128ctx *state)
+ 446:fips202.c     **** {
+ 1272              	 .loc 1 446 1 is_stmt 1 view-0
+ 1273              	 .cfi_startproc
+ 1274              	 
+ 1275              	 
+ 1276              	 
+ 447:fips202.c     **** #ifdef PROFILE_HASHING
+ 448:fips202.c     ****   uint64_t t0 = hal_get_time();
+ 449:fips202.c     **** #endif
+ 450:fips202.c     ****   keccak_squeezeblocks(output, nblocks, state->ctx, SHAKE128_RATE);
+ 1277              	 .loc 1 450 3 view .LVU271
+ 446:fips202.c     **** #ifdef PROFILE_HASHING
+ 1278              	 .loc 1 446 1 is_stmt 0 view .LVU272
+ 1279 0000 10B4     	 push {r4}
+ 1280              	.LCFI24:
+ 1281              	 .cfi_def_cfa_offset 4
+ 1282              	 .cfi_offset 4,-4
+ 1283              	 .loc 1 450 3 view .LVU273
+ 1284 0002 024C     	 ldr r4,.L80
+ 1285 0004 A823     	 movs r3,#168
+ 1286 0006 A446     	 mov ip,r4
+ 451:fips202.c     **** #ifdef PROFILE_HASHING
+ 452:fips202.c     ****   uint64_t t1 = hal_get_time();
+ 453:fips202.c     ****   hash_cycles += (t1-t0);
+ 454:fips202.c     **** #endif
+ 455:fips202.c     **** }
+ 1287              	 .loc 1 455 1 view .LVU274
+ 1288 0008 10BC     	 pop {r4}
+ 1289              	.LCFI25:
+ 1290              	 .cfi_restore 4
+ 1291              	 .cfi_def_cfa_offset 0
+ 450:fips202.c     **** #ifdef PROFILE_HASHING
+ 1292              	 .loc 1 450 3 view .LVU275
+ 1293 000a 6047     	 bx ip
+ 1294              	.LVL108:
+ 1295              	.L81:
+ 450:fips202.c     **** #ifdef PROFILE_HASHING
+ 1296              	 .loc 1 450 3 view .LVU276
+ 1297              	 .align 2
+ 1298              	.L80:
+ 1299 000c 00000000 	 .word keccak_squeezeblocks
+ 1300              	 .cfi_endproc
+ 1301              	.LFE22:
+ 1303              	 .section .text.cshake128_simple_squeezeblocks,"ax",%progbits
+ 1304              	 .align 1
+ 1305              	 .global cshake128_simple_squeezeblocks
+ 1306              	 .syntax unified
+ 1307              	 .thumb
+ 1308              	 .thumb_func
+ 1310              	cshake128_simple_squeezeblocks:
+ 1311              	.LFB53:
+ 1312              	 .cfi_startproc
+ 358:fips202.c     **** {
+ 1313              	 .loc 1 358 6 is_stmt 1 view-0
+ 1314              	 
+ 1315              	 
+ 1316              	 
+ 1317 0000 004B     	 ldr r3,.L83
+ 1318 0002 1847     	 bx r3
+ 1319              	.L84:
+ 1320              	 .align 2
+ 1321              	.L83:
+ 1322 0004 00000000 	 .word shake128_squeezeblocks
+ 1323              	 .cfi_endproc
+ 1324              	.LFE53:
+ 1326              	 .section .text.shake128,"ax",%progbits
+ 1327              	 .align 1
+ 1328              	 .global shake128
+ 1329              	 .syntax unified
+ 1330              	 .thumb
+ 1331              	 .thumb_func
+ 1333              	shake128:
+ 1334              	.LVL109:
+ 1335              	.LFB23:
+ 456:fips202.c     **** 
+ 457:fips202.c     **** void shake128(uint8_t *output, size_t outlen, const uint8_t *input, size_t inlen)
+ 458:fips202.c     **** {
+ 1336              	 .loc 1 458 1 view-0
+ 1337              	 .cfi_startproc
+ 1338              	 
+ 1339              	 
+ 459:fips202.c     **** #ifdef PROFILE_HASHING
+ 460:fips202.c     ****   uint64_t t0 = hal_get_time();
+ 461:fips202.c     **** #endif
+ 462:fips202.c     ****   shake128incctx state;
+ 1340              	 .loc 1 462 3 view .LVU279
+ 463:fips202.c     **** 
+ 464:fips202.c     ****   keccak_inc_init(state.ctx);
+ 1341              	 .loc 1 464 3 view .LVU280
+ 458:fips202.c     **** #ifdef PROFILE_HASHING
+ 1342              	 .loc 1 458 1 is_stmt 0 view .LVU281
+ 1343 0000 F0B5     	 push {r4,r5,r6,r7,lr}
+ 1344              	.LCFI26:
+ 1345              	 .cfi_def_cfa_offset 20
+ 1346              	 .cfi_offset 4,-20
+ 1347              	 .cfi_offset 5,-16
+ 1348              	 .cfi_offset 6,-12
+ 1349              	 .cfi_offset 7,-8
+ 1350              	 .cfi_offset 14,-4
+ 1351 0002 B5B0     	 sub sp,sp,#212
+ 1352              	.LCFI27:
+ 1353              	 .cfi_def_cfa_offset 232
+ 458:fips202.c     **** #ifdef PROFILE_HASHING
+ 1354              	 .loc 1 458 1 view .LVU282
+ 1355 0004 0446     	 mov r4,r0
+ 1356 0006 1646     	 mov r6,r2
+ 1357 0008 1F46     	 mov r7,r3
+ 1358              	 .loc 1 464 3 view .LVU283
+ 1359 000a 6846     	 mov r0,sp
+ 1360              	.LVL110:
+ 1361              	 .loc 1 464 3 view .LVU284
+ 1362 000c 0A4B     	 ldr r3,.L86
+ 1363              	.LVL111:
+ 458:fips202.c     **** #ifdef PROFILE_HASHING
+ 1364              	 .loc 1 458 1 view .LVU285
+ 1365 000e 0D46     	 mov r5,r1
+ 1366              	 .loc 1 464 3 view .LVU286
+ 1367 0010 9847     	 blx r3
+ 1368              	.LVL112:
+ 465:fips202.c     **** 
+ 466:fips202.c     ****   /* Absorb input */
+ 467:fips202.c     ****   keccak_inc_absorb(state.ctx, SHAKE128_RATE, input, inlen);
+ 1369              	 .loc 1 467 3 is_stmt 1 view .LVU287
+ 1370 0012 3B46     	 mov r3,r7
+ 1371 0014 3246     	 mov r2,r6
+ 1372 0016 6846     	 mov r0,sp
+ 1373 0018 084E     	 ldr r6,.L86+4
+ 1374              	.LVL113:
+ 1375              	 .loc 1 467 3 is_stmt 0 view .LVU288
+ 1376 001a A821     	 movs r1,#168
+ 1377 001c B047     	 blx r6
+ 1378              	.LVL114:
+ 468:fips202.c     ****   keccak_inc_finalize(state.ctx, SHAKE128_RATE, 0x1F);
+ 1379              	 .loc 1 468 3 is_stmt 1 view .LVU289
+ 1380 001e 6846     	 mov r0,sp
+ 1381 0020 074B     	 ldr r3,.L86+8
+ 1382 0022 1F22     	 movs r2,#31
+ 1383 0024 A821     	 movs r1,#168
+ 1384 0026 9847     	 blx r3
+ 1385              	.LVL115:
+ 469:fips202.c     **** 
+ 470:fips202.c     ****   /* Squeeze output */
+ 471:fips202.c     ****   keccak_inc_squeeze(output, outlen, state.ctx, SHAKE128_RATE);
+ 1386              	 .loc 1 471 3 view .LVU290
+ 1387 0028 2046     	 mov r0,r4
+ 1388 002a A823     	 movs r3,#168
+ 1389 002c 054C     	 ldr r4,.L86+12
+ 1390              	.LVL116:
+ 1391              	 .loc 1 471 3 is_stmt 0 view .LVU291
+ 1392 002e 6A46     	 mov r2,sp
+ 1393 0030 2946     	 mov r1,r5
+ 1394 0032 A047     	 blx r4
+ 1395              	.LVL117:
+ 472:fips202.c     **** #ifdef PROFILE_HASHING
+ 473:fips202.c     ****   uint64_t t1 = hal_get_time();
+ 474:fips202.c     ****   hash_cycles += (t1-t0);
+ 475:fips202.c     **** #endif
+ 476:fips202.c     **** }
+ 1396              	 .loc 1 476 1 view .LVU292
+ 1397 0034 35B0     	 add sp,sp,#212
+ 1398              	.LCFI28:
+ 1399              	 .cfi_def_cfa_offset 20
+ 1400              	 
+ 1401 0036 F0BD     	 pop {r4,r5,r6,r7,pc}
+ 1402              	.LVL118:
+ 1403              	.L87:
+ 1404              	 .loc 1 476 1 view .LVU293
+ 1405              	 .align 2
+ 1406              	.L86:
+ 1407 0038 00000000 	 .word keccak_inc_init
+ 1408 003c 00000000 	 .word keccak_inc_absorb
+ 1409 0040 00000000 	 .word keccak_inc_finalize
+ 1410 0044 00000000 	 .word keccak_inc_squeeze
+ 1411              	 .cfi_endproc
+ 1412              	.LFE23:
+ 1414              	 .section .text.shake128_ctx_release,"ax",%progbits
+ 1415              	 .align 1
+ 1416              	 .global shake128_ctx_release
+ 1417              	 .syntax unified
+ 1418              	 .thumb
+ 1419              	 .thumb_func
+ 1421              	shake128_ctx_release:
+ 1422              	.LVL119:
+ 1423              	.LFB24:
+ 477:fips202.c     **** 
+ 478:fips202.c     **** void shake128_ctx_release(shake128ctx *state) {
+ 1424              	 .loc 1 478 47 is_stmt 1 view-0
+ 1425              	 .cfi_startproc
+ 1426              	 
+ 1427              	 
+ 1428              	 
+ 479:fips202.c     ****     (void) state;
+ 1429              	 .loc 1 479 5 view .LVU295
+ 480:fips202.c     **** }
+ 1430              	 .loc 1 480 1 is_stmt 0 view .LVU296
+ 1431 0000 7047     	 bx lr
+ 1432              	 .cfi_endproc
+ 1433              	.LFE24:
+ 1435              	 .section .text.shake128_ctx_clone,"ax",%progbits
+ 1436              	 .align 1
+ 1437              	 .global shake128_ctx_clone
+ 1438              	 .syntax unified
+ 1439              	 .thumb
+ 1440              	 .thumb_func
+ 1442              	shake128_ctx_clone:
+ 1443              	.LVL120:
+ 1444              	.LFB25:
+ 481:fips202.c     **** void shake128_ctx_clone(shake128ctx *dest, const shake128ctx *src) {
+ 1445              	 .loc 1 481 68 is_stmt 1 view-0
+ 1446              	 .cfi_startproc
+ 1447              	 
+ 1448              	 
+ 1449              	 
+ 482:fips202.c     ****     memcpy(dest, src, sizeof(shake128ctx));
+ 1450              	 .loc 1 482 5 view .LVU298
+ 1451 0000 014B     	 ldr r3,.L90
+ 1452 0002 C822     	 movs r2,#200
+ 1453 0004 1847     	 bx r3
+ 1454              	.LVL121:
+ 1455              	.L91:
+ 1456              	 .loc 1 482 5 is_stmt 0 view .LVU299
+ 1457 0006 00BF     	 .align 2
+ 1458              	.L90:
+ 1459 0008 00000000 	 .word memcpy
+ 1460              	 .cfi_endproc
+ 1461              	.LFE25:
+ 1463              	 .section .text.shake256_absorb,"ax",%progbits
+ 1464              	 .align 1
+ 1465              	 .global shake256_absorb
+ 1466              	 .syntax unified
+ 1467              	 .thumb
+ 1468              	 .thumb_func
+ 1470              	shake256_absorb:
+ 1471              	.LVL122:
+ 1472              	.LFB26:
+ 483:fips202.c     **** }
+ 484:fips202.c     **** 
+ 485:fips202.c     **** void shake256_absorb(shake256ctx *state, const uint8_t *input, size_t inlen)
+ 486:fips202.c     **** {
+ 1473              	 .loc 1 486 1 is_stmt 1 view-0
+ 1474              	 .cfi_startproc
+ 1475              	 
+ 1476              	 
+ 487:fips202.c     **** #ifdef PROFILE_HASHING
+ 488:fips202.c     ****   uint64_t t0 = hal_get_time();
+ 489:fips202.c     **** #endif
+ 490:fips202.c     ****   int i;
+ 1477              	 .loc 1 490 3 view .LVU301
+ 491:fips202.c     ****   for (i = 0; i < 25; i++)
+ 1478              	 .loc 1 491 3 view .LVU302
+ 1479              	 .loc 1 491 17 discriminator 1 view .LVU303
+ 486:fips202.c     **** #ifdef PROFILE_HASHING
+ 1480              	 .loc 1 486 1 is_stmt 0 view .LVU304
+ 1481 0000 73B5     	 push {r0,r1,r4,r5,r6,lr}
+ 1482              	.LCFI29:
+ 1483              	 .cfi_def_cfa_offset 24
+ 1484              	 .cfi_offset 4,-16
+ 1485              	 .cfi_offset 5,-12
+ 1486              	 .cfi_offset 6,-8
+ 1487              	 .cfi_offset 14,-4
+ 492:fips202.c     ****     state->ctx[i] = 0;
+ 1488              	 .loc 1 492 19 view .LVU305
+ 1489 0002 084B     	 ldr r3,.L93
+ 486:fips202.c     **** #ifdef PROFILE_HASHING
+ 1490              	 .loc 1 486 1 view .LVU306
+ 1491 0004 0D46     	 mov r5,r1
+ 1492 0006 1646     	 mov r6,r2
+ 1493              	 .loc 1 492 19 view .LVU307
+ 1494 0008 0021     	 movs r1,#0
+ 1495              	.LVL123:
+ 1496              	 .loc 1 492 19 view .LVU308
+ 1497 000a C822     	 movs r2,#200
+ 1498              	.LVL124:
+ 486:fips202.c     **** #ifdef PROFILE_HASHING
+ 1499              	 .loc 1 486 1 view .LVU309
+ 1500 000c 0446     	 mov r4,r0
+ 1501              	 .loc 1 492 19 view .LVU310
+ 1502 000e 9847     	 blx r3
+ 1503              	.LVL125:
+ 493:fips202.c     **** 
+ 494:fips202.c     ****   keccak_absorb(state->ctx, SHAKE256_RATE, input, inlen, 0x1F);
+ 1504              	 .loc 1 494 3 is_stmt 1 view .LVU311
+ 1505 0010 1F23     	 movs r3,#31
+ 1506 0012 0093     	 str r3,[sp]
+ 1507 0014 2046     	 mov r0,r4
+ 1508 0016 3346     	 mov r3,r6
+ 1509 0018 034C     	 ldr r4,.L93+4
+ 1510              	.LVL126:
+ 1511              	 .loc 1 494 3 is_stmt 0 view .LVU312
+ 1512 001a 2A46     	 mov r2,r5
+ 1513 001c 8821     	 movs r1,#136
+ 1514 001e A047     	 blx r4
+ 1515              	.LVL127:
+ 495:fips202.c     **** #ifdef PROFILE_HASHING
+ 496:fips202.c     ****   uint64_t t1 = hal_get_time();
+ 497:fips202.c     ****   hash_cycles += (t1-t0);
+ 498:fips202.c     **** #endif
+ 499:fips202.c     **** }
+ 1516              	 .loc 1 499 1 view .LVU313
+ 1517 0020 02B0     	 add sp,sp,#8
+ 1518              	.LCFI30:
+ 1519              	 .cfi_def_cfa_offset 16
+ 1520              	 
+ 1521 0022 70BD     	 pop {r4,r5,r6,pc}
+ 1522              	.LVL128:
+ 1523              	.L94:
+ 1524              	 .loc 1 499 1 view .LVU314
+ 1525              	 .align 2
+ 1526              	.L93:
+ 1527 0024 00000000 	 .word memset
+ 1528 0028 00000000 	 .word keccak_absorb
+ 1529              	 .cfi_endproc
+ 1530              	.LFE26:
+ 1532              	 .section .text.shake256_squeezeblocks,"ax",%progbits
+ 1533              	 .align 1
+ 1534              	 .global shake256_squeezeblocks
+ 1535              	 .syntax unified
+ 1536              	 .thumb
+ 1537              	 .thumb_func
+ 1539              	shake256_squeezeblocks:
+ 1540              	.LVL129:
+ 1541              	.LFB27:
+ 500:fips202.c     **** 
+ 501:fips202.c     **** 
+ 502:fips202.c     **** void shake256_squeezeblocks(uint8_t *output, size_t nblocks, shake256ctx *state)
+ 503:fips202.c     **** {
+ 1542              	 .loc 1 503 1 is_stmt 1 view-0
+ 1543              	 .cfi_startproc
+ 1544              	 
+ 1545              	 
+ 1546              	 
+ 504:fips202.c     **** #ifdef PROFILE_HASHING
+ 505:fips202.c     ****   uint64_t t0 = hal_get_time();
+ 506:fips202.c     **** #endif
+ 507:fips202.c     ****   keccak_squeezeblocks(output, nblocks, state->ctx, SHAKE256_RATE);
+ 1547              	 .loc 1 507 3 view .LVU316
+ 503:fips202.c     **** #ifdef PROFILE_HASHING
+ 1548              	 .loc 1 503 1 is_stmt 0 view .LVU317
+ 1549 0000 10B4     	 push {r4}
+ 1550              	.LCFI31:
+ 1551              	 .cfi_def_cfa_offset 4
+ 1552              	 .cfi_offset 4,-4
+ 1553              	 .loc 1 507 3 view .LVU318
+ 1554 0002 024C     	 ldr r4,.L96
+ 1555 0004 8823     	 movs r3,#136
+ 1556 0006 A446     	 mov ip,r4
+ 508:fips202.c     **** #ifdef PROFILE_HASHING
+ 509:fips202.c     ****   uint64_t t1 = hal_get_time();
+ 510:fips202.c     ****   hash_cycles += (t1-t0);
+ 511:fips202.c     **** #endif
+ 512:fips202.c     **** }
+ 1557              	 .loc 1 512 1 view .LVU319
+ 1558 0008 10BC     	 pop {r4}
+ 1559              	.LCFI32:
+ 1560              	 .cfi_restore 4
+ 1561              	 .cfi_def_cfa_offset 0
+ 507:fips202.c     **** #ifdef PROFILE_HASHING
+ 1562              	 .loc 1 507 3 view .LVU320
+ 1563 000a 6047     	 bx ip
+ 1564              	.LVL130:
+ 1565              	.L97:
+ 507:fips202.c     **** #ifdef PROFILE_HASHING
+ 1566              	 .loc 1 507 3 view .LVU321
+ 1567              	 .align 2
+ 1568              	.L96:
+ 1569 000c 00000000 	 .word keccak_squeezeblocks
+ 1570              	 .cfi_endproc
+ 1571              	.LFE27:
+ 1573              	 .section .text.shake256,"ax",%progbits
+ 1574              	 .align 1
+ 1575              	 .global shake256
+ 1576              	 .syntax unified
+ 1577              	 .thumb
+ 1578              	 .thumb_func
+ 1580              	shake256:
+ 1581              	.LVL131:
+ 1582              	.LFB28:
+ 513:fips202.c     **** 
+ 514:fips202.c     **** /*************************************************
+ 515:fips202.c     ****  * Name:        shake256
+ 516:fips202.c     ****  *
+ 517:fips202.c     ****  * Description: SHAKE256 XOF with non-incremental API
+ 518:fips202.c     ****  *
+ 519:fips202.c     ****  * Arguments:   - uint8_t *output:      pointer to output
+ 520:fips202.c     ****  *              - size_t outlen:        requested output length in bytes
+ 521:fips202.c     ****  *              - const uint8_t *input: pointer to input
+ 522:fips202.c     ****  *              - size_t inlen:         length of input in bytes
+ 523:fips202.c     ****  **************************************************/
+ 524:fips202.c     **** void shake256(uint8_t *output, size_t outlen,
+ 525:fips202.c     ****     const uint8_t *input, size_t inlen)
+ 526:fips202.c     **** {
+ 1583              	 .loc 1 526 1 is_stmt 1 view-0
+ 1584              	 .cfi_startproc
+ 1585              	 
+ 1586              	 
+ 527:fips202.c     **** #ifdef PROFILE_HASHING
+ 528:fips202.c     ****   uint64_t t0 = hal_get_time();
+ 529:fips202.c     **** #endif
+ 530:fips202.c     ****   shake256incctx state;
+ 1587              	 .loc 1 530 3 view .LVU323
+ 531:fips202.c     **** 
+ 532:fips202.c     ****   keccak_inc_init(state.ctx);
+ 1588              	 .loc 1 532 3 view .LVU324
+ 526:fips202.c     **** #ifdef PROFILE_HASHING
+ 1589              	 .loc 1 526 1 is_stmt 0 view .LVU325
+ 1590 0000 F0B5     	 push {r4,r5,r6,r7,lr}
+ 1591              	.LCFI33:
+ 1592              	 .cfi_def_cfa_offset 20
+ 1593              	 .cfi_offset 4,-20
+ 1594              	 .cfi_offset 5,-16
+ 1595              	 .cfi_offset 6,-12
+ 1596              	 .cfi_offset 7,-8
+ 1597              	 .cfi_offset 14,-4
+ 1598 0002 B5B0     	 sub sp,sp,#212
+ 1599              	.LCFI34:
+ 1600              	 .cfi_def_cfa_offset 232
+ 526:fips202.c     **** #ifdef PROFILE_HASHING
+ 1601              	 .loc 1 526 1 view .LVU326
+ 1602 0004 0446     	 mov r4,r0
+ 1603 0006 1646     	 mov r6,r2
+ 1604 0008 1F46     	 mov r7,r3
+ 1605              	 .loc 1 532 3 view .LVU327
+ 1606 000a 6846     	 mov r0,sp
+ 1607              	.LVL132:
+ 1608              	 .loc 1 532 3 view .LVU328
+ 1609 000c 0A4B     	 ldr r3,.L99
+ 1610              	.LVL133:
+ 526:fips202.c     **** #ifdef PROFILE_HASHING
+ 1611              	 .loc 1 526 1 view .LVU329
+ 1612 000e 0D46     	 mov r5,r1
+ 1613              	 .loc 1 532 3 view .LVU330
+ 1614 0010 9847     	 blx r3
+ 1615              	.LVL134:
+ 533:fips202.c     **** 
+ 534:fips202.c     ****   /* Absorb input */
+ 535:fips202.c     ****   keccak_inc_absorb(state.ctx, SHAKE256_RATE, input, inlen);
+ 1616              	 .loc 1 535 3 is_stmt 1 view .LVU331
+ 1617 0012 3B46     	 mov r3,r7
+ 1618 0014 3246     	 mov r2,r6
+ 1619 0016 6846     	 mov r0,sp
+ 1620 0018 084E     	 ldr r6,.L99+4
+ 1621              	.LVL135:
+ 1622              	 .loc 1 535 3 is_stmt 0 view .LVU332
+ 1623 001a 8821     	 movs r1,#136
+ 1624 001c B047     	 blx r6
+ 1625              	.LVL136:
+ 536:fips202.c     ****   keccak_inc_finalize(state.ctx, SHAKE256_RATE, 0x1F);
+ 1626              	 .loc 1 536 3 is_stmt 1 view .LVU333
+ 1627 001e 6846     	 mov r0,sp
+ 1628 0020 074B     	 ldr r3,.L99+8
+ 1629 0022 1F22     	 movs r2,#31
+ 1630 0024 8821     	 movs r1,#136
+ 1631 0026 9847     	 blx r3
+ 1632              	.LVL137:
+ 537:fips202.c     **** 
+ 538:fips202.c     ****   /* Squeeze output */
+ 539:fips202.c     ****   keccak_inc_squeeze(output, outlen, state.ctx, SHAKE256_RATE);
+ 1633              	 .loc 1 539 3 view .LVU334
+ 1634 0028 2046     	 mov r0,r4
+ 1635 002a 8823     	 movs r3,#136
+ 1636 002c 054C     	 ldr r4,.L99+12
+ 1637              	.LVL138:
+ 1638              	 .loc 1 539 3 is_stmt 0 view .LVU335
+ 1639 002e 6A46     	 mov r2,sp
+ 1640 0030 2946     	 mov r1,r5
+ 1641 0032 A047     	 blx r4
+ 1642              	.LVL139:
+ 540:fips202.c     **** #ifdef PROFILE_HASHING
+ 541:fips202.c     ****   uint64_t t1 = hal_get_time();
+ 542:fips202.c     ****   hash_cycles += (t1-t0);
+ 543:fips202.c     **** #endif
+ 544:fips202.c     **** }
+ 1643              	 .loc 1 544 1 view .LVU336
+ 1644 0034 35B0     	 add sp,sp,#212
+ 1645              	.LCFI35:
+ 1646              	 .cfi_def_cfa_offset 20
+ 1647              	 
+ 1648 0036 F0BD     	 pop {r4,r5,r6,r7,pc}
+ 1649              	.LVL140:
+ 1650              	.L100:
+ 1651              	 .loc 1 544 1 view .LVU337
+ 1652              	 .align 2
+ 1653              	.L99:
+ 1654 0038 00000000 	 .word keccak_inc_init
+ 1655 003c 00000000 	 .word keccak_inc_absorb
+ 1656 0040 00000000 	 .word keccak_inc_finalize
+ 1657 0044 00000000 	 .word keccak_inc_squeeze
+ 1658              	 .cfi_endproc
+ 1659              	.LFE28:
+ 1661              	 .section .text.shake256_ctx_release,"ax",%progbits
+ 1662              	 .align 1
+ 1663              	 .global shake256_ctx_release
+ 1664              	 .syntax unified
+ 1665              	 .thumb
+ 1666              	 .thumb_func
+ 1668              	shake256_ctx_release:
+ 1669              	.LFB57:
+ 1670              	 .cfi_startproc
+ 545:fips202.c     **** 
+ 546:fips202.c     **** void shake256_ctx_release(shake256ctx *state) {
+ 1671              	 .loc 1 546 6 is_stmt 1 view-0
+ 1672              	 
+ 1673              	 
+ 1674              	 
+ 1675 0000 7047     	 bx lr
+ 1676              	 .cfi_endproc
+ 1677              	.LFE57:
+ 1679              	 .section .text.shake256_ctx_clone,"ax",%progbits
+ 1680              	 .align 1
+ 1681              	 .global shake256_ctx_clone
+ 1682              	 .syntax unified
+ 1683              	 .thumb
+ 1684              	 .thumb_func
+ 1686              	shake256_ctx_clone:
+ 1687              	.LFB67:
+ 1688              	 .cfi_startproc
+ 547:fips202.c     ****     (void) state;
+ 548:fips202.c     **** }
+ 549:fips202.c     **** 
+ 550:fips202.c     **** void shake256_ctx_clone(shake256ctx *dest, const shake256ctx *src) {
+ 1689              	 .loc 1 550 6 view-0
+ 1690              	 
+ 1691              	 
+ 1692              	 
+ 1693 0000 004B     	 ldr r3,.L103
+ 1694 0002 1847     	 bx r3
+ 1695              	.L104:
+ 1696              	 .align 2
+ 1697              	.L103:
+ 1698 0004 00000000 	 .word shake128_ctx_clone
+ 1699              	 .cfi_endproc
+ 1700              	.LFE67:
+ 1702              	 .section .text.sha3_256,"ax",%progbits
+ 1703              	 .align 1
+ 1704              	 .global sha3_256
+ 1705              	 .syntax unified
+ 1706              	 .thumb
+ 1707              	 .thumb_func
+ 1709              	sha3_256:
+ 1710              	.LVL141:
+ 1711              	.LFB31:
+ 551:fips202.c     ****     memcpy(dest, src, sizeof(shake256ctx));
+ 552:fips202.c     **** }
+ 553:fips202.c     **** 
+ 554:fips202.c     **** 
+ 555:fips202.c     **** /*************************************************
+ 556:fips202.c     ****  * Name:        sha3_256
+ 557:fips202.c     ****  *
+ 558:fips202.c     ****  * Description: SHA3-256 with non-incremental API
+ 559:fips202.c     ****  *
+ 560:fips202.c     ****  * Arguments:   - uint8_t *output:      pointer to output
+ 561:fips202.c     ****  *              - const uint8_t *input: pointer to input
+ 562:fips202.c     ****  *              - size_t inlen:         length of input in bytes
+ 563:fips202.c     ****  **************************************************/
+ 564:fips202.c     **** void sha3_256(uint8_t *output, const uint8_t *input, size_t inlen)
+ 565:fips202.c     **** {
+ 1712              	 .loc 1 565 1 view-0
+ 1713              	 .cfi_startproc
+ 1714              	 
+ 1715              	 
+ 566:fips202.c     **** #ifdef PROFILE_HASHING
+ 567:fips202.c     ****   uint64_t t0 = hal_get_time();
+ 568:fips202.c     **** #endif
+ 569:fips202.c     ****   sha3_256incctx state;
+ 1716              	 .loc 1 569 3 view .LVU341
+ 570:fips202.c     ****   keccak_inc_init(state.ctx);
+ 1717              	 .loc 1 570 3 view .LVU342
+ 565:fips202.c     **** #ifdef PROFILE_HASHING
+ 1718              	 .loc 1 565 1 is_stmt 0 view .LVU343
+ 1719 0000 70B5     	 push {r4,r5,r6,lr}
+ 1720              	.LCFI36:
+ 1721              	 .cfi_def_cfa_offset 16
+ 1722              	 .cfi_offset 4,-16
+ 1723              	 .cfi_offset 5,-12
+ 1724              	 .cfi_offset 6,-8
+ 1725              	 .cfi_offset 14,-4
+ 1726 0002 B4B0     	 sub sp,sp,#208
+ 1727              	.LCFI37:
+ 1728              	 .cfi_def_cfa_offset 224
+ 565:fips202.c     **** #ifdef PROFILE_HASHING
+ 1729              	 .loc 1 565 1 view .LVU344
+ 1730 0004 0D46     	 mov r5,r1
+ 1731 0006 1646     	 mov r6,r2
+ 1732 0008 0446     	 mov r4,r0
+ 1733              	 .loc 1 570 3 view .LVU345
+ 1734 000a 0B4B     	 ldr r3,.L106
+ 1735 000c 6846     	 mov r0,sp
+ 1736              	.LVL142:
+ 1737              	 .loc 1 570 3 view .LVU346
+ 1738 000e 9847     	 blx r3
+ 1739              	.LVL143:
+ 571:fips202.c     **** 
+ 572:fips202.c     ****   /* Absorb input */
+ 573:fips202.c     ****   keccak_inc_absorb(state.ctx, SHA3_256_RATE, input, inlen);
+ 1740              	 .loc 1 573 3 is_stmt 1 view .LVU347
+ 1741 0010 3346     	 mov r3,r6
+ 1742 0012 2A46     	 mov r2,r5
+ 1743 0014 6846     	 mov r0,sp
+ 1744 0016 094D     	 ldr r5,.L106+4
+ 1745              	.LVL144:
+ 1746              	 .loc 1 573 3 is_stmt 0 view .LVU348
+ 1747 0018 8821     	 movs r1,#136
+ 1748 001a A847     	 blx r5
+ 1749              	.LVL145:
+ 574:fips202.c     ****   keccak_inc_finalize(state.ctx, SHA3_256_RATE, 0x06);
+ 1750              	 .loc 1 574 3 is_stmt 1 view .LVU349
+ 1751 001c 6846     	 mov r0,sp
+ 1752 001e 084B     	 ldr r3,.L106+8
+ 1753 0020 0622     	 movs r2,#6
+ 1754 0022 8821     	 movs r1,#136
+ 1755 0024 9847     	 blx r3
+ 1756              	.LVL146:
+ 575:fips202.c     **** 
+ 576:fips202.c     ****   /* Squeeze output */
+ 577:fips202.c     ****   keccak_inc_squeeze(output, 32, state.ctx, SHA3_256_RATE);
+ 1757              	 .loc 1 577 3 view .LVU350
+ 1758 0026 2046     	 mov r0,r4
+ 1759 0028 8823     	 movs r3,#136
+ 1760 002a 064C     	 ldr r4,.L106+12
+ 1761              	.LVL147:
+ 1762              	 .loc 1 577 3 is_stmt 0 view .LVU351
+ 1763 002c 6A46     	 mov r2,sp
+ 1764 002e 2021     	 movs r1,#32
+ 1765 0030 A047     	 blx r4
+ 1766              	.LVL148:
+ 578:fips202.c     **** #ifdef PROFILE_HASHING
+ 579:fips202.c     ****   uint64_t t1 = hal_get_time();
+ 580:fips202.c     ****   hash_cycles += (t1-t0);
+ 581:fips202.c     **** #endif
+ 582:fips202.c     **** }
+ 1767              	 .loc 1 582 1 view .LVU352
+ 1768 0032 34B0     	 add sp,sp,#208
+ 1769              	.LCFI38:
+ 1770              	 .cfi_def_cfa_offset 16
+ 1771              	 
+ 1772 0034 70BD     	 pop {r4,r5,r6,pc}
+ 1773              	.LVL149:
+ 1774              	.L107:
+ 1775              	 .loc 1 582 1 view .LVU353
+ 1776 0036 00BF     	 .align 2
+ 1777              	.L106:
+ 1778 0038 00000000 	 .word keccak_inc_init
+ 1779 003c 00000000 	 .word keccak_inc_absorb
+ 1780 0040 00000000 	 .word keccak_inc_finalize
+ 1781 0044 00000000 	 .word keccak_inc_squeeze
+ 1782              	 .cfi_endproc
+ 1783              	.LFE31:
+ 1785              	 .section .text.sha3_256_inc_init,"ax",%progbits
+ 1786              	 .align 1
+ 1787              	 .global sha3_256_inc_init
+ 1788              	 .syntax unified
+ 1789              	 .thumb
+ 1790              	 .thumb_func
+ 1792              	sha3_256_inc_init:
+ 1793              	.LFB71:
+ 1794              	 .cfi_startproc
+ 583:fips202.c     **** void sha3_256_inc_init(sha3_256incctx *state) {
+ 1795              	 .loc 1 583 6 is_stmt 1 view-0
+ 1796              	 
+ 1797              	 
+ 1798              	 
+ 1799 0000 004B     	 ldr r3,.L109
+ 1800 0002 1847     	 bx r3
+ 1801              	.L110:
+ 1802              	 .align 2
+ 1803              	.L109:
+ 1804 0004 00000000 	 .word keccak_inc_init
+ 1805              	 .cfi_endproc
+ 1806              	.LFE71:
+ 1808              	 .section .text.sha3_256_inc_absorb,"ax",%progbits
+ 1809              	 .align 1
+ 1810              	 .global sha3_256_inc_absorb
+ 1811              	 .syntax unified
+ 1812              	 .thumb
+ 1813              	 .thumb_func
+ 1815              	sha3_256_inc_absorb:
+ 1816              	.LFB87:
+ 1817              	 .cfi_startproc
+ 584:fips202.c     **** #ifdef PROFILE_HASHING
+ 585:fips202.c     ****   uint64_t t0 = hal_get_time();
+ 586:fips202.c     **** #endif
+ 587:fips202.c     ****     keccak_inc_init(state->ctx);
+ 588:fips202.c     **** #ifdef PROFILE_HASHING
+ 589:fips202.c     ****   uint64_t t1 = hal_get_time();
+ 590:fips202.c     ****   hash_cycles += (t1-t0);
+ 591:fips202.c     **** #endif
+ 592:fips202.c     **** }
+ 593:fips202.c     **** 
+ 594:fips202.c     **** void sha3_256_inc_absorb(sha3_256incctx *state, const uint8_t *input, size_t inlen) {
+ 1818              	 .loc 1 594 6 view-0
+ 1819              	 
+ 1820              	 
+ 1821              	 
+ 1822 0000 004B     	 ldr r3,.L112
+ 1823 0002 1847     	 bx r3
+ 1824              	.L113:
+ 1825              	 .align 2
+ 1826              	.L112:
+ 1827 0004 00000000 	 .word shake256_inc_absorb
+ 1828              	 .cfi_endproc
+ 1829              	.LFE87:
+ 1831              	 .section .text.sha3_256_inc_finalize,"ax",%progbits
+ 1832              	 .align 1
+ 1833              	 .global sha3_256_inc_finalize
+ 1834              	 .syntax unified
+ 1835              	 .thumb
+ 1836              	 .thumb_func
+ 1838              	sha3_256_inc_finalize:
+ 1839              	.LVL150:
+ 1840              	.LFB34:
+ 595:fips202.c     **** #ifdef PROFILE_HASHING
+ 596:fips202.c     ****   uint64_t t0 = hal_get_time();
+ 597:fips202.c     **** #endif
+ 598:fips202.c     ****     keccak_inc_absorb(state->ctx, SHA3_256_RATE, input, inlen);
+ 599:fips202.c     **** #ifdef PROFILE_HASHING
+ 600:fips202.c     ****   uint64_t t1 = hal_get_time();
+ 601:fips202.c     ****   hash_cycles += (t1-t0);
+ 602:fips202.c     **** #endif
+ 603:fips202.c     **** }
+ 604:fips202.c     **** 
+ 605:fips202.c     **** void sha3_256_inc_finalize(uint8_t *output, sha3_256incctx *state) {
+ 1841              	 .loc 1 605 68 view-0
+ 1842              	 .cfi_startproc
+ 1843              	 
+ 1844              	 
+ 606:fips202.c     **** #ifdef PROFILE_HASHING
+ 607:fips202.c     ****   uint64_t t0 = hal_get_time();
+ 608:fips202.c     **** #endif
+ 609:fips202.c     ****     uint8_t t[SHA3_256_RATE];
+ 1845              	 .loc 1 609 5 view .LVU357
+ 610:fips202.c     ****     keccak_inc_finalize(state->ctx, SHA3_256_RATE, 0x06);
+ 1846              	 .loc 1 610 5 view .LVU358
+ 605:fips202.c     **** #ifdef PROFILE_HASHING
+ 1847              	 .loc 1 605 68 is_stmt 0 view .LVU359
+ 1848 0000 30B5     	 push {r4,r5,lr}
+ 1849              	.LCFI39:
+ 1850              	 .cfi_def_cfa_offset 12
+ 1851              	 .cfi_offset 4,-12
+ 1852              	 .cfi_offset 5,-8
+ 1853              	 .cfi_offset 14,-4
+ 1854 0002 0D46     	 mov r5,r1
+ 1855 0004 A3B0     	 sub sp,sp,#140
+ 1856              	.LCFI40:
+ 1857              	 .cfi_def_cfa_offset 152
+ 1858              	 .loc 1 610 5 view .LVU360
+ 1859 0006 0D4B     	 ldr r3,.L117
+ 605:fips202.c     **** #ifdef PROFILE_HASHING
+ 1860              	 .loc 1 605 68 view .LVU361
+ 1861 0008 0446     	 mov r4,r0
+ 1862              	 .loc 1 610 5 view .LVU362
+ 1863 000a 0622     	 movs r2,#6
+ 1864 000c 2846     	 mov r0,r5
+ 1865              	.LVL151:
+ 1866              	 .loc 1 610 5 view .LVU363
+ 1867 000e 8821     	 movs r1,#136
+ 1868              	.LVL152:
+ 1869              	 .loc 1 610 5 view .LVU364
+ 1870 0010 9847     	 blx r3
+ 1871              	.LVL153:
+ 611:fips202.c     **** 
+ 612:fips202.c     ****     keccak_squeezeblocks(t, 1, state->ctx, SHA3_256_RATE);
+ 1872              	 .loc 1 612 5 is_stmt 1 view .LVU365
+ 1873 0012 2A46     	 mov r2,r5
+ 1874 0014 8823     	 movs r3,#136
+ 1875 0016 0A4D     	 ldr r5,.L117+4
+ 1876              	.LVL154:
+ 1877              	 .loc 1 612 5 is_stmt 0 view .LVU366
+ 1878 0018 0121     	 movs r1,#1
+ 1879 001a 6846     	 mov r0,sp
+ 1880 001c A847     	 blx r5
+ 1881              	.LVL155:
+ 613:fips202.c     **** 
+ 614:fips202.c     ****     for (size_t i = 0; i < 32; i++) {
+ 1882              	 .loc 1 614 5 is_stmt 1 view .LVU367
+ 1883              	.LBB2:
+ 1884              	 .loc 1 614 10 view .LVU368
+ 1885              	 .loc 1 614 26 discriminator 1 view .LVU369
+ 615:fips202.c     ****         output[i] = t[i];
+ 1886              	 .loc 1 615 19 is_stmt 0 view .LVU370
+ 1887 001e 6A46     	 mov r2,sp
+ 1888 0020 2346     	 mov r3,r4
+ 1889 0022 08AD     	 add r5,sp,#32
+ 1890              	.LVL156:
+ 1891              	.L115:
+ 1892              	 .loc 1 615 19 view .LVU371
+ 1893 0024 1446     	 mov r4,r2
+ 1894 0026 03CC     	 ldmia r4!,{r0,r1}
+ 1895 0028 AC42     	 cmp r4,r5
+ 1896 002a 1860     	 str r0,[r3]
+ 1897 002c 5960     	 str r1,[r3,#4]
+ 1898 002e 2246     	 mov r2,r4
+ 1899 0030 03F10803 	 add r3,r3,#8
+ 1900 0034 F6D1     	 bne .L115
+ 1901              	.LBE2:
+ 616:fips202.c     ****     }
+ 617:fips202.c     **** #ifdef PROFILE_HASHING
+ 618:fips202.c     ****   uint64_t t1 = hal_get_time();
+ 619:fips202.c     ****   hash_cycles += (t1-t0);
+ 620:fips202.c     **** #endif
+ 621:fips202.c     **** }
+ 1902              	 .loc 1 621 1 view .LVU372
+ 1903 0036 23B0     	 add sp,sp,#140
+ 1904              	.LCFI41:
+ 1905              	 .cfi_def_cfa_offset 12
+ 1906              	 
+ 1907 0038 30BD     	 pop {r4,r5,pc}
+ 1908              	.L118:
+ 1909 003a 00BF     	 .align 2
+ 1910              	.L117:
+ 1911 003c 00000000 	 .word keccak_inc_finalize
+ 1912 0040 00000000 	 .word keccak_squeezeblocks
+ 1913              	 .cfi_endproc
+ 1914              	.LFE34:
+ 1916              	 .section .text.sha3_256_inc_ctx_clone,"ax",%progbits
+ 1917              	 .align 1
+ 1918              	 .global sha3_256_inc_ctx_clone
+ 1919              	 .syntax unified
+ 1920              	 .thumb
+ 1921              	 .thumb_func
+ 1923              	sha3_256_inc_ctx_clone:
+ 1924              	.LFB79:
+ 1925              	 .cfi_startproc
+ 622:fips202.c     **** 
+ 623:fips202.c     **** void sha3_256_inc_ctx_clone(sha3_256incctx *dest, const sha3_256incctx *src) {
+ 1926              	 .loc 1 623 6 is_stmt 1 view-0
+ 1927              	 
+ 1928              	 
+ 1929              	 
+ 1930 0000 004B     	 ldr r3,.L120
+ 1931 0002 1847     	 bx r3
+ 1932              	.L121:
+ 1933              	 .align 2
+ 1934              	.L120:
+ 1935 0004 00000000 	 .word shake128_inc_ctx_clone
+ 1936              	 .cfi_endproc
+ 1937              	.LFE79:
+ 1939              	 .section .text.sha3_256_inc_ctx_release,"ax",%progbits
+ 1940              	 .align 1
+ 1941              	 .global sha3_256_inc_ctx_release
+ 1942              	 .syntax unified
+ 1943              	 .thumb
+ 1944              	 .thumb_func
+ 1946              	sha3_256_inc_ctx_release:
+ 1947              	.LFB61:
+ 1948              	 .cfi_startproc
+ 624:fips202.c     ****     memcpy(dest, src, sizeof(sha3_256incctx));
+ 625:fips202.c     **** }
+ 626:fips202.c     **** 
+ 627:fips202.c     **** void sha3_256_inc_ctx_release(sha3_256incctx *state) {
+ 1949              	 .loc 1 627 6 view-0
+ 1950              	 
+ 1951              	 
+ 1952              	 
+ 1953 0000 7047     	 bx lr
+ 1954              	 .cfi_endproc
+ 1955              	.LFE61:
+ 1957              	 .section .text.sha3_384_inc_init,"ax",%progbits
+ 1958              	 .align 1
+ 1959              	 .global sha3_384_inc_init
+ 1960              	 .syntax unified
+ 1961              	 .thumb
+ 1962              	 .thumb_func
+ 1964              	sha3_384_inc_init:
+ 1965              	.LFB73:
+ 1966              	 .cfi_startproc
+ 628:fips202.c     ****     (void) state;
+ 629:fips202.c     **** }
+ 630:fips202.c     **** 
+ 631:fips202.c     **** void sha3_384_inc_init(sha3_384incctx *state) {
+ 1967              	 .loc 1 631 6 view-0
+ 1968              	 
+ 1969              	 
+ 1970              	 
+ 1971 0000 004B     	 ldr r3,.L124
+ 1972 0002 1847     	 bx r3
+ 1973              	.L125:
+ 1974              	 .align 2
+ 1975              	.L124:
+ 1976 0004 00000000 	 .word keccak_inc_init
+ 1977              	 .cfi_endproc
+ 1978              	.LFE73:
+ 1980              	 .section .text.sha3_384_inc_absorb,"ax",%progbits
+ 1981              	 .align 1
+ 1982              	 .global sha3_384_inc_absorb
+ 1983              	 .syntax unified
+ 1984              	 .thumb
+ 1985              	 .thumb_func
+ 1987              	sha3_384_inc_absorb:
+ 1988              	.LVL157:
+ 1989              	.LFB38:
+ 632:fips202.c     **** #ifdef PROFILE_HASHING
+ 633:fips202.c     ****   uint64_t t0 = hal_get_time();
+ 634:fips202.c     **** #endif
+ 635:fips202.c     ****     keccak_inc_init(state->ctx);
+ 636:fips202.c     **** #ifdef PROFILE_HASHING
+ 637:fips202.c     ****   uint64_t t1 = hal_get_time();
+ 638:fips202.c     ****   hash_cycles += (t1-t0);
+ 639:fips202.c     **** #endif
+ 640:fips202.c     **** }
+ 641:fips202.c     **** 
+ 642:fips202.c     **** void sha3_384_inc_absorb(sha3_384incctx *state, const uint8_t *input, size_t inlen) {
+ 1990              	 .loc 1 642 85 view-0
+ 1991              	 .cfi_startproc
+ 1992              	 
+ 1993              	 
+ 1994              	 
+ 643:fips202.c     **** #ifdef PROFILE_HASHING
+ 644:fips202.c     ****   uint64_t t0 = hal_get_time();
+ 645:fips202.c     **** #endif
+ 646:fips202.c     ****     keccak_inc_absorb(state->ctx, SHA3_384_RATE, input, inlen);
+ 1995              	 .loc 1 646 5 view .LVU377
+ 642:fips202.c     **** #ifdef PROFILE_HASHING
+ 1996              	 .loc 1 642 85 is_stmt 0 view .LVU378
+ 1997 0000 10B4     	 push {r4}
+ 1998              	.LCFI42:
+ 1999              	 .cfi_def_cfa_offset 4
+ 2000              	 .cfi_offset 4,-4
+ 2001              	 .loc 1 646 5 view .LVU379
+ 2002 0002 034C     	 ldr r4,.L127
+ 642:fips202.c     **** #ifdef PROFILE_HASHING
+ 2003              	 .loc 1 642 85 view .LVU380
+ 2004 0004 1346     	 mov r3,r2
+ 2005              	 .loc 1 646 5 view .LVU381
+ 2006 0006 A446     	 mov ip,r4
+ 2007 0008 0A46     	 mov r2,r1
+ 2008              	.LVL158:
+ 647:fips202.c     **** #ifdef PROFILE_HASHING
+ 648:fips202.c     ****   uint64_t t1 = hal_get_time();
+ 649:fips202.c     ****   hash_cycles += (t1-t0);
+ 650:fips202.c     **** #endif
+ 651:fips202.c     **** }
+ 2009              	 .loc 1 651 1 view .LVU382
+ 2010 000a 10BC     	 pop {r4}
+ 2011              	.LCFI43:
+ 2012              	 .cfi_restore 4
+ 2013              	 .cfi_def_cfa_offset 0
+ 646:fips202.c     **** #ifdef PROFILE_HASHING
+ 2014              	 .loc 1 646 5 view .LVU383
+ 2015 000c 6821     	 movs r1,#104
+ 2016              	.LVL159:
+ 646:fips202.c     **** #ifdef PROFILE_HASHING
+ 2017              	 .loc 1 646 5 view .LVU384
+ 2018 000e 6047     	 bx ip
+ 2019              	.LVL160:
+ 2020              	.L128:
+ 646:fips202.c     **** #ifdef PROFILE_HASHING
+ 2021              	 .loc 1 646 5 view .LVU385
+ 2022              	 .align 2
+ 2023              	.L127:
+ 2024 0010 00000000 	 .word keccak_inc_absorb
+ 2025              	 .cfi_endproc
+ 2026              	.LFE38:
+ 2028              	 .section .text.sha3_384_inc_finalize,"ax",%progbits
+ 2029              	 .align 1
+ 2030              	 .global sha3_384_inc_finalize
+ 2031              	 .syntax unified
+ 2032              	 .thumb
+ 2033              	 .thumb_func
+ 2035              	sha3_384_inc_finalize:
+ 2036              	.LVL161:
+ 2037              	.LFB39:
+ 652:fips202.c     **** 
+ 653:fips202.c     **** void sha3_384_inc_finalize(uint8_t *output, sha3_384incctx *state) {
+ 2038              	 .loc 1 653 68 is_stmt 1 view-0
+ 2039              	 .cfi_startproc
+ 2040              	 
+ 2041              	 
+ 654:fips202.c     **** #ifdef PROFILE_HASHING
+ 655:fips202.c     ****   uint64_t t0 = hal_get_time();
+ 656:fips202.c     **** #endif
+ 657:fips202.c     ****     uint8_t t[SHA3_384_RATE];
+ 2042              	 .loc 1 657 5 view .LVU387
+ 658:fips202.c     ****     keccak_inc_finalize(state->ctx, SHA3_384_RATE, 0x06);
+ 2043              	 .loc 1 658 5 view .LVU388
+ 653:fips202.c     **** #ifdef PROFILE_HASHING
+ 2044              	 .loc 1 653 68 is_stmt 0 view .LVU389
+ 2045 0000 30B5     	 push {r4,r5,lr}
+ 2046              	.LCFI44:
+ 2047              	 .cfi_def_cfa_offset 12
+ 2048              	 .cfi_offset 4,-12
+ 2049              	 .cfi_offset 5,-8
+ 2050              	 .cfi_offset 14,-4
+ 2051 0002 0D46     	 mov r5,r1
+ 2052 0004 9BB0     	 sub sp,sp,#108
+ 2053              	.LCFI45:
+ 2054              	 .cfi_def_cfa_offset 120
+ 2055              	 .loc 1 658 5 view .LVU390
+ 2056 0006 0D4B     	 ldr r3,.L132
+ 653:fips202.c     **** #ifdef PROFILE_HASHING
+ 2057              	 .loc 1 653 68 view .LVU391
+ 2058 0008 0446     	 mov r4,r0
+ 2059              	 .loc 1 658 5 view .LVU392
+ 2060 000a 0622     	 movs r2,#6
+ 2061 000c 2846     	 mov r0,r5
+ 2062              	.LVL162:
+ 2063              	 .loc 1 658 5 view .LVU393
+ 2064 000e 6821     	 movs r1,#104
+ 2065              	.LVL163:
+ 2066              	 .loc 1 658 5 view .LVU394
+ 2067 0010 9847     	 blx r3
+ 2068              	.LVL164:
+ 659:fips202.c     **** 
+ 660:fips202.c     ****     keccak_squeezeblocks(t, 1, state->ctx, SHA3_384_RATE);
+ 2069              	 .loc 1 660 5 is_stmt 1 view .LVU395
+ 2070 0012 2A46     	 mov r2,r5
+ 2071 0014 6823     	 movs r3,#104
+ 2072 0016 0A4D     	 ldr r5,.L132+4
+ 2073              	.LVL165:
+ 2074              	 .loc 1 660 5 is_stmt 0 view .LVU396
+ 2075 0018 0121     	 movs r1,#1
+ 2076 001a 6846     	 mov r0,sp
+ 2077 001c A847     	 blx r5
+ 2078              	.LVL166:
+ 661:fips202.c     **** 
+ 662:fips202.c     ****     for (size_t i = 0; i < 48; i++) {
+ 2079              	 .loc 1 662 5 is_stmt 1 view .LVU397
+ 2080              	.LBB3:
+ 2081              	 .loc 1 662 10 view .LVU398
+ 2082              	 .loc 1 662 26 discriminator 1 view .LVU399
+ 663:fips202.c     ****         output[i] = t[i];
+ 2083              	 .loc 1 663 19 is_stmt 0 view .LVU400
+ 2084 001e 6A46     	 mov r2,sp
+ 2085 0020 2346     	 mov r3,r4
+ 2086 0022 0CAD     	 add r5,sp,#48
+ 2087              	.LVL167:
+ 2088              	.L130:
+ 2089              	 .loc 1 663 19 view .LVU401
+ 2090 0024 1446     	 mov r4,r2
+ 2091 0026 03CC     	 ldmia r4!,{r0,r1}
+ 2092 0028 AC42     	 cmp r4,r5
+ 2093 002a 1860     	 str r0,[r3]
+ 2094 002c 5960     	 str r1,[r3,#4]
+ 2095 002e 2246     	 mov r2,r4
+ 2096 0030 03F10803 	 add r3,r3,#8
+ 2097 0034 F6D1     	 bne .L130
+ 2098              	.LBE3:
+ 664:fips202.c     ****     }
+ 665:fips202.c     **** #ifdef PROFILE_HASHING
+ 666:fips202.c     ****   uint64_t t1 = hal_get_time();
+ 667:fips202.c     ****   hash_cycles += (t1-t0);
+ 668:fips202.c     **** #endif
+ 669:fips202.c     **** }
+ 2099              	 .loc 1 669 1 view .LVU402
+ 2100 0036 1BB0     	 add sp,sp,#108
+ 2101              	.LCFI46:
+ 2102              	 .cfi_def_cfa_offset 12
+ 2103              	 
+ 2104 0038 30BD     	 pop {r4,r5,pc}
+ 2105              	.L133:
+ 2106 003a 00BF     	 .align 2
+ 2107              	.L132:
+ 2108 003c 00000000 	 .word keccak_inc_finalize
+ 2109 0040 00000000 	 .word keccak_squeezeblocks
+ 2110              	 .cfi_endproc
+ 2111              	.LFE39:
+ 2113              	 .section .text.sha3_384_inc_ctx_clone,"ax",%progbits
+ 2114              	 .align 1
+ 2115              	 .global sha3_384_inc_ctx_clone
+ 2116              	 .syntax unified
+ 2117              	 .thumb
+ 2118              	 .thumb_func
+ 2120              	sha3_384_inc_ctx_clone:
+ 2121              	.LFB81:
+ 2122              	 .cfi_startproc
+ 670:fips202.c     **** 
+ 671:fips202.c     **** void sha3_384_inc_ctx_clone(sha3_384incctx *dest, const sha3_384incctx *src) {
+ 2123              	 .loc 1 671 6 is_stmt 1 view-0
+ 2124              	 
+ 2125              	 
+ 2126              	 
+ 2127 0000 004B     	 ldr r3,.L135
+ 2128 0002 1847     	 bx r3
+ 2129              	.L136:
+ 2130              	 .align 2
+ 2131              	.L135:
+ 2132 0004 00000000 	 .word shake128_inc_ctx_clone
+ 2133              	 .cfi_endproc
+ 2134              	.LFE81:
+ 2136              	 .section .text.sha3_384_inc_ctx_release,"ax",%progbits
+ 2137              	 .align 1
+ 2138              	 .global sha3_384_inc_ctx_release
+ 2139              	 .syntax unified
+ 2140              	 .thumb
+ 2141              	 .thumb_func
+ 2143              	sha3_384_inc_ctx_release:
+ 2144              	.LFB63:
+ 2145              	 .cfi_startproc
+ 672:fips202.c     ****     memcpy(dest, src, sizeof(sha3_384incctx));
+ 673:fips202.c     **** }
+ 674:fips202.c     **** 
+ 675:fips202.c     **** void sha3_384_inc_ctx_release(sha3_384incctx *state) {
+ 2146              	 .loc 1 675 6 view-0
+ 2147              	 
+ 2148              	 
+ 2149              	 
+ 2150 0000 7047     	 bx lr
+ 2151              	 .cfi_endproc
+ 2152              	.LFE63:
+ 2154              	 .section .text.sha3_384,"ax",%progbits
+ 2155              	 .align 1
+ 2156              	 .global sha3_384
+ 2157              	 .syntax unified
+ 2158              	 .thumb
+ 2159              	 .thumb_func
+ 2161              	sha3_384:
+ 2162              	.LVL168:
+ 2163              	.LFB42:
+ 676:fips202.c     ****     (void) state;
+ 677:fips202.c     **** }
+ 678:fips202.c     **** 
+ 679:fips202.c     **** /*************************************************
+ 680:fips202.c     ****  * Name:        sha3_384
+ 681:fips202.c     ****  *
+ 682:fips202.c     ****  * Description: SHA3-256 with non-incremental API
+ 683:fips202.c     ****  *
+ 684:fips202.c     ****  * Arguments:   - uint8_t *output:      pointer to output
+ 685:fips202.c     ****  *              - const uint8_t *input: pointer to input
+ 686:fips202.c     ****  *              - size_t inlen:   length of input in bytes
+ 687:fips202.c     ****  **************************************************/
+ 688:fips202.c     **** void sha3_384(uint8_t *output, const uint8_t *input, size_t inlen) {
+ 2164              	 .loc 1 688 68 view-0
+ 2165              	 .cfi_startproc
+ 2166              	 
+ 2167              	 
+ 689:fips202.c     **** #ifdef PROFILE_HASHING
+ 690:fips202.c     ****   uint64_t t0 = hal_get_time();
+ 691:fips202.c     **** #endif
+ 692:fips202.c     ****   sha3_384incctx state;
+ 2168              	 .loc 1 692 3 view .LVU406
+ 693:fips202.c     ****   keccak_inc_init(state.ctx);
+ 2169              	 .loc 1 693 3 view .LVU407
+ 688:fips202.c     **** #ifdef PROFILE_HASHING
+ 2170              	 .loc 1 688 68 is_stmt 0 view .LVU408
+ 2171 0000 70B5     	 push {r4,r5,r6,lr}
+ 2172              	.LCFI47:
+ 2173              	 .cfi_def_cfa_offset 16
+ 2174              	 .cfi_offset 4,-16
+ 2175              	 .cfi_offset 5,-12
+ 2176              	 .cfi_offset 6,-8
+ 2177              	 .cfi_offset 14,-4
+ 2178 0002 B4B0     	 sub sp,sp,#208
+ 2179              	.LCFI48:
+ 2180              	 .cfi_def_cfa_offset 224
+ 688:fips202.c     **** #ifdef PROFILE_HASHING
+ 2181              	 .loc 1 688 68 view .LVU409
+ 2182 0004 0D46     	 mov r5,r1
+ 2183 0006 1646     	 mov r6,r2
+ 2184 0008 0446     	 mov r4,r0
+ 2185              	 .loc 1 693 3 view .LVU410
+ 2186 000a 0B4B     	 ldr r3,.L139
+ 2187 000c 6846     	 mov r0,sp
+ 2188              	.LVL169:
+ 2189              	 .loc 1 693 3 view .LVU411
+ 2190 000e 9847     	 blx r3
+ 2191              	.LVL170:
+ 694:fips202.c     **** 
+ 695:fips202.c     ****   /* Absorb input */
+ 696:fips202.c     ****   keccak_inc_absorb(state.ctx, SHA3_384_RATE, input, inlen);
+ 2192              	 .loc 1 696 3 is_stmt 1 view .LVU412
+ 2193 0010 3346     	 mov r3,r6
+ 2194 0012 2A46     	 mov r2,r5
+ 2195 0014 6846     	 mov r0,sp
+ 2196 0016 094D     	 ldr r5,.L139+4
+ 2197              	.LVL171:
+ 2198              	 .loc 1 696 3 is_stmt 0 view .LVU413
+ 2199 0018 6821     	 movs r1,#104
+ 2200 001a A847     	 blx r5
+ 2201              	.LVL172:
+ 697:fips202.c     ****   keccak_inc_finalize(state.ctx, SHA3_384_RATE, 0x06);
+ 2202              	 .loc 1 697 3 is_stmt 1 view .LVU414
+ 2203 001c 6846     	 mov r0,sp
+ 2204 001e 084B     	 ldr r3,.L139+8
+ 2205 0020 0622     	 movs r2,#6
+ 2206 0022 6821     	 movs r1,#104
+ 2207 0024 9847     	 blx r3
+ 2208              	.LVL173:
+ 698:fips202.c     **** 
+ 699:fips202.c     ****   /* Squeeze output */
+ 700:fips202.c     ****   keccak_inc_squeeze(output, 48, state.ctx, SHA3_384_RATE);
+ 2209              	 .loc 1 700 3 view .LVU415
+ 2210 0026 2046     	 mov r0,r4
+ 2211 0028 6823     	 movs r3,#104
+ 2212 002a 064C     	 ldr r4,.L139+12
+ 2213              	.LVL174:
+ 2214              	 .loc 1 700 3 is_stmt 0 view .LVU416
+ 2215 002c 6A46     	 mov r2,sp
+ 2216 002e 3021     	 movs r1,#48
+ 2217 0030 A047     	 blx r4
+ 2218              	.LVL175:
+ 701:fips202.c     **** #ifdef PROFILE_HASHING
+ 702:fips202.c     ****   uint64_t t1 = hal_get_time();
+ 703:fips202.c     ****   hash_cycles += (t1-t0);
+ 704:fips202.c     **** #endif
+ 705:fips202.c     **** }
+ 2219              	 .loc 1 705 1 view .LVU417
+ 2220 0032 34B0     	 add sp,sp,#208
+ 2221              	.LCFI49:
+ 2222              	 .cfi_def_cfa_offset 16
+ 2223              	 
+ 2224 0034 70BD     	 pop {r4,r5,r6,pc}
+ 2225              	.LVL176:
+ 2226              	.L140:
+ 2227              	 .loc 1 705 1 view .LVU418
+ 2228 0036 00BF     	 .align 2
+ 2229              	.L139:
+ 2230 0038 00000000 	 .word keccak_inc_init
+ 2231 003c 00000000 	 .word keccak_inc_absorb
+ 2232 0040 00000000 	 .word keccak_inc_finalize
+ 2233 0044 00000000 	 .word keccak_inc_squeeze
+ 2234              	 .cfi_endproc
+ 2235              	.LFE42:
+ 2237              	 .section .text.sha3_512,"ax",%progbits
+ 2238              	 .align 1
+ 2239              	 .global sha3_512
+ 2240              	 .syntax unified
+ 2241              	 .thumb
+ 2242              	 .thumb_func
+ 2244              	sha3_512:
+ 2245              	.LVL177:
+ 2246              	.LFB43:
+ 706:fips202.c     **** /*************************************************
+ 707:fips202.c     ****  * Name:        sha3_512
+ 708:fips202.c     ****  *
+ 709:fips202.c     ****  * Description: SHA3-512 with non-incremental API
+ 710:fips202.c     ****  *
+ 711:fips202.c     ****  * Arguments:   - uint8_t *output:      pointer to output
+ 712:fips202.c     ****  *              - const uint8_t *input: pointer to input
+ 713:fips202.c     ****  *              - size_t inlen:         length of input in bytes
+ 714:fips202.c     ****  **************************************************/
+ 715:fips202.c     **** void sha3_512(uint8_t *output, const uint8_t *input, size_t inlen)
+ 716:fips202.c     **** {
+ 2247              	 .loc 1 716 1 is_stmt 1 view-0
+ 2248              	 .cfi_startproc
+ 2249              	 
+ 2250              	 
+ 717:fips202.c     **** #ifdef PROFILE_HASHING
+ 718:fips202.c     ****   uint64_t t0 = hal_get_time();
+ 719:fips202.c     **** #endif
+ 720:fips202.c     ****   sha3_512incctx state;
+ 2251              	 .loc 1 720 3 view .LVU420
+ 721:fips202.c     ****   keccak_inc_init(state.ctx);
+ 2252              	 .loc 1 721 3 view .LVU421
+ 716:fips202.c     **** #ifdef PROFILE_HASHING
+ 2253              	 .loc 1 716 1 is_stmt 0 view .LVU422
+ 2254 0000 70B5     	 push {r4,r5,r6,lr}
+ 2255              	.LCFI50:
+ 2256              	 .cfi_def_cfa_offset 16
+ 2257              	 .cfi_offset 4,-16
+ 2258              	 .cfi_offset 5,-12
+ 2259              	 .cfi_offset 6,-8
+ 2260              	 .cfi_offset 14,-4
+ 2261 0002 B4B0     	 sub sp,sp,#208
+ 2262              	.LCFI51:
+ 2263              	 .cfi_def_cfa_offset 224
+ 716:fips202.c     **** #ifdef PROFILE_HASHING
+ 2264              	 .loc 1 716 1 view .LVU423
+ 2265 0004 0D46     	 mov r5,r1
+ 2266 0006 1646     	 mov r6,r2
+ 2267 0008 0446     	 mov r4,r0
+ 2268              	 .loc 1 721 3 view .LVU424
+ 2269 000a 0B4B     	 ldr r3,.L142
+ 2270 000c 6846     	 mov r0,sp
+ 2271              	.LVL178:
+ 2272              	 .loc 1 721 3 view .LVU425
+ 2273 000e 9847     	 blx r3
+ 2274              	.LVL179:
+ 722:fips202.c     **** 
+ 723:fips202.c     ****   /* Absorb input */
+ 724:fips202.c     ****   keccak_inc_absorb(state.ctx, SHA3_512_RATE, input, inlen);
+ 2275              	 .loc 1 724 3 is_stmt 1 view .LVU426
+ 2276 0010 3346     	 mov r3,r6
+ 2277 0012 2A46     	 mov r2,r5
+ 2278 0014 6846     	 mov r0,sp
+ 2279 0016 094D     	 ldr r5,.L142+4
+ 2280              	.LVL180:
+ 2281              	 .loc 1 724 3 is_stmt 0 view .LVU427
+ 2282 0018 4821     	 movs r1,#72
+ 2283 001a A847     	 blx r5
+ 2284              	.LVL181:
+ 725:fips202.c     ****   keccak_inc_finalize(state.ctx, SHA3_512_RATE, 0x06);
+ 2285              	 .loc 1 725 3 is_stmt 1 view .LVU428
+ 2286 001c 6846     	 mov r0,sp
+ 2287 001e 084B     	 ldr r3,.L142+8
+ 2288 0020 0622     	 movs r2,#6
+ 2289 0022 4821     	 movs r1,#72
+ 2290 0024 9847     	 blx r3
+ 2291              	.LVL182:
+ 726:fips202.c     **** 
+ 727:fips202.c     ****   /* Squeeze output */
+ 728:fips202.c     ****   keccak_inc_squeeze(output, 64, state.ctx, SHA3_512_RATE);
+ 2292              	 .loc 1 728 3 view .LVU429
+ 2293 0026 2046     	 mov r0,r4
+ 2294 0028 4823     	 movs r3,#72
+ 2295 002a 064C     	 ldr r4,.L142+12
+ 2296              	.LVL183:
+ 2297              	 .loc 1 728 3 is_stmt 0 view .LVU430
+ 2298 002c 6A46     	 mov r2,sp
+ 2299 002e 4021     	 movs r1,#64
+ 2300 0030 A047     	 blx r4
+ 2301              	.LVL184:
+ 729:fips202.c     **** #ifdef PROFILE_HASHING
+ 730:fips202.c     ****   uint64_t t1 = hal_get_time();
+ 731:fips202.c     ****   hash_cycles += (t1-t0);
+ 732:fips202.c     **** #endif
+ 733:fips202.c     **** }
+ 2302              	 .loc 1 733 1 view .LVU431
+ 2303 0032 34B0     	 add sp,sp,#208
+ 2304              	.LCFI52:
+ 2305              	 .cfi_def_cfa_offset 16
+ 2306              	 
+ 2307 0034 70BD     	 pop {r4,r5,r6,pc}
+ 2308              	.LVL185:
+ 2309              	.L143:
+ 2310              	 .loc 1 733 1 view .LVU432
+ 2311 0036 00BF     	 .align 2
+ 2312              	.L142:
+ 2313 0038 00000000 	 .word keccak_inc_init
+ 2314 003c 00000000 	 .word keccak_inc_absorb
+ 2315 0040 00000000 	 .word keccak_inc_finalize
+ 2316 0044 00000000 	 .word keccak_inc_squeeze
+ 2317              	 .cfi_endproc
+ 2318              	.LFE43:
+ 2320              	 .section .text.sha3_512_inc_init,"ax",%progbits
+ 2321              	 .align 1
+ 2322              	 .global sha3_512_inc_init
+ 2323              	 .syntax unified
+ 2324              	 .thumb
+ 2325              	 .thumb_func
+ 2327              	sha3_512_inc_init:
+ 2328              	.LFB75:
+ 2329              	 .cfi_startproc
+ 734:fips202.c     **** void sha3_512_inc_init(sha3_512incctx *state) {
+ 2330              	 .loc 1 734 6 is_stmt 1 view-0
+ 2331              	 
+ 2332              	 
+ 2333              	 
+ 2334 0000 004B     	 ldr r3,.L145
+ 2335 0002 1847     	 bx r3
+ 2336              	.L146:
+ 2337              	 .align 2
+ 2338              	.L145:
+ 2339 0004 00000000 	 .word keccak_inc_init
+ 2340              	 .cfi_endproc
+ 2341              	.LFE75:
+ 2343              	 .section .text.sha3_512_inc_absorb,"ax",%progbits
+ 2344              	 .align 1
+ 2345              	 .global sha3_512_inc_absorb
+ 2346              	 .syntax unified
+ 2347              	 .thumb
+ 2348              	 .thumb_func
+ 2350              	sha3_512_inc_absorb:
+ 2351              	.LVL186:
+ 2352              	.LFB45:
+ 735:fips202.c     **** #ifdef PROFILE_HASHING
+ 736:fips202.c     ****   uint64_t t0 = hal_get_time();
+ 737:fips202.c     **** #endif
+ 738:fips202.c     ****     keccak_inc_init(state->ctx);
+ 739:fips202.c     **** #ifdef PROFILE_HASHING
+ 740:fips202.c     ****   uint64_t t1 = hal_get_time();
+ 741:fips202.c     ****   hash_cycles += (t1-t0);
+ 742:fips202.c     **** #endif
+ 743:fips202.c     **** }
+ 744:fips202.c     **** 
+ 745:fips202.c     **** void sha3_512_inc_absorb(sha3_512incctx *state, const uint8_t *input, size_t inlen) {
+ 2353              	 .loc 1 745 85 view-0
+ 2354              	 .cfi_startproc
+ 2355              	 
+ 2356              	 
+ 2357              	 
+ 746:fips202.c     **** #ifdef PROFILE_HASHING
+ 747:fips202.c     ****   uint64_t t0 = hal_get_time();
+ 748:fips202.c     **** #endif
+ 749:fips202.c     ****     keccak_inc_absorb(state->ctx, SHA3_512_RATE, input, inlen);
+ 2358              	 .loc 1 749 5 view .LVU435
+ 745:fips202.c     **** #ifdef PROFILE_HASHING
+ 2359              	 .loc 1 745 85 is_stmt 0 view .LVU436
+ 2360 0000 10B4     	 push {r4}
+ 2361              	.LCFI53:
+ 2362              	 .cfi_def_cfa_offset 4
+ 2363              	 .cfi_offset 4,-4
+ 2364              	 .loc 1 749 5 view .LVU437
+ 2365 0002 034C     	 ldr r4,.L148
+ 745:fips202.c     **** #ifdef PROFILE_HASHING
+ 2366              	 .loc 1 745 85 view .LVU438
+ 2367 0004 1346     	 mov r3,r2
+ 2368              	 .loc 1 749 5 view .LVU439
+ 2369 0006 A446     	 mov ip,r4
+ 2370 0008 0A46     	 mov r2,r1
+ 2371              	.LVL187:
+ 750:fips202.c     **** #ifdef PROFILE_HASHING
+ 751:fips202.c     ****   uint64_t t1 = hal_get_time();
+ 752:fips202.c     ****   hash_cycles += (t1-t0);
+ 753:fips202.c     **** #endif
+ 754:fips202.c     **** }
+ 2372              	 .loc 1 754 1 view .LVU440
+ 2373 000a 10BC     	 pop {r4}
+ 2374              	.LCFI54:
+ 2375              	 .cfi_restore 4
+ 2376              	 .cfi_def_cfa_offset 0
+ 749:fips202.c     **** #ifdef PROFILE_HASHING
+ 2377              	 .loc 1 749 5 view .LVU441
+ 2378 000c 4821     	 movs r1,#72
+ 2379              	.LVL188:
+ 749:fips202.c     **** #ifdef PROFILE_HASHING
+ 2380              	 .loc 1 749 5 view .LVU442
+ 2381 000e 6047     	 bx ip
+ 2382              	.LVL189:
+ 2383              	.L149:
+ 749:fips202.c     **** #ifdef PROFILE_HASHING
+ 2384              	 .loc 1 749 5 view .LVU443
+ 2385              	 .align 2
+ 2386              	.L148:
+ 2387 0010 00000000 	 .word keccak_inc_absorb
+ 2388              	 .cfi_endproc
+ 2389              	.LFE45:
+ 2391              	 .section .text.sha3_512_inc_finalize,"ax",%progbits
+ 2392              	 .align 1
+ 2393              	 .global sha3_512_inc_finalize
+ 2394              	 .syntax unified
+ 2395              	 .thumb
+ 2396              	 .thumb_func
+ 2398              	sha3_512_inc_finalize:
+ 2399              	.LVL190:
+ 2400              	.LFB46:
+ 755:fips202.c     **** 
+ 756:fips202.c     **** void sha3_512_inc_finalize(uint8_t *output, sha3_512incctx *state) {
+ 2401              	 .loc 1 756 68 is_stmt 1 view-0
+ 2402              	 .cfi_startproc
+ 2403              	 
+ 2404              	 
+ 757:fips202.c     **** #ifdef PROFILE_HASHING
+ 758:fips202.c     ****   uint64_t t0 = hal_get_time();
+ 759:fips202.c     **** #endif
+ 760:fips202.c     ****     uint8_t t[SHA3_512_RATE];
+ 2405              	 .loc 1 760 5 view .LVU445
+ 761:fips202.c     ****     keccak_inc_finalize(state->ctx, SHA3_512_RATE, 0x06);
+ 2406              	 .loc 1 761 5 view .LVU446
+ 756:fips202.c     **** #ifdef PROFILE_HASHING
+ 2407              	 .loc 1 756 68 is_stmt 0 view .LVU447
+ 2408 0000 30B5     	 push {r4,r5,lr}
+ 2409              	.LCFI55:
+ 2410              	 .cfi_def_cfa_offset 12
+ 2411              	 .cfi_offset 4,-12
+ 2412              	 .cfi_offset 5,-8
+ 2413              	 .cfi_offset 14,-4
+ 2414 0002 0D46     	 mov r5,r1
+ 2415 0004 93B0     	 sub sp,sp,#76
+ 2416              	.LCFI56:
+ 2417              	 .cfi_def_cfa_offset 88
+ 2418              	 .loc 1 761 5 view .LVU448
+ 2419 0006 0D4B     	 ldr r3,.L153
+ 756:fips202.c     **** #ifdef PROFILE_HASHING
+ 2420              	 .loc 1 756 68 view .LVU449
+ 2421 0008 0446     	 mov r4,r0
+ 2422              	 .loc 1 761 5 view .LVU450
+ 2423 000a 0622     	 movs r2,#6
+ 2424 000c 2846     	 mov r0,r5
+ 2425              	.LVL191:
+ 2426              	 .loc 1 761 5 view .LVU451
+ 2427 000e 4821     	 movs r1,#72
+ 2428              	.LVL192:
+ 2429              	 .loc 1 761 5 view .LVU452
+ 2430 0010 9847     	 blx r3
+ 2431              	.LVL193:
+ 762:fips202.c     **** 
+ 763:fips202.c     ****     keccak_squeezeblocks(t, 1, state->ctx, SHA3_512_RATE);
+ 2432              	 .loc 1 763 5 is_stmt 1 view .LVU453
+ 2433 0012 2A46     	 mov r2,r5
+ 2434 0014 4823     	 movs r3,#72
+ 2435 0016 0A4D     	 ldr r5,.L153+4
+ 2436              	.LVL194:
+ 2437              	 .loc 1 763 5 is_stmt 0 view .LVU454
+ 2438 0018 0121     	 movs r1,#1
+ 2439 001a 6846     	 mov r0,sp
+ 2440 001c A847     	 blx r5
+ 2441              	.LVL195:
+ 764:fips202.c     **** 
+ 765:fips202.c     ****     for (size_t i = 0; i < 64; i++) {
+ 2442              	 .loc 1 765 5 is_stmt 1 view .LVU455
+ 2443              	.LBB4:
+ 2444              	 .loc 1 765 10 view .LVU456
+ 2445              	 .loc 1 765 26 discriminator 1 view .LVU457
+ 766:fips202.c     ****         output[i] = t[i];
+ 2446              	 .loc 1 766 19 is_stmt 0 view .LVU458
+ 2447 001e 6A46     	 mov r2,sp
+ 2448 0020 2346     	 mov r3,r4
+ 2449 0022 10AD     	 add r5,sp,#64
+ 2450              	.LVL196:
+ 2451              	.L151:
+ 2452              	 .loc 1 766 19 view .LVU459
+ 2453 0024 1446     	 mov r4,r2
+ 2454 0026 03CC     	 ldmia r4!,{r0,r1}
+ 2455 0028 AC42     	 cmp r4,r5
+ 2456 002a 1860     	 str r0,[r3]
+ 2457 002c 5960     	 str r1,[r3,#4]
+ 2458 002e 2246     	 mov r2,r4
+ 2459 0030 03F10803 	 add r3,r3,#8
+ 2460 0034 F6D1     	 bne .L151
+ 2461              	.LBE4:
+ 767:fips202.c     ****     }
+ 768:fips202.c     **** #ifdef PROFILE_HASHING
+ 769:fips202.c     ****   uint64_t t1 = hal_get_time();
+ 770:fips202.c     ****   hash_cycles += (t1-t0);
+ 771:fips202.c     **** #endif
+ 772:fips202.c     **** }
+ 2462              	 .loc 1 772 1 view .LVU460
+ 2463 0036 13B0     	 add sp,sp,#76
+ 2464              	.LCFI57:
+ 2465              	 .cfi_def_cfa_offset 12
+ 2466              	 
+ 2467 0038 30BD     	 pop {r4,r5,pc}
+ 2468              	.L154:
+ 2469 003a 00BF     	 .align 2
+ 2470              	.L153:
+ 2471 003c 00000000 	 .word keccak_inc_finalize
+ 2472 0040 00000000 	 .word keccak_squeezeblocks
+ 2473              	 .cfi_endproc
+ 2474              	.LFE46:
+ 2476              	 .section .text.sha3_512_inc_ctx_clone,"ax",%progbits
+ 2477              	 .align 1
+ 2478              	 .global sha3_512_inc_ctx_clone
+ 2479              	 .syntax unified
+ 2480              	 .thumb
+ 2481              	 .thumb_func
+ 2483              	sha3_512_inc_ctx_clone:
+ 2484              	.LFB83:
+ 2485              	 .cfi_startproc
+ 773:fips202.c     **** 
+ 774:fips202.c     **** void sha3_512_inc_ctx_clone(sha3_512incctx *dest, const sha3_512incctx *src) {
+ 2486              	 .loc 1 774 6 is_stmt 1 view-0
+ 2487              	 
+ 2488              	 
+ 2489              	 
+ 2490 0000 004B     	 ldr r3,.L156
+ 2491 0002 1847     	 bx r3
+ 2492              	.L157:
+ 2493              	 .align 2
+ 2494              	.L156:
+ 2495 0004 00000000 	 .word shake128_inc_ctx_clone
+ 2496              	 .cfi_endproc
+ 2497              	.LFE83:
+ 2499              	 .section .text.sha3_512_inc_ctx_release,"ax",%progbits
+ 2500              	 .align 1
+ 2501              	 .global sha3_512_inc_ctx_release
+ 2502              	 .syntax unified
+ 2503              	 .thumb
+ 2504              	 .thumb_func
+ 2506              	sha3_512_inc_ctx_release:
+ 2507              	.LFB65:
+ 2508              	 .cfi_startproc
+ 775:fips202.c     ****     memcpy(dest, src, sizeof(sha3_512incctx));
+ 776:fips202.c     **** }
+ 777:fips202.c     **** 
+ 778:fips202.c     **** void sha3_512_inc_ctx_release(sha3_512incctx *state) {
+ 2509              	 .loc 1 778 6 view-0
+ 2510              	 
+ 2511              	 
+ 2512              	 
+ 2513 0000 7047     	 bx lr
+ 2514              	 .cfi_endproc
+ 2515              	.LFE65:
+ 2517              	 .section .text.cshake256_simple_absorb,"ax",%progbits
+ 2518              	 .align 1
+ 2519              	 .global cshake256_simple_absorb
+ 2520              	 .syntax unified
+ 2521              	 .thumb
+ 2522              	 .thumb_func
+ 2524              	cshake256_simple_absorb:
+ 2525              	.LVL197:
+ 2526              	.LFB49:
+ 779:fips202.c     ****     (void) state;
+ 780:fips202.c     **** }
+ 781:fips202.c     **** 
+ 782:fips202.c     **** /********** cSHAKE256 ***********/
+ 783:fips202.c     **** 
+ 784:fips202.c     **** void cshake256_simple_absorb(shake256ctx *state, uint16_t cstm, const uint8_t *in, size_t inlen)
+ 785:fips202.c     **** {
+ 2527              	 .loc 1 785 1 view-0
+ 2528              	 .cfi_startproc
+ 2529              	 
+ 2530              	 
+ 786:fips202.c     **** #ifdef PROFILE_HASHING
+ 787:fips202.c     ****   uint64_t t0 = hal_get_time();
+ 788:fips202.c     **** #endif
+ 789:fips202.c     ****   uint8_t sep[8];
+ 2531              	 .loc 1 789 3 view .LVU464
+ 790:fips202.c     ****   size_t i;
+ 2532              	 .loc 1 790 3 view .LVU465
+ 791:fips202.c     **** 
+ 792:fips202.c     ****   for (i = 0; i < 25; i++)
+ 2533              	 .loc 1 792 3 view .LVU466
+ 2534              	 .loc 1 792 17 discriminator 1 view .LVU467
+ 785:fips202.c     **** #ifdef PROFILE_HASHING
+ 2535              	 .loc 1 785 1 is_stmt 0 view .LVU468
+ 2536 0000 F0B5     	 push {r4,r5,r6,r7,lr}
+ 2537              	.LCFI58:
+ 2538              	 .cfi_def_cfa_offset 20
+ 2539              	 .cfi_offset 4,-20
+ 2540              	 .cfi_offset 5,-16
+ 2541              	 .cfi_offset 6,-12
+ 2542              	 .cfi_offset 7,-8
+ 2543              	 .cfi_offset 14,-4
+ 2544 0002 0F46     	 mov r7,r1
+ 2545 0004 85B0     	 sub sp,sp,#20
+ 2546              	.LCFI59:
+ 2547              	 .cfi_def_cfa_offset 40
+ 785:fips202.c     **** #ifdef PROFILE_HASHING
+ 2548              	 .loc 1 785 1 view .LVU469
+ 2549 0006 1546     	 mov r5,r2
+ 2550 0008 1E46     	 mov r6,r3
+ 793:fips202.c     ****     state->ctx[i] = 0;
+ 2551              	 .loc 1 793 19 view .LVU470
+ 2552 000a C822     	 movs r2,#200
+ 2553              	.LVL198:
+ 2554              	 .loc 1 793 19 view .LVU471
+ 2555 000c 0F4B     	 ldr r3,.L160
+ 2556              	.LVL199:
+ 2557              	 .loc 1 793 19 view .LVU472
+ 2558 000e 0021     	 movs r1,#0
+ 2559              	.LVL200:
+ 785:fips202.c     **** #ifdef PROFILE_HASHING
+ 2560              	 .loc 1 785 1 view .LVU473
+ 2561 0010 0446     	 mov r4,r0
+ 2562              	 .loc 1 793 19 view .LVU474
+ 2563 0012 9847     	 blx r3
+ 2564              	.LVL201:
+ 794:fips202.c     **** 
+ 795:fips202.c     ****   /* Absorb customization (domain-separation) string */
+ 796:fips202.c     ****   sep[0] = 0x01;
+ 2565              	 .loc 1 796 3 is_stmt 1 view .LVU475
+ 797:fips202.c     ****   sep[1] = 0x88;
+ 2566              	 .loc 1 797 3 view .LVU476
+ 798:fips202.c     ****   sep[2] = 0x01;
+ 2567              	 .loc 1 798 3 view .LVU477
+ 799:fips202.c     ****   sep[3] = 0x00;
+ 2568              	 .loc 1 799 3 view .LVU478
+ 800:fips202.c     ****   sep[4] = 0x01;
+ 2569              	 .loc 1 800 3 view .LVU479
+ 801:fips202.c     ****   sep[5] = 16; // fixed bitlen of cstm
+ 2570              	 .loc 1 801 3 view .LVU480
+ 796:fips202.c     ****   sep[1] = 0x88;
+ 2571              	 .loc 1 796 10 is_stmt 0 view .LVU481
+ 2572 0014 0E4B     	 ldr r3,.L160+4
+ 2573 0016 0293     	 str r3,[sp,#8]
+ 800:fips202.c     ****   sep[4] = 0x01;
+ 2574              	 .loc 1 800 10 view .LVU482
+ 2575 0018 41F20103 	 movw r3,#4097
+ 2576 001c ADF80C30 	 strh r3,[sp,#12]
+ 802:fips202.c     ****   sep[6] = cstm & 0xff;
+ 2577              	 .loc 1 802 3 is_stmt 1 view .LVU483
+ 803:fips202.c     ****   sep[7] = cstm >> 8;
+ 2578              	 .loc 1 803 3 view .LVU484
+ 804:fips202.c     **** 
+ 805:fips202.c     ****   KeccakF1600_StateXORBytes(state->ctx, sep, 0, 8);
+ 2579              	 .loc 1 805 3 is_stmt 0 view .LVU485
+ 2580 0020 0823     	 movs r3,#8
+ 2581 0022 0DEB0301 	 add r1,sp,r3
+ 802:fips202.c     ****   sep[7] = cstm >> 8;
+ 2582              	 .loc 1 802 10 view .LVU486
+ 2583 0026 ADF80E70 	 strh r7,[sp,#14]
+ 2584              	 .loc 1 805 3 is_stmt 1 view .LVU487
+ 2585 002a 0022     	 movs r2,#0
+ 2586 002c 2046     	 mov r0,r4
+ 2587 002e 094F     	 ldr r7,.L160+8
+ 2588              	.LVL202:
+ 2589              	 .loc 1 805 3 is_stmt 0 view .LVU488
+ 2590 0030 B847     	 blx r7
+ 2591              	.LVL203:
+ 806:fips202.c     ****   KeccakF1600_StatePermute(state->ctx);
+ 2592              	 .loc 1 806 3 is_stmt 1 view .LVU489
+ 2593 0032 2046     	 mov r0,r4
+ 2594 0034 084B     	 ldr r3,.L160+12
+ 2595 0036 9847     	 blx r3
+ 2596              	.LVL204:
+ 807:fips202.c     **** 
+ 808:fips202.c     ****   /* Absorb input */
+ 809:fips202.c     ****   keccak_absorb(state->ctx, SHAKE256_RATE, in, inlen, 0x04);
+ 2597              	 .loc 1 809 3 view .LVU490
+ 2598 0038 0423     	 movs r3,#4
+ 2599 003a 0093     	 str r3,[sp]
+ 2600 003c 2046     	 mov r0,r4
+ 2601 003e 3346     	 mov r3,r6
+ 2602 0040 064C     	 ldr r4,.L160+16
+ 2603              	.LVL205:
+ 2604              	 .loc 1 809 3 is_stmt 0 view .LVU491
+ 2605 0042 2A46     	 mov r2,r5
+ 2606 0044 8821     	 movs r1,#136
+ 2607 0046 A047     	 blx r4
+ 2608              	.LVL206:
+ 810:fips202.c     **** #ifdef PROFILE_HASHING
+ 811:fips202.c     ****   uint64_t t1 = hal_get_time();
+ 812:fips202.c     ****   hash_cycles += (t1-t0);
+ 813:fips202.c     **** #endif
+ 814:fips202.c     **** }
+ 2609              	 .loc 1 814 1 view .LVU492
+ 2610 0048 05B0     	 add sp,sp,#20
+ 2611              	.LCFI60:
+ 2612              	 .cfi_def_cfa_offset 20
+ 2613              	 
+ 2614 004a F0BD     	 pop {r4,r5,r6,r7,pc}
+ 2615              	.LVL207:
+ 2616              	.L161:
+ 2617              	 .loc 1 814 1 view .LVU493
+ 2618              	 .align 2
+ 2619              	.L160:
+ 2620 004c 00000000 	 .word memset
+ 2621 0050 01880100 	 .word 100353
+ 2622 0054 00000000 	 .word KeccakF1600_StateXORBytes
+ 2623 0058 00000000 	 .word KeccakF1600_StatePermute
+ 2624 005c 00000000 	 .word keccak_absorb
+ 2625              	 .cfi_endproc
+ 2626              	.LFE49:
+ 2628              	 .section .text.cshake256_simple_squeezeblocks,"ax",%progbits
+ 2629              	 .align 1
+ 2630              	 .global cshake256_simple_squeezeblocks
+ 2631              	 .syntax unified
+ 2632              	 .thumb
+ 2633              	 .thumb_func
+ 2635              	cshake256_simple_squeezeblocks:
+ 2636              	.LFB85:
+ 2637              	 .cfi_startproc
+ 815:fips202.c     **** 
+ 816:fips202.c     **** 
+ 817:fips202.c     **** void cshake256_simple_squeezeblocks(uint8_t *output, size_t nblocks, shake256ctx *state)
+ 2638              	 .loc 1 817 6 is_stmt 1 view-0
+ 2639              	 
+ 2640              	 
+ 2641              	 
+ 2642 0000 004B     	 ldr r3,.L163
+ 2643 0002 1847     	 bx r3
+ 2644              	.L164:
+ 2645              	 .align 2
+ 2646              	.L163:
+ 2647 0004 00000000 	 .word shake256_squeezeblocks
+ 2648              	 .cfi_endproc
+ 2649              	.LFE85:
+ 2651              	 .section .text.cshake256_simple,"ax",%progbits
+ 2652              	 .align 1
+ 2653              	 .global cshake256_simple
+ 2654              	 .syntax unified
+ 2655              	 .thumb
+ 2656              	 .thumb_func
+ 2658              	cshake256_simple:
+ 2659              	.LVL208:
+ 2660              	.LFB51:
+ 818:fips202.c     **** {
+ 819:fips202.c     **** #ifdef PROFILE_HASHING
+ 820:fips202.c     ****   uint64_t t0 = hal_get_time();
+ 821:fips202.c     **** #endif
+ 822:fips202.c     ****   keccak_squeezeblocks(output, nblocks, state->ctx, SHAKE256_RATE);
+ 823:fips202.c     **** #ifdef PROFILE_HASHING
+ 824:fips202.c     ****   uint64_t t1 = hal_get_time();
+ 825:fips202.c     ****   hash_cycles += (t1-t0);
+ 826:fips202.c     **** #endif
+ 827:fips202.c     **** }
+ 828:fips202.c     **** 
+ 829:fips202.c     **** 
+ 830:fips202.c     **** void cshake256_simple(uint8_t *output, size_t outlen, uint16_t cstm, const uint8_t *in, size_t inle
+ 831:fips202.c     **** {
+ 2661              	 .loc 1 831 1 view-0
+ 2662              	 .cfi_startproc
+ 2663              	 
+ 2664              	 
+ 832:fips202.c     ****   shake256incctx state;
+ 2665              	 .loc 1 832 3 view .LVU496
+ 833:fips202.c     ****   uint8_t sep[8];
+ 2666              	 .loc 1 833 3 view .LVU497
+ 834:fips202.c     ****   #ifdef PROFILE_HASHING
+ 835:fips202.c     ****     uint64_t t0 = hal_get_time();
+ 836:fips202.c     ****   #endif
+ 837:fips202.c     **** 
+ 838:fips202.c     **** 
+ 839:fips202.c     ****   keccak_inc_init(state.ctx);
+ 2667              	 .loc 1 839 3 view .LVU498
+ 831:fips202.c     ****   shake256incctx state;
+ 2668              	 .loc 1 831 1 is_stmt 0 view .LVU499
+ 2669 0000 F0B5     	 push {r4,r5,r6,r7,lr}
+ 2670              	.LCFI61:
+ 2671              	 .cfi_def_cfa_offset 20
+ 2672              	 .cfi_offset 4,-20
+ 2673              	 .cfi_offset 5,-16
+ 2674              	 .cfi_offset 6,-12
+ 2675              	 .cfi_offset 7,-8
+ 2676              	 .cfi_offset 14,-4
+ 2677 0002 B7B0     	 sub sp,sp,#220
+ 2678              	.LCFI62:
+ 2679              	 .cfi_def_cfa_offset 240
+ 831:fips202.c     ****   shake256incctx state;
+ 2680              	 .loc 1 831 1 view .LVU500
+ 2681 0004 0446     	 mov r4,r0
+ 2682 0006 1E46     	 mov r6,r3
+ 2683              	 .loc 1 839 3 view .LVU501
+ 2684 0008 02A8     	 add r0,sp,#8
+ 2685              	.LVL209:
+ 2686              	 .loc 1 839 3 view .LVU502
+ 2687 000a 144B     	 ldr r3,.L166
+ 2688              	.LVL210:
+ 831:fips202.c     ****   shake256incctx state;
+ 2689              	 .loc 1 831 1 view .LVU503
+ 2690 000c 0D46     	 mov r5,r1
+ 2691 000e 1746     	 mov r7,r2
+ 2692              	 .loc 1 839 3 view .LVU504
+ 2693 0010 9847     	 blx r3
+ 2694              	.LVL211:
+ 840:fips202.c     **** 
+ 841:fips202.c     ****   /* Absorb customization (domain-separation) string */
+ 842:fips202.c     ****   sep[0] = 0x01;
+ 2695              	 .loc 1 842 3 is_stmt 1 view .LVU505
+ 843:fips202.c     ****   sep[1] = 0x88;
+ 2696              	 .loc 1 843 3 view .LVU506
+ 844:fips202.c     ****   sep[2] = 0x01;
+ 2697              	 .loc 1 844 3 view .LVU507
+ 845:fips202.c     ****   sep[3] = 0x00;
+ 2698              	 .loc 1 845 3 view .LVU508
+ 846:fips202.c     ****   sep[4] = 0x01;
+ 2699              	 .loc 1 846 3 view .LVU509
+ 847:fips202.c     ****   sep[5] = 16; // fixed bitlen of cstm
+ 2700              	 .loc 1 847 3 view .LVU510
+ 842:fips202.c     ****   sep[1] = 0x88;
+ 2701              	 .loc 1 842 10 is_stmt 0 view .LVU511
+ 2702 0012 134B     	 ldr r3,.L166+4
+ 2703 0014 0093     	 str r3,[sp]
+ 846:fips202.c     ****   sep[4] = 0x01;
+ 2704              	 .loc 1 846 10 view .LVU512
+ 2705 0016 41F20103 	 movw r3,#4097
+ 2706 001a ADF80430 	 strh r3,[sp,#4]
+ 848:fips202.c     ****   sep[6] = cstm & 0xff;
+ 2707              	 .loc 1 848 3 is_stmt 1 view .LVU513
+ 849:fips202.c     ****   sep[7] = cstm >> 8;
+ 2708              	 .loc 1 849 3 view .LVU514
+ 850:fips202.c     **** 
+ 851:fips202.c     ****   KeccakF1600_StateXORBytes(state.ctx, sep, 0, 8);
+ 2709              	 .loc 1 851 3 is_stmt 0 view .LVU515
+ 2710 001e 0823     	 movs r3,#8
+ 2711 0020 6946     	 mov r1,sp
+ 2712 0022 0DEB0300 	 add r0,sp,r3
+ 848:fips202.c     ****   sep[7] = cstm >> 8;
+ 2713              	 .loc 1 848 10 view .LVU516
+ 2714 0026 ADF80670 	 strh r7,[sp,#6]
+ 2715              	 .loc 1 851 3 is_stmt 1 view .LVU517
+ 2716 002a 0022     	 movs r2,#0
+ 2717 002c 0D4F     	 ldr r7,.L166+8
+ 2718              	.LVL212:
+ 2719              	 .loc 1 851 3 is_stmt 0 view .LVU518
+ 2720 002e B847     	 blx r7
+ 2721              	.LVL213:
+ 852:fips202.c     ****   KeccakF1600_StatePermute(state.ctx);
+ 2722              	 .loc 1 852 3 is_stmt 1 view .LVU519
+ 2723 0030 02A8     	 add r0,sp,#8
+ 2724 0032 0D4B     	 ldr r3,.L166+12
+ 2725 0034 9847     	 blx r3
+ 2726              	.LVL214:
+ 853:fips202.c     **** 
+ 854:fips202.c     ****   /* Absorb input */
+ 855:fips202.c     ****   keccak_inc_absorb(state.ctx, SHAKE256_RATE, in, inlen);
+ 2727              	 .loc 1 855 3 view .LVU520
+ 2728 0036 3C9B     	 ldr r3,[sp,#240]
+ 2729 0038 3246     	 mov r2,r6
+ 2730 003a 02A8     	 add r0,sp,#8
+ 2731 003c 0B4E     	 ldr r6,.L166+16
+ 2732              	.LVL215:
+ 2733              	 .loc 1 855 3 is_stmt 0 view .LVU521
+ 2734 003e 8821     	 movs r1,#136
+ 2735 0040 B047     	 blx r6
+ 2736              	.LVL216:
+ 856:fips202.c     ****   keccak_inc_finalize(state.ctx, SHAKE256_RATE, 0x04);
+ 2737              	 .loc 1 856 3 is_stmt 1 view .LVU522
+ 2738 0042 02A8     	 add r0,sp,#8
+ 2739 0044 0A4B     	 ldr r3,.L166+20
+ 2740 0046 0422     	 movs r2,#4
+ 2741 0048 8821     	 movs r1,#136
+ 2742 004a 9847     	 blx r3
+ 2743              	.LVL217:
+ 857:fips202.c     **** 
+ 858:fips202.c     ****   /* Squeeze output */
+ 859:fips202.c     ****   keccak_inc_squeeze(output, outlen, state.ctx, SHAKE256_RATE);
+ 2744              	 .loc 1 859 3 view .LVU523
+ 2745 004c 2046     	 mov r0,r4
+ 2746 004e 8823     	 movs r3,#136
+ 2747 0050 084C     	 ldr r4,.L166+24
+ 2748              	.LVL218:
+ 2749              	 .loc 1 859 3 is_stmt 0 view .LVU524
+ 2750 0052 02AA     	 add r2,sp,#8
+ 2751 0054 2946     	 mov r1,r5
+ 2752 0056 A047     	 blx r4
+ 2753              	.LVL219:
+ 860:fips202.c     **** #ifdef PROFILE_HASHING
+ 861:fips202.c     ****   uint64_t t1 = hal_get_time();
+ 862:fips202.c     ****   hash_cycles += (t1-t0);
+ 863:fips202.c     **** #endif
+ 864:fips202.c     **** }
+ 2754              	 .loc 1 864 1 view .LVU525
+ 2755 0058 37B0     	 add sp,sp,#220
+ 2756              	.LCFI63:
+ 2757              	 .cfi_def_cfa_offset 20
+ 2758              	 
+ 2759 005a F0BD     	 pop {r4,r5,r6,r7,pc}
+ 2760              	.LVL220:
+ 2761              	.L167:
+ 2762              	 .loc 1 864 1 view .LVU526
+ 2763              	 .align 2
+ 2764              	.L166:
+ 2765 005c 00000000 	 .word keccak_inc_init
+ 2766 0060 01880100 	 .word 100353
+ 2767 0064 00000000 	 .word KeccakF1600_StateXORBytes
+ 2768 0068 00000000 	 .word KeccakF1600_StatePermute
+ 2769 006c 00000000 	 .word keccak_inc_absorb
+ 2770 0070 00000000 	 .word keccak_inc_finalize
+ 2771 0074 00000000 	 .word keccak_inc_squeeze
+ 2772              	 .cfi_endproc
+ 2773              	.LFE51:
+ 2775              	 .text
+ 2776              	.Letext0:
+ 2777              	 .file 2 "/usr/lib/gcc/arm-none-eabi/14.2.1/include/stddef.h"
+ 2778              	 .file 3 "/usr/lib/gcc/arm-none-eabi/14.2.1/include/stdint.h"
+ 2779              	 .file 4 "fips202.h"
+ 2780              	 .file 5 "keccakf1600.h"
+ 2781              	 .file 6 "<built-in>"
+ 2782              	 .file 7 "/usr/include/newlib/string.h"
+DEFINED SYMBOLS
+                            *ABS*:00000000 fips202.c
+    {standard input}:19     .text.keccak_inc_init:00000000 $t
+    {standard input}:24     .text.keccak_inc_init:00000000 keccak_inc_init
+    {standard input}:61     .text.keccak_inc_init:00000018 $d
+    {standard input}:66     .text.keccak_inc_finalize:00000000 $t
+    {standard input}:71     .text.keccak_inc_finalize:00000000 keccak_inc_finalize
+    {standard input}:155    .text.keccak_inc_finalize:00000054 $d
+    {standard input}:160    .text.keccak_inc_absorb:00000000 $t
+    {standard input}:165    .text.keccak_inc_absorb:00000000 keccak_inc_absorb
+    {standard input}:258    .text.keccak_inc_absorb:00000068 $d
+    {standard input}:264    .text.keccak_absorb:00000000 $t
+    {standard input}:269    .text.keccak_absorb:00000000 keccak_absorb
+    {standard input}:378    .text.keccak_absorb:00000070 $d
+    {standard input}:384    .text.keccak_inc_squeeze:00000000 $t
+    {standard input}:389    .text.keccak_inc_squeeze:00000000 keccak_inc_squeeze
+    {standard input}:508    .text.keccak_inc_squeeze:00000070 $d
+    {standard input}:514    .text.keccak_squeezeblocks:00000000 $t
+    {standard input}:519    .text.keccak_squeezeblocks:00000000 keccak_squeezeblocks
+    {standard input}:580    .text.keccak_squeezeblocks:00000030 $d
+    {standard input}:586    .text.shake128_inc_init:00000000 $t
+    {standard input}:592    .text.shake128_inc_init:00000000 shake128_inc_init
+    {standard input}:608    .text.shake128_inc_init:00000004 $d
+    {standard input}:613    .text.shake128_inc_absorb:00000000 $t
+    {standard input}:619    .text.shake128_inc_absorb:00000000 shake128_inc_absorb
+    {standard input}:656    .text.shake128_inc_absorb:00000010 $d
+    {standard input}:661    .text.shake128_inc_finalize:00000000 $t
+    {standard input}:667    .text.shake128_inc_finalize:00000000 shake128_inc_finalize
+    {standard input}:685    .text.shake128_inc_finalize:00000008 $d
+    {standard input}:690    .text.shake128_inc_squeeze:00000000 $t
+    {standard input}:696    .text.shake128_inc_squeeze:00000000 shake128_inc_squeeze
+    {standard input}:726    .text.shake128_inc_squeeze:0000000c $d
+    {standard input}:731    .text.shake128_inc_ctx_clone:00000000 $t
+    {standard input}:737    .text.shake128_inc_ctx_clone:00000000 shake128_inc_ctx_clone
+    {standard input}:754    .text.shake128_inc_ctx_clone:00000008 $d
+    {standard input}:759    .text.shake128_inc_ctx_release:00000000 $t
+    {standard input}:765    .text.shake128_inc_ctx_release:00000000 shake128_inc_ctx_release
+    {standard input}:777    .text.shake256_inc_init:00000000 $t
+    {standard input}:783    .text.shake256_inc_init:00000000 shake256_inc_init
+    {standard input}:795    .text.shake256_inc_init:00000004 $d
+    {standard input}:800    .text.shake256_inc_absorb:00000000 $t
+    {standard input}:806    .text.shake256_inc_absorb:00000000 shake256_inc_absorb
+    {standard input}:843    .text.shake256_inc_absorb:00000010 $d
+    {standard input}:848    .text.shake256_inc_finalize:00000000 $t
+    {standard input}:854    .text.shake256_inc_finalize:00000000 shake256_inc_finalize
+    {standard input}:872    .text.shake256_inc_finalize:00000008 $d
+    {standard input}:877    .text.shake256_inc_squeeze:00000000 $t
+    {standard input}:883    .text.shake256_inc_squeeze:00000000 shake256_inc_squeeze
+    {standard input}:913    .text.shake256_inc_squeeze:0000000c $d
+    {standard input}:918    .text.shake256_inc_ctx_clone:00000000 $t
+    {standard input}:924    .text.shake256_inc_ctx_clone:00000000 shake256_inc_ctx_clone
+    {standard input}:936    .text.shake256_inc_ctx_clone:00000004 $d
+    {standard input}:941    .text.shake256_inc_ctx_release:00000000 $t
+    {standard input}:947    .text.shake256_inc_ctx_release:00000000 shake256_inc_ctx_release
+    {standard input}:959    .text.cshake128_simple_absorb:00000000 $t
+    {standard input}:965    .text.cshake128_simple_absorb:00000000 cshake128_simple_absorb
+    {standard input}:1061   .text.cshake128_simple_absorb:0000004c $d
+    {standard input}:1070   .text.cshake128_simple:00000000 $t
+    {standard input}:1076   .text.cshake128_simple:00000000 cshake128_simple
+    {standard input}:1183   .text.cshake128_simple:0000005c $d
+    {standard input}:1194   .text.shake128_absorb:00000000 $t
+    {standard input}:1200   .text.shake128_absorb:00000000 shake128_absorb
+    {standard input}:1257   .text.shake128_absorb:00000024 $d
+    {standard input}:1263   .text.shake128_squeezeblocks:00000000 $t
+    {standard input}:1269   .text.shake128_squeezeblocks:00000000 shake128_squeezeblocks
+    {standard input}:1299   .text.shake128_squeezeblocks:0000000c $d
+    {standard input}:1304   .text.cshake128_simple_squeezeblocks:00000000 $t
+    {standard input}:1310   .text.cshake128_simple_squeezeblocks:00000000 cshake128_simple_squeezeblocks
+    {standard input}:1322   .text.cshake128_simple_squeezeblocks:00000004 $d
+    {standard input}:1327   .text.shake128:00000000 $t
+    {standard input}:1333   .text.shake128:00000000 shake128
+    {standard input}:1407   .text.shake128:00000038 $d
+    {standard input}:1415   .text.shake128_ctx_release:00000000 $t
+    {standard input}:1421   .text.shake128_ctx_release:00000000 shake128_ctx_release
+    {standard input}:1436   .text.shake128_ctx_clone:00000000 $t
+    {standard input}:1442   .text.shake128_ctx_clone:00000000 shake128_ctx_clone
+    {standard input}:1459   .text.shake128_ctx_clone:00000008 $d
+    {standard input}:1464   .text.shake256_absorb:00000000 $t
+    {standard input}:1470   .text.shake256_absorb:00000000 shake256_absorb
+    {standard input}:1527   .text.shake256_absorb:00000024 $d
+    {standard input}:1533   .text.shake256_squeezeblocks:00000000 $t
+    {standard input}:1539   .text.shake256_squeezeblocks:00000000 shake256_squeezeblocks
+    {standard input}:1569   .text.shake256_squeezeblocks:0000000c $d
+    {standard input}:1574   .text.shake256:00000000 $t
+    {standard input}:1580   .text.shake256:00000000 shake256
+    {standard input}:1654   .text.shake256:00000038 $d
+    {standard input}:1662   .text.shake256_ctx_release:00000000 $t
+    {standard input}:1668   .text.shake256_ctx_release:00000000 shake256_ctx_release
+    {standard input}:1680   .text.shake256_ctx_clone:00000000 $t
+    {standard input}:1686   .text.shake256_ctx_clone:00000000 shake256_ctx_clone
+    {standard input}:1698   .text.shake256_ctx_clone:00000004 $d
+    {standard input}:1703   .text.sha3_256:00000000 $t
+    {standard input}:1709   .text.sha3_256:00000000 sha3_256
+    {standard input}:1778   .text.sha3_256:00000038 $d
+    {standard input}:1786   .text.sha3_256_inc_init:00000000 $t
+    {standard input}:1792   .text.sha3_256_inc_init:00000000 sha3_256_inc_init
+    {standard input}:1804   .text.sha3_256_inc_init:00000004 $d
+    {standard input}:1809   .text.sha3_256_inc_absorb:00000000 $t
+    {standard input}:1815   .text.sha3_256_inc_absorb:00000000 sha3_256_inc_absorb
+    {standard input}:1827   .text.sha3_256_inc_absorb:00000004 $d
+    {standard input}:1832   .text.sha3_256_inc_finalize:00000000 $t
+    {standard input}:1838   .text.sha3_256_inc_finalize:00000000 sha3_256_inc_finalize
+    {standard input}:1911   .text.sha3_256_inc_finalize:0000003c $d
+    {standard input}:1917   .text.sha3_256_inc_ctx_clone:00000000 $t
+    {standard input}:1923   .text.sha3_256_inc_ctx_clone:00000000 sha3_256_inc_ctx_clone
+    {standard input}:1935   .text.sha3_256_inc_ctx_clone:00000004 $d
+    {standard input}:1940   .text.sha3_256_inc_ctx_release:00000000 $t
+    {standard input}:1946   .text.sha3_256_inc_ctx_release:00000000 sha3_256_inc_ctx_release
+    {standard input}:1958   .text.sha3_384_inc_init:00000000 $t
+    {standard input}:1964   .text.sha3_384_inc_init:00000000 sha3_384_inc_init
+    {standard input}:1976   .text.sha3_384_inc_init:00000004 $d
+    {standard input}:1981   .text.sha3_384_inc_absorb:00000000 $t
+    {standard input}:1987   .text.sha3_384_inc_absorb:00000000 sha3_384_inc_absorb
+    {standard input}:2024   .text.sha3_384_inc_absorb:00000010 $d
+    {standard input}:2029   .text.sha3_384_inc_finalize:00000000 $t
+    {standard input}:2035   .text.sha3_384_inc_finalize:00000000 sha3_384_inc_finalize
+    {standard input}:2108   .text.sha3_384_inc_finalize:0000003c $d
+    {standard input}:2114   .text.sha3_384_inc_ctx_clone:00000000 $t
+    {standard input}:2120   .text.sha3_384_inc_ctx_clone:00000000 sha3_384_inc_ctx_clone
+    {standard input}:2132   .text.sha3_384_inc_ctx_clone:00000004 $d
+    {standard input}:2137   .text.sha3_384_inc_ctx_release:00000000 $t
+    {standard input}:2143   .text.sha3_384_inc_ctx_release:00000000 sha3_384_inc_ctx_release
+    {standard input}:2155   .text.sha3_384:00000000 $t
+    {standard input}:2161   .text.sha3_384:00000000 sha3_384
+    {standard input}:2230   .text.sha3_384:00000038 $d
+    {standard input}:2238   .text.sha3_512:00000000 $t
+    {standard input}:2244   .text.sha3_512:00000000 sha3_512
+    {standard input}:2313   .text.sha3_512:00000038 $d
+    {standard input}:2321   .text.sha3_512_inc_init:00000000 $t
+    {standard input}:2327   .text.sha3_512_inc_init:00000000 sha3_512_inc_init
+    {standard input}:2339   .text.sha3_512_inc_init:00000004 $d
+    {standard input}:2344   .text.sha3_512_inc_absorb:00000000 $t
+    {standard input}:2350   .text.sha3_512_inc_absorb:00000000 sha3_512_inc_absorb
+    {standard input}:2387   .text.sha3_512_inc_absorb:00000010 $d
+    {standard input}:2392   .text.sha3_512_inc_finalize:00000000 $t
+    {standard input}:2398   .text.sha3_512_inc_finalize:00000000 sha3_512_inc_finalize
+    {standard input}:2471   .text.sha3_512_inc_finalize:0000003c $d
+    {standard input}:2477   .text.sha3_512_inc_ctx_clone:00000000 $t
+    {standard input}:2483   .text.sha3_512_inc_ctx_clone:00000000 sha3_512_inc_ctx_clone
+    {standard input}:2495   .text.sha3_512_inc_ctx_clone:00000004 $d
+    {standard input}:2500   .text.sha3_512_inc_ctx_release:00000000 $t
+    {standard input}:2506   .text.sha3_512_inc_ctx_release:00000000 sha3_512_inc_ctx_release
+    {standard input}:2518   .text.cshake256_simple_absorb:00000000 $t
+    {standard input}:2524   .text.cshake256_simple_absorb:00000000 cshake256_simple_absorb
+    {standard input}:2620   .text.cshake256_simple_absorb:0000004c $d
+    {standard input}:2629   .text.cshake256_simple_squeezeblocks:00000000 $t
+    {standard input}:2635   .text.cshake256_simple_squeezeblocks:00000000 cshake256_simple_squeezeblocks
+    {standard input}:2647   .text.cshake256_simple_squeezeblocks:00000004 $d
+    {standard input}:2652   .text.cshake256_simple:00000000 $t
+    {standard input}:2658   .text.cshake256_simple:00000000 cshake256_simple
+    {standard input}:2765   .text.cshake256_simple:0000005c $d
+                           .group:00000000 wm4.0.2b10ec159abbf65f4ef33f6bb625bef4
+                           .group:00000000 wm4.stddef.h.39.38eb7ec030421799c657b13be5aa21c7
+                           .group:00000000 wm4.stdint.h.29.6d480f4ba0f60596e88234283d42444f
+                           .group:00000000 wm4._newlib_version.h.4.0eb654b64686e2bd29646258853f6c22
+                           .group:00000000 wm4.newlib.h.27.07bf1b8b16da454ae07478107717878b
+                           .group:00000000 wm4.ieeefp.h.77.b6f5ce903562917fbd9193ee87d4fa47
+                           .group:00000000 wm4.features.h.22.03467e2205ec9ffbc20524d97cdbdf6a
+                           .group:00000000 wm4.config.h.224.10ee1ad185d877c6e334e6581faab44d
+                           .group:00000000 wm4._ansi.h.31.de524f58584151836e90d8620a16f8e8
+                           .group:00000000 wm4._default_types.h.6.959254cf5f09734ea7516c89e8bb21bd
+                           .group:00000000 wm4.cdefs.h.49.bafb023044e47a1dcdd854e4d6521f7d
+                           .group:00000000 wm4._types.h.20.dd0d04dca3800a0d2a6129b87f3adbb2
+                           .group:00000000 wm4.stddef.h.158.6f8e08a347b1cff664332fa350bfceb3
+                           .group:00000000 wm4._types.h.127.3bdfe3ff8ea2d0985b03d9cbe93480e3
+                           .group:00000000 wm4.reent.h.18.25503cdc8b7e55dd0d6ea7b3e5af7a03
+                           .group:00000000 wm4.lock.h.2.c0958401bd0ce484d507ee19aacab817
+                           .group:00000000 wm4.reent.h.78.6b87466b04591b1f1cb88c14fdf2ba9e
+                           .group:00000000 wm4.string.h.15.dab3980bf35408a4c507182805e2de3a
+                           .group:00000000 wm4.stddef.h.158.eec8bf00b5213f43d095cb984c5f22e3
+                           .group:00000000 wm4.fips202.h.8.2cc74cbc0cc47480e2382b93618e92e9
+
+UNDEFINED SYMBOLS
+memset
+KeccakF1600_StateXORBytes
+KeccakF1600_StatePermute
+KeccakF1600_StateExtractBytes
+memcpy

@@ -1,0 +1,68 @@
+   1              	# 0 "fastaddsub.S"
+   2              	# 0 "<built-in>"
+   3              	# 0 "<command-line>"
+   4              	# 1 "fastaddsub.S"
+   1              	.syntax unified
+   2              	.cpu cortex-m4
+   3              	.thumb
+   4              	
+   5              	.align 2
+   6              	.global pointwise_sub
+   8              	pointwise_sub:
+   9:fastaddsub.S  ****   push {r4-r11, lr}
+  10              	
+  11:fastaddsub.S  ****   movw r14, #25
+  12              	  1:
+  13:fastaddsub.S  ****     ldm r1!, {r3-r7}
+  14:fastaddsub.S  ****     ldm r2!, {r8-r12}
+  15:fastaddsub.S  ****     usub16 r3, r3, r8
+  16:fastaddsub.S  ****     usub16 r4, r4, r9
+  17:fastaddsub.S  ****     usub16 r5, r5, r10
+  18:fastaddsub.S  ****     usub16 r6, r6, r11
+  19:fastaddsub.S  ****     usub16 r7, r7, r12
+  20:fastaddsub.S  ****     stm r0!, {r3-r7}
+  21              	
+  22:fastaddsub.S  ****     subs.w r14, #1
+  23:fastaddsub.S  ****   bne.w 1b
+  24              	
+  25:fastaddsub.S  ****   ldm r1!, {r3-r5}
+  26:fastaddsub.S  ****   ldm r2!, {r8-r10}
+  27:fastaddsub.S  ****   usub16 r3, r3, r8
+  28:fastaddsub.S  ****   usub16 r4, r4, r9
+  29:fastaddsub.S  ****   usub16 r5, r5, r10
+  30:fastaddsub.S  ****   stm r0!, {r3-r5}
+  31:fastaddsub.S  ****   pop {r4-r11, pc}
+  32              	
+  33              	
+  34              	.align 2
+  35              	.global pointwise_add
+  37              	pointwise_add:
+  38:fastaddsub.S  ****   push {r4-r11, lr}
+  39              	
+  40:fastaddsub.S  ****   movw r14, #25
+  41              	  1:
+  42:fastaddsub.S  ****     ldm r1!, {r3-r7}
+  43:fastaddsub.S  ****     ldm r2!, {r8-r12}
+  44:fastaddsub.S  ****     uadd16 r3, r3, r8
+  45:fastaddsub.S  ****     uadd16 r4, r4, r9
+  46:fastaddsub.S  ****     uadd16 r5, r5, r10
+  47:fastaddsub.S  ****     uadd16 r6, r6, r11
+  48:fastaddsub.S  ****     uadd16 r7, r7, r12
+  49:fastaddsub.S  ****     stm r0!, {r3-r7}
+  50              	
+  51:fastaddsub.S  ****     subs.w r14, #1
+  52:fastaddsub.S  ****   bne.w 1b
+  53              	
+  54:fastaddsub.S  ****   ldm r1!, {r3-r5}
+  55:fastaddsub.S  ****   ldm r2!, {r8-r10}
+  56:fastaddsub.S  ****   uadd16 r3, r3, r8
+  57:fastaddsub.S  ****   uadd16 r4, r4, r9
+  58:fastaddsub.S  ****   uadd16 r5, r5, r10
+  59:fastaddsub.S  ****   stm r0!, {r3-r5}
+  60:fastaddsub.S  ****   pop {r4-r11, pc}
+DEFINED SYMBOLS
+        fastaddsub.S:5      .text:00000000 $t
+        fastaddsub.S:8      .text:00000000 pointwise_sub
+        fastaddsub.S:37     .text:00000044 pointwise_add
+
+NO UNDEFINED SYMBOLS
