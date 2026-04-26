@@ -1,0 +1,27 @@
+{
+  "platform": "CWHUSKY",
+  "ss_ver": "SS_VER_2_1",
+  "firmware_hex": "/opt/tools/chipwhisperer/firmware/mcu/simpleserial-ml-kem-512/simpleserial-ml-kem-512-CWHUSKY.hex",
+  "firmware_c": "/opt/tools/chipwhisperer/firmware/mcu/simpleserial-ml-kem-512/simpleserial-ml-kem-512.c",
+  "n_traces": 100,
+  "n_samples": 3000,
+  "gain_db": 18,
+  "adc_offset": 0,
+  "adc_samples": 3000,
+  "ss_cmd": 1,
+  "scmd_map": {
+    "sk_base": 0,
+    "pk_base": 16,
+    "ct_base": 32,
+    "ss": 48,
+    "decap": 64
+  },
+  "chunk_sizes": {
+    "sk": 204,
+    "pk": 200,
+    "ct": 192,
+    "ss": 32
+  },
+  "vector_source": "firmware_c_arrays",
+  "notes": "cmd=0x01 with SSv2.1 subcommands; trigger isolates PQCLEAN_MLKEM512_CLEAN_cmov"
+}
