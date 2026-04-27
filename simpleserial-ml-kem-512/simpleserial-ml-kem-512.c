@@ -58,6 +58,8 @@ static uint8_t decap_decrypted_buf[KYBER_SYMBYTES];
 
 #if SS_VER == SS_VER_2_1
 #define MLKEM_SS_V21_CMD         0x01
+#define MLKEM_SS_V21_CMD_RX      0x02
+#define MLKEM_SS_V21_CMD_TX      0x03
 #define MLKEM_SS_V21_CHUNK_SK    204u
 #define MLKEM_SS_V21_CHUNK_PK    200u
 #define MLKEM_SS_V21_CHUNK_CT    192u
@@ -260,42 +262,10 @@ static void v21_sync_pk_into_sk(void)
     hash_h(sk + KYBER_SECRETKEYBYTES - 2 * KYBER_SYMBYTES, pk, KYBER_PUBLICKEYBYTES);
 }
 
-static uint8_t led_on_cmd_v21(uint8_t cmd, uint8_t scmd, uint8_t len, uint8_t *buf)
-{
-    (void)cmd;
-    (void)scmd;
-    if (len != 1) {
-        return SS_ERR_LEN;
-    }
-    return led_on_cmd(buf, len);
-}
-
-static uint8_t led_off_cmd_v21(uint8_t cmd, uint8_t scmd, uint8_t len, uint8_t *buf)
-{
-    (void)cmd;
-    (void)scmd;
-    if (len != 1) {
-        return SS_ERR_LEN;
-    }
-    return led_off_cmd(buf, len);
-}
-
-static uint8_t led_toggle_v21(uint8_t cmd, uint8_t scmd, uint8_t len, uint8_t *buf)
-{
-    (void)cmd;
-    (void)scmd;
-    if (len != 1) {
-        return SS_ERR_LEN;
-    }
-    return led_toggle(buf, len);
-}
-
-uint8_t ml_kem_512(uint8_t cmd, uint8_t scmd, uint8_t len, uint8_t *buf)
+static uint8_t v21_handle_vector_write(uint8_t scmd, uint8_t len, const uint8_t *buf)
 {
     uint8_t chunk_index;
     uint8_t err;
-
-    (void)cmd;
 
     if ((scmd >= MLKEM_SS_V21_SCMD_SK_BASE) &&
         (scmd < (MLKEM_SS_V21_SCMD_SK_BASE + MLKEM_SS_V21_SK_CHUNKS))) {
@@ -345,6 +315,91 @@ uint8_t ml_kem_512(uint8_t cmd, uint8_t scmd, uint8_t len, uint8_t *buf)
         return SS_ERR_OK;
     }
 
+    return SS_ERR_CMD;
+}
+
+static uint8_t v21_readback_bounds(uint8_t scmd, const uint8_t **src, uint8_t *out_len)
+{
+    uint8_t chunk_index;
+    size_t offset;
+
+    if ((scmd >= MLKEM_SS_V21_SCMD_SK_BASE) &&
+        (scmd < (MLKEM_SS_V21_SCMD_SK_BASE + MLKEM_SS_V21_SK_CHUNKS))) {
+        chunk_index = scmd - MLKEM_SS_V21_SCMD_SK_BASE;
+        offset = (size_t)chunk_index * MLKEM_SS_V21_CHUNK_SK;
+        *src = sk + offset;
+        *out_len = MLKEM_SS_V21_CHUNK_SK;
+        return SS_ERR_OK;
+    }
+
+    if ((scmd >= MLKEM_SS_V21_SCMD_PK_BASE) &&
+        (scmd < (MLKEM_SS_V21_SCMD_PK_BASE + MLKEM_SS_V21_PK_CHUNKS))) {
+        chunk_index = scmd - MLKEM_SS_V21_SCMD_PK_BASE;
+        offset = (size_t)chunk_index * MLKEM_SS_V21_CHUNK_PK;
+        *src = pk + offset;
+        *out_len = MLKEM_SS_V21_CHUNK_PK;
+        return SS_ERR_OK;
+    }
+
+    if ((scmd >= MLKEM_SS_V21_SCMD_CT_BASE) &&
+        (scmd < (MLKEM_SS_V21_SCMD_CT_BASE + MLKEM_SS_V21_CT_CHUNKS))) {
+        chunk_index = scmd - MLKEM_SS_V21_SCMD_CT_BASE;
+        offset = (size_t)chunk_index * MLKEM_SS_V21_CHUNK_CT;
+        *src = ct + offset;
+        *out_len = MLKEM_SS_V21_CHUNK_CT;
+        return SS_ERR_OK;
+    }
+
+    if (scmd == MLKEM_SS_V21_SCMD_SS) {
+        *src = ss;
+        *out_len = KYBER_SSBYTES;
+        return SS_ERR_OK;
+    }
+
+    return SS_ERR_CMD;
+}
+
+static uint8_t led_on_cmd_v21(uint8_t cmd, uint8_t scmd, uint8_t len, uint8_t *buf)
+{
+    (void)cmd;
+    (void)scmd;
+    if (len != 1) {
+        return SS_ERR_LEN;
+    }
+    return led_on_cmd(buf, len);
+}
+
+static uint8_t led_off_cmd_v21(uint8_t cmd, uint8_t scmd, uint8_t len, uint8_t *buf)
+{
+    (void)cmd;
+    (void)scmd;
+    if (len != 1) {
+        return SS_ERR_LEN;
+    }
+    return led_off_cmd(buf, len);
+}
+
+static uint8_t led_toggle_v21(uint8_t cmd, uint8_t scmd, uint8_t len, uint8_t *buf)
+{
+    (void)cmd;
+    (void)scmd;
+    if (len != 1) {
+        return SS_ERR_LEN;
+    }
+    return led_toggle(buf, len);
+}
+
+uint8_t ml_kem_512(uint8_t cmd, uint8_t scmd, uint8_t len, uint8_t *buf)
+{
+    uint8_t err;
+
+    (void)cmd;
+
+    err = v21_handle_vector_write(scmd, len, buf);
+    if (err != SS_ERR_CMD) {
+        return err;
+    }
+
     if (scmd == MLKEM_SS_V21_SCMD_DECAP) {
         if (len != 0) {
             return SS_ERR_LEN;
@@ -363,6 +418,34 @@ uint8_t ml_kem_512(uint8_t cmd, uint8_t scmd, uint8_t len, uint8_t *buf)
     }
 
     return SS_ERR_CMD;
+}
+
+static uint8_t ml_kem_512_rx_chunk(uint8_t cmd, uint8_t scmd, uint8_t len, uint8_t *buf)
+{
+    (void)cmd;
+    return v21_handle_vector_write(scmd, len, buf);
+}
+
+static uint8_t ml_kem_512_tx_chunk(uint8_t cmd, uint8_t scmd, uint8_t len, uint8_t *buf)
+{
+    const uint8_t *src;
+    uint8_t out_len;
+    uint8_t err;
+
+    (void)cmd;
+    (void)buf;
+
+    if (len != 0) {
+        return SS_ERR_LEN;
+    }
+
+    err = v21_readback_bounds(scmd, &src, &out_len);
+    if (err != SS_ERR_OK) {
+        return err;
+    }
+
+    simpleserial_put('k', out_len, src);
+    return SS_ERR_OK;
 }
 #endif
 
@@ -394,6 +477,8 @@ int main(void)
 
     #if SS_VER == SS_VER_2_1
     simpleserial_addcmd(MLKEM_SS_V21_CMD, MLKEM_SS_V21_CHUNK_SK, ml_kem_512);
+    simpleserial_addcmd(MLKEM_SS_V21_CMD_RX, MLKEM_SS_V21_CHUNK_SK, ml_kem_512_rx_chunk);
+    simpleserial_addcmd(MLKEM_SS_V21_CMD_TX, 0, ml_kem_512_tx_chunk);
     simpleserial_addcmd('h', 1, led_on_cmd_v21);
     simpleserial_addcmd('l', 1, led_off_cmd_v21);
     simpleserial_addcmd('t', 1, led_toggle_v21);

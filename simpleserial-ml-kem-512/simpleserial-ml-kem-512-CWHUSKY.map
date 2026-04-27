@@ -2679,7 +2679,7 @@ LOAD /usr/lib/gcc/arm-none-eabi/14.2.1/thumb/v7e-m/nofp/crtn.o
                 0x00001000                        __stack_size__ = DEFINED (__stack_size__)?__stack_size__:0x1000
                 0x2000fffc                        __ram_end__ = ((ORIGIN (ram) + LENGTH (ram)) - 0x4)
 
-.text           0x00400000     0x2ea0
+.text           0x00400000     0x2f60
                 0x00400000                        . = ALIGN (0x4)
                 0x00400000                        _sfixed = .
  *(.vectors .vectors.*)
@@ -2687,394 +2687,399 @@ LOAD /usr/lib/gcc/arm-none-eabi/14.2.1/thumb/v7e-m/nofp/crtn.o
                 0x00400000                exception_table
  *(.text .text.* .gnu.linkonce.t.*)
  .text          0x004000cc       0x88 /usr/lib/gcc/arm-none-eabi/14.2.1/thumb/v7e-m/nofp/crtbegin.o
+ .text.ml_kem_512_tx_chunk
+                0x00400154       0x68 objdir-CWHUSKY/simpleserial-ml-kem-512.o
+ .text.v21_handle_vector_write
+                0x004001bc      0x10c objdir-CWHUSKY/simpleserial-ml-kem-512.o
+ .text.ml_kem_512_rx_chunk
+                0x004002c8       0x10 objdir-CWHUSKY/simpleserial-ml-kem-512.o
  .text.led_toggle
-                0x00400154       0x78 objdir-CWHUSKY/simpleserial-ml-kem-512.o
-                0x00400154                led_toggle
+                0x004002d8       0x78 objdir-CWHUSKY/simpleserial-ml-kem-512.o
+                0x004002d8                led_toggle
  .text.led_toggle_v21
-                0x004001cc       0x1c objdir-CWHUSKY/simpleserial-ml-kem-512.o
+                0x00400350       0x1c objdir-CWHUSKY/simpleserial-ml-kem-512.o
  .text.led_on_cmd
-                0x004001e8       0x38 objdir-CWHUSKY/simpleserial-ml-kem-512.o
-                0x004001e8                led_on_cmd
+                0x0040036c       0x38 objdir-CWHUSKY/simpleserial-ml-kem-512.o
+                0x0040036c                led_on_cmd
  .text.led_on_cmd_v21
-                0x00400220       0x1c objdir-CWHUSKY/simpleserial-ml-kem-512.o
+                0x004003a4       0x1c objdir-CWHUSKY/simpleserial-ml-kem-512.o
  .text.led_off_cmd
-                0x0040023c       0x38 objdir-CWHUSKY/simpleserial-ml-kem-512.o
-                0x0040023c                led_off_cmd
+                0x004003c0       0x38 objdir-CWHUSKY/simpleserial-ml-kem-512.o
+                0x004003c0                led_off_cmd
  .text.led_off_cmd_v21
-                0x00400274       0x1c objdir-CWHUSKY/simpleserial-ml-kem-512.o
- .text.led_on   0x00400290       0x34 objdir-CWHUSKY/simpleserial-ml-kem-512.o
-                0x00400290                led_on
- .text.led_off  0x004002c4       0x34 objdir-CWHUSKY/simpleserial-ml-kem-512.o
-                0x004002c4                led_off
+                0x004003f8       0x1c objdir-CWHUSKY/simpleserial-ml-kem-512.o
+ .text.led_on   0x00400414       0x34 objdir-CWHUSKY/simpleserial-ml-kem-512.o
+                0x00400414                led_on
+ .text.led_off  0x00400448       0x34 objdir-CWHUSKY/simpleserial-ml-kem-512.o
+                0x00400448                led_off
  .text.ml_kem_512_decap
-                0x004002f8      0x108 objdir-CWHUSKY/simpleserial-ml-kem-512.o
-                0x004002f8                ml_kem_512_decap
+                0x0040047c      0x108 objdir-CWHUSKY/simpleserial-ml-kem-512.o
+                0x0040047c                ml_kem_512_decap
  .text.ml_kem_512
-                0x00400400      0x150 objdir-CWHUSKY/simpleserial-ml-kem-512.o
-                0x00400400                ml_kem_512
+                0x00400584       0x78 objdir-CWHUSKY/simpleserial-ml-kem-512.o
+                0x00400584                ml_kem_512
  .text.startup.main
-                0x00400550       0xc0 objdir-CWHUSKY/simpleserial-ml-kem-512.o
-                0x00400550                main
+                0x004005fc       0xd8 objdir-CWHUSKY/simpleserial-ml-kem-512.o
+                0x004005fc                main
  .text.PQCLEAN_MLKEM512_CLEAN_indcpa_dec
-                0x00400610       0x88 objdir-CWHUSKY/indcpa.o
-                0x00400610                PQCLEAN_MLKEM512_CLEAN_indcpa_dec
+                0x004006d4       0x88 objdir-CWHUSKY/indcpa.o
+                0x004006d4                PQCLEAN_MLKEM512_CLEAN_indcpa_dec
  .text.PQCLEAN_MLKEM512_CLEAN_ntt
-                0x00400698       0x98 objdir-CWHUSKY/ntt.o
-                0x00400698                PQCLEAN_MLKEM512_CLEAN_ntt
+                0x0040075c       0x98 objdir-CWHUSKY/ntt.o
+                0x0040075c                PQCLEAN_MLKEM512_CLEAN_ntt
  .text.PQCLEAN_MLKEM512_CLEAN_invntt
-                0x00400730       0xac objdir-CWHUSKY/ntt.o
-                0x00400730                PQCLEAN_MLKEM512_CLEAN_invntt
+                0x004007f4       0xac objdir-CWHUSKY/ntt.o
+                0x004007f4                PQCLEAN_MLKEM512_CLEAN_invntt
  .text.PQCLEAN_MLKEM512_CLEAN_basemul
-                0x004007dc       0x58 objdir-CWHUSKY/ntt.o
-                0x004007dc                PQCLEAN_MLKEM512_CLEAN_basemul
+                0x004008a0       0x58 objdir-CWHUSKY/ntt.o
+                0x004008a0                PQCLEAN_MLKEM512_CLEAN_basemul
  .text.PQCLEAN_MLKEM512_CLEAN_poly_decompress
-                0x00400834       0x36 objdir-CWHUSKY/poly.o
-                0x00400834                PQCLEAN_MLKEM512_CLEAN_poly_decompress
+                0x004008f8       0x36 objdir-CWHUSKY/poly.o
+                0x004008f8                PQCLEAN_MLKEM512_CLEAN_poly_decompress
  .text.PQCLEAN_MLKEM512_CLEAN_poly_frombytes
-                0x0040086a       0x30 objdir-CWHUSKY/poly.o
-                0x0040086a                PQCLEAN_MLKEM512_CLEAN_poly_frombytes
- *fill*         0x0040089a        0x2 
+                0x0040092e       0x30 objdir-CWHUSKY/poly.o
+                0x0040092e                PQCLEAN_MLKEM512_CLEAN_poly_frombytes
+ *fill*         0x0040095e        0x2 
  .text.PQCLEAN_MLKEM512_CLEAN_poly_tomsg
-                0x0040089c       0x48 objdir-CWHUSKY/poly.o
-                0x0040089c                PQCLEAN_MLKEM512_CLEAN_poly_tomsg
+                0x00400960       0x48 objdir-CWHUSKY/poly.o
+                0x00400960                PQCLEAN_MLKEM512_CLEAN_poly_tomsg
  .text.PQCLEAN_MLKEM512_CLEAN_poly_invntt_tomont
-                0x004008e4        0x8 objdir-CWHUSKY/poly.o
-                0x004008e4                PQCLEAN_MLKEM512_CLEAN_poly_invntt_tomont
+                0x004009a8        0x8 objdir-CWHUSKY/poly.o
+                0x004009a8                PQCLEAN_MLKEM512_CLEAN_poly_invntt_tomont
  .text.PQCLEAN_MLKEM512_CLEAN_poly_basemul_montgomery
-                0x004008ec       0x4c objdir-CWHUSKY/poly.o
-                0x004008ec                PQCLEAN_MLKEM512_CLEAN_poly_basemul_montgomery
+                0x004009b0       0x4c objdir-CWHUSKY/poly.o
+                0x004009b0                PQCLEAN_MLKEM512_CLEAN_poly_basemul_montgomery
  .text.PQCLEAN_MLKEM512_CLEAN_poly_reduce
-                0x00400938       0x1c objdir-CWHUSKY/poly.o
-                0x00400938                PQCLEAN_MLKEM512_CLEAN_poly_reduce
+                0x004009fc       0x1c objdir-CWHUSKY/poly.o
+                0x004009fc                PQCLEAN_MLKEM512_CLEAN_poly_reduce
  .text.PQCLEAN_MLKEM512_CLEAN_poly_ntt
-                0x00400954       0x1c objdir-CWHUSKY/poly.o
-                0x00400954                PQCLEAN_MLKEM512_CLEAN_poly_ntt
+                0x00400a18       0x1c objdir-CWHUSKY/poly.o
+                0x00400a18                PQCLEAN_MLKEM512_CLEAN_poly_ntt
  .text.PQCLEAN_MLKEM512_CLEAN_poly_add
-                0x00400970       0x1c objdir-CWHUSKY/poly.o
-                0x00400970                PQCLEAN_MLKEM512_CLEAN_poly_add
+                0x00400a34       0x1c objdir-CWHUSKY/poly.o
+                0x00400a34                PQCLEAN_MLKEM512_CLEAN_poly_add
  .text.PQCLEAN_MLKEM512_CLEAN_poly_sub
-                0x0040098c       0x1c objdir-CWHUSKY/poly.o
-                0x0040098c                PQCLEAN_MLKEM512_CLEAN_poly_sub
+                0x00400a50       0x1c objdir-CWHUSKY/poly.o
+                0x00400a50                PQCLEAN_MLKEM512_CLEAN_poly_sub
  .text.PQCLEAN_MLKEM512_CLEAN_polyvec_decompress
-                0x004009a8       0x82 objdir-CWHUSKY/polyvec.o
-                0x004009a8                PQCLEAN_MLKEM512_CLEAN_polyvec_decompress
- *fill*         0x00400a2a        0x2 
+                0x00400a6c       0x82 objdir-CWHUSKY/polyvec.o
+                0x00400a6c                PQCLEAN_MLKEM512_CLEAN_polyvec_decompress
+ *fill*         0x00400aee        0x2 
  .text.PQCLEAN_MLKEM512_CLEAN_polyvec_frombytes
-                0x00400a2c       0x20 objdir-CWHUSKY/polyvec.o
-                0x00400a2c                PQCLEAN_MLKEM512_CLEAN_polyvec_frombytes
+                0x00400af0       0x20 objdir-CWHUSKY/polyvec.o
+                0x00400af0                PQCLEAN_MLKEM512_CLEAN_polyvec_frombytes
  .text.PQCLEAN_MLKEM512_CLEAN_polyvec_ntt
-                0x00400a4c       0x18 objdir-CWHUSKY/polyvec.o
-                0x00400a4c                PQCLEAN_MLKEM512_CLEAN_polyvec_ntt
+                0x00400b10       0x18 objdir-CWHUSKY/polyvec.o
+                0x00400b10                PQCLEAN_MLKEM512_CLEAN_polyvec_ntt
  .text.PQCLEAN_MLKEM512_CLEAN_polyvec_basemul_acc_montgomery
-                0x00400a64       0x40 objdir-CWHUSKY/polyvec.o
-                0x00400a64                PQCLEAN_MLKEM512_CLEAN_polyvec_basemul_acc_montgomery
+                0x00400b28       0x40 objdir-CWHUSKY/polyvec.o
+                0x00400b28                PQCLEAN_MLKEM512_CLEAN_polyvec_basemul_acc_montgomery
  .text.PQCLEAN_MLKEM512_CLEAN_montgomery_reduce
-                0x00400aa4       0x1c objdir-CWHUSKY/reduce.o
-                0x00400aa4                PQCLEAN_MLKEM512_CLEAN_montgomery_reduce
+                0x00400b68       0x1c objdir-CWHUSKY/reduce.o
+                0x00400b68                PQCLEAN_MLKEM512_CLEAN_montgomery_reduce
  .text.PQCLEAN_MLKEM512_CLEAN_barrett_reduce
-                0x00400ac0       0x20 objdir-CWHUSKY/reduce.o
-                0x00400ac0                PQCLEAN_MLKEM512_CLEAN_barrett_reduce
+                0x00400b84       0x20 objdir-CWHUSKY/reduce.o
+                0x00400b84                PQCLEAN_MLKEM512_CLEAN_barrett_reduce
  .text.PQCLEAN_MLKEM512_CLEAN_kyber_shake256_rkprf
-                0x00400ae0       0x50 objdir-CWHUSKY/symmetric-shake.o
-                0x00400ae0                PQCLEAN_MLKEM512_CLEAN_kyber_shake256_rkprf
+                0x00400ba4       0x50 objdir-CWHUSKY/symmetric-shake.o
+                0x00400ba4                PQCLEAN_MLKEM512_CLEAN_kyber_shake256_rkprf
  .text.PQCLEAN_MLKEM512_CLEAN_verify
-                0x00400b30       0x20 objdir-CWHUSKY/verify.o
-                0x00400b30                PQCLEAN_MLKEM512_CLEAN_verify
+                0x00400bf4       0x20 objdir-CWHUSKY/verify.o
+                0x00400bf4                PQCLEAN_MLKEM512_CLEAN_verify
  .text.PQCLEAN_MLKEM512_CLEAN_cmov
-                0x00400b50       0x22 objdir-CWHUSKY/verify.o
-                0x00400b50                PQCLEAN_MLKEM512_CLEAN_cmov
- *fill*         0x00400b72        0x2 
+                0x00400c14       0x22 objdir-CWHUSKY/verify.o
+                0x00400c14                PQCLEAN_MLKEM512_CLEAN_cmov
+ *fill*         0x00400c36        0x2 
  .text.KeccakF1600_StatePermute
-                0x00400b74      0xdec objdir-CWHUSKY/fips202.o
+                0x00400c38      0xdec objdir-CWHUSKY/fips202.o
  .text.keccak_squeezeblocks
-                0x00401960       0x64 objdir-CWHUSKY/fips202.o
+                0x00401a24       0x64 objdir-CWHUSKY/fips202.o
  .text.keccak_inc_init
-                0x004019c4       0x1c objdir-CWHUSKY/fips202.o
+                0x00401a88       0x1c objdir-CWHUSKY/fips202.o
  .text.keccak_inc_absorb
-                0x004019e0      0x100 objdir-CWHUSKY/fips202.o
+                0x00401aa4      0x100 objdir-CWHUSKY/fips202.o
  .text.keccak_inc_finalize
-                0x00401ae0       0x54 objdir-CWHUSKY/fips202.o
+                0x00401ba4       0x54 objdir-CWHUSKY/fips202.o
  .text.keccak_inc_squeeze
-                0x00401b34       0xd4 objdir-CWHUSKY/fips202.o
+                0x00401bf8       0xd4 objdir-CWHUSKY/fips202.o
  .text.keccak_absorb
-                0x00401c08      0x11c objdir-CWHUSKY/fips202.o
+                0x00401ccc      0x11c objdir-CWHUSKY/fips202.o
  .text.shake256_inc_init
-                0x00401d24       0x28 objdir-CWHUSKY/fips202.o
-                0x00401d24                shake256_inc_init
+                0x00401de8       0x28 objdir-CWHUSKY/fips202.o
+                0x00401de8                shake256_inc_init
  .text.shake256_inc_absorb
-                0x00401d4c       0x18 objdir-CWHUSKY/fips202.o
-                0x00401d4c                shake256_inc_absorb
+                0x00401e10       0x18 objdir-CWHUSKY/fips202.o
+                0x00401e10                shake256_inc_absorb
  .text.shake256_inc_finalize
-                0x00401d64       0x10 objdir-CWHUSKY/fips202.o
-                0x00401d64                shake256_inc_finalize
+                0x00401e28       0x10 objdir-CWHUSKY/fips202.o
+                0x00401e28                shake256_inc_finalize
  .text.shake256_inc_squeeze
-                0x00401d74       0x14 objdir-CWHUSKY/fips202.o
-                0x00401d74                shake256_inc_squeeze
+                0x00401e38       0x14 objdir-CWHUSKY/fips202.o
+                0x00401e38                shake256_inc_squeeze
  .text.shake256_inc_ctx_release
-                0x00401d88        0xc objdir-CWHUSKY/fips202.o
-                0x00401d88                shake256_inc_ctx_release
+                0x00401e4c        0xc objdir-CWHUSKY/fips202.o
+                0x00401e4c                shake256_inc_ctx_release
  .text.sha3_256
-                0x00401d94       0x48 objdir-CWHUSKY/fips202.o
-                0x00401d94                sha3_256
+                0x00401e58       0x48 objdir-CWHUSKY/fips202.o
+                0x00401e58                sha3_256
  .text.sha3_512
-                0x00401ddc       0x48 objdir-CWHUSKY/fips202.o
-                0x00401ddc                sha3_512
- .text.ss_crc   0x00401e24       0x2c objdir-CWHUSKY/simpleserial.o
-                0x00401e24                ss_crc
+                0x00401ea0       0x48 objdir-CWHUSKY/fips202.o
+                0x00401ea0                sha3_512
+ .text.ss_crc   0x00401ee8       0x2c objdir-CWHUSKY/simpleserial.o
+                0x00401ee8                ss_crc
  .text.stuff_data
-                0x00401e50       0x22 objdir-CWHUSKY/simpleserial.o
-                0x00401e50                stuff_data
+                0x00401f14       0x22 objdir-CWHUSKY/simpleserial.o
+                0x00401f14                stuff_data
  .text.unstuff_data
-                0x00401e72       0x1e objdir-CWHUSKY/simpleserial.o
-                0x00401e72                unstuff_data
+                0x00401f36       0x1e objdir-CWHUSKY/simpleserial.o
+                0x00401f36                unstuff_data
  .text.simpleserial_addcmd
-                0x00401e90       0x40 objdir-CWHUSKY/simpleserial.o
-                0x00401e90                simpleserial_addcmd
+                0x00401f54       0x40 objdir-CWHUSKY/simpleserial.o
+                0x00401f54                simpleserial_addcmd
  .text.simpleserial_init
-                0x00401ed0       0x28 objdir-CWHUSKY/simpleserial.o
-                0x00401ed0                simpleserial_init
+                0x00401f94       0x28 objdir-CWHUSKY/simpleserial.o
+                0x00401f94                simpleserial_init
  .text.simpleserial_put
-                0x00401ef8       0x6c objdir-CWHUSKY/simpleserial.o
-                0x00401ef8                simpleserial_put
+                0x00401fbc       0x6c objdir-CWHUSKY/simpleserial.o
+                0x00401fbc                simpleserial_put
  .text.check_version
-                0x00401f64       0x20 objdir-CWHUSKY/simpleserial.o
-                0x00401f64                check_version
+                0x00402028       0x20 objdir-CWHUSKY/simpleserial.o
+                0x00402028                check_version
  .text.ss_get_commands
-                0x00401f84       0x44 objdir-CWHUSKY/simpleserial.o
-                0x00401f84                ss_get_commands
+                0x00402048       0x44 objdir-CWHUSKY/simpleserial.o
+                0x00402048                ss_get_commands
  .text.simpleserial_get
-                0x00401fc8      0x104 objdir-CWHUSKY/simpleserial.o
-                0x00401fc8                simpleserial_get
+                0x0040208c      0x104 objdir-CWHUSKY/simpleserial.o
+                0x0040208c                simpleserial_get
  .text.Dummy_Handler
-                0x004020cc        0x2 objdir-CWHUSKY/startup_sam4s.o
-                0x004020cc                DACC_Handler
-                0x004020cc                DebugMon_Handler
-                0x004020cc                HardFault_Handler
-                0x004020cc                TC2_Handler
-                0x004020cc                SPI_Handler
-                0x004020cc                SysTick_Handler
-                0x004020cc                TWI1_Handler
-                0x004020cc                PendSV_Handler
-                0x004020cc                NMI_Handler
-                0x004020cc                ADC_Handler
-                0x004020cc                CRCCU_Handler
-                0x004020cc                USART0_Handler
-                0x004020cc                RTT_Handler
-                0x004020cc                PIOB_Handler
-                0x004020cc                RTC_Handler
-                0x004020cc                UsageFault_Handler
-                0x004020cc                WDT_Handler
-                0x004020cc                TC1_Handler
-                0x004020cc                HSMCI_Handler
-                0x004020cc                UART1_Handler
-                0x004020cc                Dummy_Handler
-                0x004020cc                TWI0_Handler
-                0x004020cc                USART1_Handler
-                0x004020cc                PIOA_Handler
-                0x004020cc                SSC_Handler
-                0x004020cc                EFC0_Handler
-                0x004020cc                ACC_Handler
-                0x004020cc                PMC_Handler
-                0x004020cc                PWM_Handler
-                0x004020cc                MemManage_Handler
-                0x004020cc                SUPC_Handler
-                0x004020cc                SVC_Handler
-                0x004020cc                UART0_Handler
-                0x004020cc                UDP_Handler
-                0x004020cc                BusFault_Handler
-                0x004020cc                RSTC_Handler
-                0x004020cc                TC0_Handler
- *fill*         0x004020ce        0x2 
+                0x00402190        0x2 objdir-CWHUSKY/startup_sam4s.o
+                0x00402190                DACC_Handler
+                0x00402190                DebugMon_Handler
+                0x00402190                HardFault_Handler
+                0x00402190                TC2_Handler
+                0x00402190                SPI_Handler
+                0x00402190                SysTick_Handler
+                0x00402190                TWI1_Handler
+                0x00402190                PendSV_Handler
+                0x00402190                NMI_Handler
+                0x00402190                ADC_Handler
+                0x00402190                CRCCU_Handler
+                0x00402190                USART0_Handler
+                0x00402190                RTT_Handler
+                0x00402190                PIOB_Handler
+                0x00402190                RTC_Handler
+                0x00402190                UsageFault_Handler
+                0x00402190                WDT_Handler
+                0x00402190                TC1_Handler
+                0x00402190                HSMCI_Handler
+                0x00402190                UART1_Handler
+                0x00402190                Dummy_Handler
+                0x00402190                TWI0_Handler
+                0x00402190                USART1_Handler
+                0x00402190                PIOA_Handler
+                0x00402190                SSC_Handler
+                0x00402190                EFC0_Handler
+                0x00402190                ACC_Handler
+                0x00402190                PMC_Handler
+                0x00402190                PWM_Handler
+                0x00402190                MemManage_Handler
+                0x00402190                SUPC_Handler
+                0x00402190                SVC_Handler
+                0x00402190                UART0_Handler
+                0x00402190                UDP_Handler
+                0x00402190                BusFault_Handler
+                0x00402190                RSTC_Handler
+                0x00402190                TC0_Handler
+ *fill*         0x00402192        0x2 
  .text.Reset_Handler
-                0x004020d0       0x7c objdir-CWHUSKY/startup_sam4s.o
-                0x004020d0                Reset_Handler
+                0x00402194       0x7c objdir-CWHUSKY/startup_sam4s.o
+                0x00402194                Reset_Handler
  .text.platform_init
-                0x0040214c       0x98 objdir-CWHUSKY/sam4s_hal.o
-                0x0040214c                platform_init
+                0x00402210       0x98 objdir-CWHUSKY/sam4s_hal.o
+                0x00402210                platform_init
  .text.init_uart
-                0x004021e4       0x60 objdir-CWHUSKY/sam4s_hal.o
-                0x004021e4                init_uart
- .text.putch    0x00402244       0x1c objdir-CWHUSKY/sam4s_hal.o
-                0x00402244                putch
- .text.getch    0x00402260       0x20 objdir-CWHUSKY/sam4s_hal.o
-                0x00402260                getch
+                0x004022a8       0x60 objdir-CWHUSKY/sam4s_hal.o
+                0x004022a8                init_uart
+ .text.putch    0x00402308       0x1c objdir-CWHUSKY/sam4s_hal.o
+                0x00402308                putch
+ .text.getch    0x00402324       0x20 objdir-CWHUSKY/sam4s_hal.o
+                0x00402324                getch
  .text.trigger_setup
-                0x00402280       0x20 objdir-CWHUSKY/sam4s_hal.o
-                0x00402280                trigger_setup
+                0x00402344       0x20 objdir-CWHUSKY/sam4s_hal.o
+                0x00402344                trigger_setup
  .text.trigger_low
-                0x004022a0       0x20 objdir-CWHUSKY/sam4s_hal.o
-                0x004022a0                trigger_low
+                0x00402364       0x20 objdir-CWHUSKY/sam4s_hal.o
+                0x00402364                trigger_low
  .text.trigger_high
-                0x004022c0       0x20 objdir-CWHUSKY/sam4s_hal.o
-                0x004022c0                trigger_high
+                0x00402384       0x20 objdir-CWHUSKY/sam4s_hal.o
+                0x00402384                trigger_high
  .text.uart_init
-                0x004022e0       0x34 objdir-CWHUSKY/uart.o
-                0x004022e0                uart_init
+                0x004023a4       0x34 objdir-CWHUSKY/uart.o
+                0x004023a4                uart_init
  .text.uart_enable_tx
-                0x00402314        0x6 objdir-CWHUSKY/uart.o
-                0x00402314                uart_enable_tx
+                0x004023d8        0x6 objdir-CWHUSKY/uart.o
+                0x004023d8                uart_enable_tx
  .text.uart_enable_rx
-                0x0040231a        0x6 objdir-CWHUSKY/uart.o
-                0x0040231a                uart_enable_rx
+                0x004023de        0x6 objdir-CWHUSKY/uart.o
+                0x004023de                uart_enable_rx
  .text.uart_write
-                0x00402320        0xe objdir-CWHUSKY/uart.o
-                0x00402320                uart_write
+                0x004023e4        0xe objdir-CWHUSKY/uart.o
+                0x004023e4                uart_write
  .text.uart_read
-                0x0040232e       0x10 objdir-CWHUSKY/uart.o
-                0x0040232e                uart_read
+                0x004023f2       0x10 objdir-CWHUSKY/uart.o
+                0x004023f2                uart_read
  .text.pio_set_peripheral
-                0x0040233e       0x6e objdir-CWHUSKY/pio.o
-                0x0040233e                pio_set_peripheral
+                0x00402402       0x6e objdir-CWHUSKY/pio.o
+                0x00402402                pio_set_peripheral
  .text.pio_set_input
-                0x004023ac       0x2e objdir-CWHUSKY/pio.o
-                0x004023ac                pio_set_input
+                0x00402470       0x2e objdir-CWHUSKY/pio.o
+                0x00402470                pio_set_input
  .text.pio_set_output
-                0x004023da       0x24 objdir-CWHUSKY/pio.o
-                0x004023da                pio_set_output
+                0x0040249e       0x24 objdir-CWHUSKY/pio.o
+                0x0040249e                pio_set_output
  .text.pio_set_pin_high
-                0x004023fe       0x18 objdir-CWHUSKY/pio.o
-                0x004023fe                pio_set_pin_high
+                0x004024c2       0x18 objdir-CWHUSKY/pio.o
+                0x004024c2                pio_set_pin_high
  .text.pio_set_pin_low
-                0x00402416       0x18 objdir-CWHUSKY/pio.o
-                0x00402416                pio_set_pin_low
- *fill*         0x0040242e        0x2 
+                0x004024da       0x18 objdir-CWHUSKY/pio.o
+                0x004024da                pio_set_pin_low
+ *fill*         0x004024f2        0x2 
  .text.pio_configure_pin
-                0x00402430       0xa4 objdir-CWHUSKY/pio.o
-                0x00402430                pio_configure_pin
+                0x004024f4       0xa4 objdir-CWHUSKY/pio.o
+                0x004024f4                pio_configure_pin
  .text.SystemCoreClockUpdate
-                0x004024d4       0xcc objdir-CWHUSKY/system_sam4s.o
-                0x004024d4                SystemCoreClockUpdate
+                0x00402598       0xcc objdir-CWHUSKY/system_sam4s.o
+                0x00402598                SystemCoreClockUpdate
  .text.system_init_flash
-                0x004025a0       0x64 objdir-CWHUSKY/system_sam4s.o
-                0x004025a0                system_init_flash
+                0x00402664       0x64 objdir-CWHUSKY/system_sam4s.o
+                0x00402664                system_init_flash
  .text.pmc_switch_mck_to_sclk
-                0x00402604       0x40 objdir-CWHUSKY/pmc.o
-                0x00402604                pmc_switch_mck_to_sclk
+                0x004026c8       0x40 objdir-CWHUSKY/pmc.o
+                0x004026c8                pmc_switch_mck_to_sclk
  .text.pmc_switch_mck_to_mainck
-                0x00402644       0x44 objdir-CWHUSKY/pmc.o
-                0x00402644                pmc_switch_mck_to_mainck
+                0x00402708       0x44 objdir-CWHUSKY/pmc.o
+                0x00402708                pmc_switch_mck_to_mainck
  .text.pmc_switch_mainck_to_xtal
-                0x00402688       0x4c objdir-CWHUSKY/pmc.o
-                0x00402688                pmc_switch_mainck_to_xtal
+                0x0040274c       0x4c objdir-CWHUSKY/pmc.o
+                0x0040274c                pmc_switch_mainck_to_xtal
  .text.pmc_osc_is_ready_mainck
-                0x004026d4       0x10 objdir-CWHUSKY/pmc.o
-                0x004026d4                pmc_osc_is_ready_mainck
+                0x00402798       0x10 objdir-CWHUSKY/pmc.o
+                0x00402798                pmc_osc_is_ready_mainck
  .text.pmc_enable_periph_clk
-                0x004026e4       0x3c objdir-CWHUSKY/pmc.o
-                0x004026e4                pmc_enable_periph_clk
+                0x004027a8       0x3c objdir-CWHUSKY/pmc.o
+                0x004027a8                pmc_enable_periph_clk
  .text.pmc_set_writeprotect
-                0x00402720       0x1c objdir-CWHUSKY/pmc.o
-                0x00402720                pmc_set_writeprotect
- .text          0x0040273c       0x50 /usr/lib/gcc/arm-none-eabi/14.2.1/../../../arm-none-eabi/lib/thumb/v7e-m/nofp/libg_nano.a(libc_a-init.o)
-                0x0040273c                __libc_init_array
- .text          0x0040278c       0xa4 /usr/lib/gcc/arm-none-eabi/14.2.1/../../../arm-none-eabi/lib/thumb/v7e-m/nofp/libg_nano.a(libc_a-memset.o)
-                0x0040278c                memset
- .text          0x00402830      0x134 /usr/lib/gcc/arm-none-eabi/14.2.1/../../../arm-none-eabi/lib/thumb/v7e-m/nofp/libg_nano.a(libc_a-memcpy.o)
-                0x00402830                memcpy
- .text          0x00402964       0x20 /usr/lib/gcc/arm-none-eabi/14.2.1/../../../arm-none-eabi/lib/thumb/v7e-m/nofp/libg_nano.a(libc_a-malloc.o)
-                0x00402964                malloc
-                0x00402974                free
- .text          0x00402984       0x24 /usr/lib/gcc/arm-none-eabi/14.2.1/../../../arm-none-eabi/lib/thumb/v7e-m/nofp/libg_nano.a(libc_a-exit.o)
-                0x00402984                exit
- .text          0x004029a8      0x148 /usr/lib/gcc/arm-none-eabi/14.2.1/../../../arm-none-eabi/lib/thumb/v7e-m/nofp/libg_nano.a(libc_a-mallocr.o)
-                0x004029f0                _malloc_r
- .text          0x00402af0       0xbc /usr/lib/gcc/arm-none-eabi/14.2.1/../../../arm-none-eabi/lib/thumb/v7e-m/nofp/libg_nano.a(libc_a-freer.o)
-                0x00402af0                _free_r
- .text          0x00402bac        0x8 /usr/lib/gcc/arm-none-eabi/14.2.1/../../../arm-none-eabi/lib/thumb/v7e-m/nofp/libg_nano.a(libc_a-mlock.o)
-                0x00402bac                __malloc_lock
-                0x00402bb0                __malloc_unlock
- .text          0x00402bb4       0x24 /usr/lib/gcc/arm-none-eabi/14.2.1/../../../arm-none-eabi/lib/thumb/v7e-m/nofp/libg_nano.a(libc_a-sbrkr.o)
-                0x00402bb4                _sbrk_r
- .text          0x00402bd8       0xc4 /usr/lib/gcc/arm-none-eabi/14.2.1/../../../arm-none-eabi/lib/thumb/v7e-m/nofp/libg_nano.a(libc_a-__call_atexit.o)
-                0x00402bd8                __call_exitprocs
- .text          0x00402c9c       0x1c /usr/lib/gcc/arm-none-eabi/14.2.1/../../../arm-none-eabi/lib/thumb/v7e-m/nofp/libnosys.a(sbrk.o)
-                0x00402c9c                _sbrk
- .text          0x00402cb8        0x4 /usr/lib/gcc/arm-none-eabi/14.2.1/../../../arm-none-eabi/lib/thumb/v7e-m/nofp/libnosys.a(_exit.o)
-                0x00402cb8                _exit
+                0x004027e4       0x1c objdir-CWHUSKY/pmc.o
+                0x004027e4                pmc_set_writeprotect
+ .text          0x00402800       0x50 /usr/lib/gcc/arm-none-eabi/14.2.1/../../../arm-none-eabi/lib/thumb/v7e-m/nofp/libg_nano.a(libc_a-init.o)
+                0x00402800                __libc_init_array
+ .text          0x00402850       0xa4 /usr/lib/gcc/arm-none-eabi/14.2.1/../../../arm-none-eabi/lib/thumb/v7e-m/nofp/libg_nano.a(libc_a-memset.o)
+                0x00402850                memset
+ .text          0x004028f4      0x134 /usr/lib/gcc/arm-none-eabi/14.2.1/../../../arm-none-eabi/lib/thumb/v7e-m/nofp/libg_nano.a(libc_a-memcpy.o)
+                0x004028f4                memcpy
+ .text          0x00402a28       0x20 /usr/lib/gcc/arm-none-eabi/14.2.1/../../../arm-none-eabi/lib/thumb/v7e-m/nofp/libg_nano.a(libc_a-malloc.o)
+                0x00402a28                malloc
+                0x00402a38                free
+ .text          0x00402a48       0x24 /usr/lib/gcc/arm-none-eabi/14.2.1/../../../arm-none-eabi/lib/thumb/v7e-m/nofp/libg_nano.a(libc_a-exit.o)
+                0x00402a48                exit
+ .text          0x00402a6c      0x148 /usr/lib/gcc/arm-none-eabi/14.2.1/../../../arm-none-eabi/lib/thumb/v7e-m/nofp/libg_nano.a(libc_a-mallocr.o)
+                0x00402ab4                _malloc_r
+ .text          0x00402bb4       0xbc /usr/lib/gcc/arm-none-eabi/14.2.1/../../../arm-none-eabi/lib/thumb/v7e-m/nofp/libg_nano.a(libc_a-freer.o)
+                0x00402bb4                _free_r
+ .text          0x00402c70        0x8 /usr/lib/gcc/arm-none-eabi/14.2.1/../../../arm-none-eabi/lib/thumb/v7e-m/nofp/libg_nano.a(libc_a-mlock.o)
+                0x00402c70                __malloc_lock
+                0x00402c74                __malloc_unlock
+ .text          0x00402c78       0x24 /usr/lib/gcc/arm-none-eabi/14.2.1/../../../arm-none-eabi/lib/thumb/v7e-m/nofp/libg_nano.a(libc_a-sbrkr.o)
+                0x00402c78                _sbrk_r
+ .text          0x00402c9c       0xc4 /usr/lib/gcc/arm-none-eabi/14.2.1/../../../arm-none-eabi/lib/thumb/v7e-m/nofp/libg_nano.a(libc_a-__call_atexit.o)
+                0x00402c9c                __call_exitprocs
+ .text          0x00402d60       0x1c /usr/lib/gcc/arm-none-eabi/14.2.1/../../../arm-none-eabi/lib/thumb/v7e-m/nofp/libnosys.a(sbrk.o)
+                0x00402d60                _sbrk
+ .text          0x00402d7c        0x4 /usr/lib/gcc/arm-none-eabi/14.2.1/../../../arm-none-eabi/lib/thumb/v7e-m/nofp/libnosys.a(_exit.o)
+                0x00402d7c                _exit
  *(.glue_7t)
- .glue_7t       0x00402cbc        0x0 linker stubs
+ .glue_7t       0x00402d80        0x0 linker stubs
  *(.glue_7)
- .glue_7        0x00402cbc        0x0 linker stubs
+ .glue_7        0x00402d80        0x0 linker stubs
  *(.rodata .rodata* .gnu.linkonce.r.*)
  .rodata.PQCLEAN_MLKEM512_CLEAN_zetas
-                0x00402cbc      0x100 objdir-CWHUSKY/ntt.o
-                0x00402cbc                PQCLEAN_MLKEM512_CLEAN_zetas
- *fill*         0x00402dbc        0x4 
+                0x00402d80      0x100 objdir-CWHUSKY/ntt.o
+                0x00402d80                PQCLEAN_MLKEM512_CLEAN_zetas
  .rodata.KeccakF_RoundConstants
-                0x00402dc0       0xc0 objdir-CWHUSKY/fips202.o
+                0x00402e80       0xc0 objdir-CWHUSKY/fips202.o
  *(.ARM.extab* .gnu.linkonce.armextab.*)
-                0x00402e80                        . = ALIGN (0x4)
+                0x00402f40                        . = ALIGN (0x4)
  *(.init)
- .init          0x00402e80        0x4 /usr/lib/gcc/arm-none-eabi/14.2.1/thumb/v7e-m/nofp/crti.o
-                0x00402e80                _init
- .init          0x00402e84        0x8 /usr/lib/gcc/arm-none-eabi/14.2.1/thumb/v7e-m/nofp/crtn.o
-                0x00402e8c                        . = ALIGN (0x4)
-                0x00402e8c                        __preinit_array_start = .
+ .init          0x00402f40        0x4 /usr/lib/gcc/arm-none-eabi/14.2.1/thumb/v7e-m/nofp/crti.o
+                0x00402f40                _init
+ .init          0x00402f44        0x8 /usr/lib/gcc/arm-none-eabi/14.2.1/thumb/v7e-m/nofp/crtn.o
+                0x00402f4c                        . = ALIGN (0x4)
+                0x00402f4c                        __preinit_array_start = .
  *(.preinit_array)
-                0x00402e8c                        __preinit_array_end = .
-                0x00402e8c                        . = ALIGN (0x4)
-                0x00402e8c                        __init_array_start = .
+                0x00402f4c                        __preinit_array_end = .
+                0x00402f4c                        . = ALIGN (0x4)
+                0x00402f4c                        __init_array_start = .
  *(SORT_BY_NAME(.init_array.*))
  *(.init_array)
- .init_array    0x00402e8c        0x4 /usr/lib/gcc/arm-none-eabi/14.2.1/thumb/v7e-m/nofp/crtbegin.o
-                0x00402e90                        __init_array_end = .
-                0x00402e90                        . = ALIGN (0x4)
+ .init_array    0x00402f4c        0x4 /usr/lib/gcc/arm-none-eabi/14.2.1/thumb/v7e-m/nofp/crtbegin.o
+                0x00402f50                        __init_array_end = .
+                0x00402f50                        . = ALIGN (0x4)
  *crtbegin.o(.ctors)
  *(EXCLUDE_FILE(*crtend.o) .ctors)
  *(SORT_BY_NAME(.ctors.*))
  *crtend.o(.ctors)
-                0x00402e90                        . = ALIGN (0x4)
+                0x00402f50                        . = ALIGN (0x4)
  *(.fini)
- .fini          0x00402e90        0x4 /usr/lib/gcc/arm-none-eabi/14.2.1/thumb/v7e-m/nofp/crti.o
-                0x00402e90                _fini
- .fini          0x00402e94        0x8 /usr/lib/gcc/arm-none-eabi/14.2.1/thumb/v7e-m/nofp/crtn.o
-                0x00402e9c                        . = ALIGN (0x4)
-                0x00402e9c                        __fini_array_start = .
+ .fini          0x00402f50        0x4 /usr/lib/gcc/arm-none-eabi/14.2.1/thumb/v7e-m/nofp/crti.o
+                0x00402f50                _fini
+ .fini          0x00402f54        0x8 /usr/lib/gcc/arm-none-eabi/14.2.1/thumb/v7e-m/nofp/crtn.o
+                0x00402f5c                        . = ALIGN (0x4)
+                0x00402f5c                        __fini_array_start = .
  *(.fini_array)
- .fini_array    0x00402e9c        0x4 /usr/lib/gcc/arm-none-eabi/14.2.1/thumb/v7e-m/nofp/crtbegin.o
+ .fini_array    0x00402f5c        0x4 /usr/lib/gcc/arm-none-eabi/14.2.1/thumb/v7e-m/nofp/crtbegin.o
  *(SORT_BY_NAME(.fini_array.*))
-                0x00402ea0                        __fini_array_end = .
+                0x00402f60                        __fini_array_end = .
  *crtbegin.o(.dtors)
  *(EXCLUDE_FILE(*crtend.o) .dtors)
  *(SORT_BY_NAME(.dtors.*))
  *crtend.o(.dtors)
-                0x00402ea0                        . = ALIGN (0x4)
-                0x00402ea0                        _efixed = .
+                0x00402f60                        . = ALIGN (0x4)
+                0x00402f60                        _efixed = .
                 [!provide]                        PROVIDE (__exidx_start = .)
 
-.vfp11_veneer   0x00402ea0        0x0
- .vfp11_veneer  0x00402ea0        0x0 linker stubs
+.vfp11_veneer   0x00402f60        0x0
+ .vfp11_veneer  0x00402f60        0x0 linker stubs
 
-.v4_bx          0x00402ea0        0x0
- .v4_bx         0x00402ea0        0x0 linker stubs
+.v4_bx          0x00402f60        0x0
+ .v4_bx         0x00402f60        0x0 linker stubs
 
-.iplt           0x00402ea0        0x0
- .iplt          0x00402ea0        0x0 /usr/lib/gcc/arm-none-eabi/14.2.1/thumb/v7e-m/nofp/crtbegin.o
+.iplt           0x00402f60        0x0
+ .iplt          0x00402f60        0x0 /usr/lib/gcc/arm-none-eabi/14.2.1/thumb/v7e-m/nofp/crtbegin.o
 
-.ARM.exidx      0x00402ea0        0x8
+.ARM.exidx      0x00402f60        0x8
  *(.ARM.exidx* .gnu.linkonce.armexidx.*)
- .ARM.exidx     0x00402ea0        0x8 /usr/lib/gcc/arm-none-eabi/14.2.1/../../../arm-none-eabi/lib/thumb/v7e-m/nofp/libg_nano.a(libc_a-memcpy.o)
+ .ARM.exidx     0x00402f60        0x8 /usr/lib/gcc/arm-none-eabi/14.2.1/../../../arm-none-eabi/lib/thumb/v7e-m/nofp/libg_nano.a(libc_a-memcpy.o)
                 [!provide]                        PROVIDE (__exidx_end = .)
 
-.eh_frame       0x00402ea8        0x0
- .eh_frame      0x00402ea8        0x0 /usr/lib/gcc/arm-none-eabi/14.2.1/thumb/v7e-m/nofp/crtbegin.o
+.eh_frame       0x00402f68        0x0
+ .eh_frame      0x00402f68        0x0 /usr/lib/gcc/arm-none-eabi/14.2.1/thumb/v7e-m/nofp/crtbegin.o
 
-.rel.dyn        0x00402ea8        0x0
- .rel.iplt      0x00402ea8        0x0 /usr/lib/gcc/arm-none-eabi/14.2.1/thumb/v7e-m/nofp/crtbegin.o
+.rel.dyn        0x00402f68        0x0
+ .rel.iplt      0x00402f68        0x0 /usr/lib/gcc/arm-none-eabi/14.2.1/thumb/v7e-m/nofp/crtbegin.o
 
 .tm_clone_table
-                0x00402ea8        0x0
+                0x00402f68        0x0
  .tm_clone_table
-                0x00402ea8        0x0 /usr/lib/gcc/arm-none-eabi/14.2.1/thumb/v7e-m/nofp/crtbegin.o
+                0x00402f68        0x0 /usr/lib/gcc/arm-none-eabi/14.2.1/thumb/v7e-m/nofp/crtbegin.o
  .tm_clone_table
-                0x00402ea8        0x0 /usr/lib/gcc/arm-none-eabi/14.2.1/thumb/v7e-m/nofp/crtend.o
+                0x00402f68        0x0 /usr/lib/gcc/arm-none-eabi/14.2.1/thumb/v7e-m/nofp/crtend.o
 
-.igot.plt       0x00402ea8        0x0
- .igot.plt      0x00402ea8        0x0 /usr/lib/gcc/arm-none-eabi/14.2.1/thumb/v7e-m/nofp/crtbegin.o
-                0x00402ea8                        . = ALIGN (0x4)
-                0x00402ea8                        _etext = .
+.igot.plt       0x00402f68        0x0
+ .igot.plt      0x00402f68        0x0 /usr/lib/gcc/arm-none-eabi/14.2.1/thumb/v7e-m/nofp/crtbegin.o
+                0x00402f68                        . = ALIGN (0x4)
+                0x00402f68                        _etext = .
 
-.relocate       0x20000000       0x54 load address 0x00402ea8
+.relocate       0x20000000       0x54 load address 0x00402f68
                 0x20000000                        . = ALIGN (0x4)
                 0x20000000                        _srelocate = .
  *(.ramfunc .ramfunc.*)
@@ -3088,7 +3093,7 @@ LOAD /usr/lib/gcc/arm-none-eabi/14.2.1/thumb/v7e-m/nofp/crtn.o
                 0x20000054                        . = ALIGN (0x4)
                 0x20000054                        _erelocate = .
 
-.bss            0x20000054     0x1058 load address 0x00402efc
+.bss            0x20000054     0x1058 load address 0x00402fbc
                 0x20000054                        . = ALIGN (0x4)
                 0x20000054                        _sbss = .
                 0x20000054                        _szero = .
@@ -3143,7 +3148,7 @@ LOAD /usr/lib/gcc/arm-none-eabi/14.2.1/thumb/v7e-m/nofp/crtn.o
                 0x200010ac                        _ebss = .
                 0x200010ac                        _ezero = .
 
-.stack          0x200010ac     0x1004 load address 0x00403f54
+.stack          0x200010ac     0x1004 load address 0x00404014
                 0x200010b0                        . = ALIGN (0x8)
  *fill*         0x200010ac        0x4 
                 0x200010b0                        _sstack = .
@@ -3299,455 +3304,455 @@ LOAD linker stubs
  .comment       0x0000004c        0x0 /usr/lib/gcc/arm-none-eabi/14.2.1/thumb/v7e-m/nofp/crtend.o
                                  0x27 (size before relaxing)
 
-.debug_info     0x00000000    0x104d4
- .debug_info    0x00000000     0x155e objdir-CWHUSKY/simpleserial-ml-kem-512.o
- .debug_info    0x0000155e     0x10c9 objdir-CWHUSKY/indcpa.o
- .debug_info    0x00002627      0x4a6 objdir-CWHUSKY/ntt.o
- .debug_info    0x00002acd      0x8f5 objdir-CWHUSKY/poly.o
- .debug_info    0x000033c2      0x737 objdir-CWHUSKY/polyvec.o
- .debug_info    0x00003af9      0x11f objdir-CWHUSKY/reduce.o
- .debug_info    0x00003c18      0x45b objdir-CWHUSKY/symmetric-shake.o
- .debug_info    0x00004073      0x1f6 objdir-CWHUSKY/verify.o
- .debug_info    0x00004269     0x23a8 objdir-CWHUSKY/fips202.o
- .debug_info    0x00006611      0x7f3 objdir-CWHUSKY/simpleserial.o
- .debug_info    0x00006e04      0x6e4 objdir-CWHUSKY/startup_sam4s.o
- .debug_info    0x000074e8      0xa0d objdir-CWHUSKY/sam4s_hal.o
- .debug_info    0x00007ef5      0x89b objdir-CWHUSKY/uart.o
- .debug_info    0x00008790     0x18f4 objdir-CWHUSKY/pio.o
- .debug_info    0x0000a084      0x457 objdir-CWHUSKY/system_sam4s.o
- .debug_info    0x0000a4db     0x1251 objdir-CWHUSKY/pmc.o
- .debug_info    0x0000b72c      0x10b /usr/lib/gcc/arm-none-eabi/14.2.1/../../../arm-none-eabi/lib/thumb/v7e-m/nofp/libg_nano.a(libc_a-init.o)
- .debug_info    0x0000b837      0x135 /usr/lib/gcc/arm-none-eabi/14.2.1/../../../arm-none-eabi/lib/thumb/v7e-m/nofp/libg_nano.a(libc_a-memset.o)
- .debug_info    0x0000b96c       0x33 /usr/lib/gcc/arm-none-eabi/14.2.1/../../../arm-none-eabi/lib/thumb/v7e-m/nofp/libg_nano.a(libc_a-memcpy.o)
- .debug_info    0x0000b99f      0x796 /usr/lib/gcc/arm-none-eabi/14.2.1/../../../arm-none-eabi/lib/thumb/v7e-m/nofp/libg_nano.a(libc_a-malloc.o)
- .debug_info    0x0000c135      0x70b /usr/lib/gcc/arm-none-eabi/14.2.1/../../../arm-none-eabi/lib/thumb/v7e-m/nofp/libg_nano.a(libc_a-impure.o)
- .debug_info    0x0000c840      0x11b /usr/lib/gcc/arm-none-eabi/14.2.1/../../../arm-none-eabi/lib/thumb/v7e-m/nofp/libg_nano.a(libc_a-exit.o)
- .debug_info    0x0000c95b      0xe8c /usr/lib/gcc/arm-none-eabi/14.2.1/../../../arm-none-eabi/lib/thumb/v7e-m/nofp/libg_nano.a(libc_a-findfp.o)
- .debug_info    0x0000d7e7      0x9b6 /usr/lib/gcc/arm-none-eabi/14.2.1/../../../arm-none-eabi/lib/thumb/v7e-m/nofp/libg_nano.a(libc_a-mallocr.o)
- .debug_info    0x0000e19d      0x87f /usr/lib/gcc/arm-none-eabi/14.2.1/../../../arm-none-eabi/lib/thumb/v7e-m/nofp/libg_nano.a(libc_a-freer.o)
- .debug_info    0x0000ea1c      0x71c /usr/lib/gcc/arm-none-eabi/14.2.1/../../../arm-none-eabi/lib/thumb/v7e-m/nofp/libg_nano.a(libc_a-mlock.o)
- .debug_info    0x0000f138      0x778 /usr/lib/gcc/arm-none-eabi/14.2.1/../../../arm-none-eabi/lib/thumb/v7e-m/nofp/libg_nano.a(libc_a-sbrkr.o)
- .debug_info    0x0000f8b0      0x235 /usr/lib/gcc/arm-none-eabi/14.2.1/../../../arm-none-eabi/lib/thumb/v7e-m/nofp/libg_nano.a(libc_a-__call_atexit.o)
- .debug_info    0x0000fae5      0x89f /usr/lib/gcc/arm-none-eabi/14.2.1/../../../arm-none-eabi/lib/thumb/v7e-m/nofp/libg_nano.a(libc_a-reent.o)
- .debug_info    0x00010384       0xac /usr/lib/gcc/arm-none-eabi/14.2.1/../../../arm-none-eabi/lib/thumb/v7e-m/nofp/libnosys.a(sbrk.o)
- .debug_info    0x00010430       0xa4 /usr/lib/gcc/arm-none-eabi/14.2.1/../../../arm-none-eabi/lib/thumb/v7e-m/nofp/libnosys.a(_exit.o)
+.debug_info     0x00000000    0x10905
+ .debug_info    0x00000000     0x198f objdir-CWHUSKY/simpleserial-ml-kem-512.o
+ .debug_info    0x0000198f     0x10c9 objdir-CWHUSKY/indcpa.o
+ .debug_info    0x00002a58      0x4a6 objdir-CWHUSKY/ntt.o
+ .debug_info    0x00002efe      0x8f5 objdir-CWHUSKY/poly.o
+ .debug_info    0x000037f3      0x737 objdir-CWHUSKY/polyvec.o
+ .debug_info    0x00003f2a      0x11f objdir-CWHUSKY/reduce.o
+ .debug_info    0x00004049      0x45b objdir-CWHUSKY/symmetric-shake.o
+ .debug_info    0x000044a4      0x1f6 objdir-CWHUSKY/verify.o
+ .debug_info    0x0000469a     0x23a8 objdir-CWHUSKY/fips202.o
+ .debug_info    0x00006a42      0x7f3 objdir-CWHUSKY/simpleserial.o
+ .debug_info    0x00007235      0x6e4 objdir-CWHUSKY/startup_sam4s.o
+ .debug_info    0x00007919      0xa0d objdir-CWHUSKY/sam4s_hal.o
+ .debug_info    0x00008326      0x89b objdir-CWHUSKY/uart.o
+ .debug_info    0x00008bc1     0x18f4 objdir-CWHUSKY/pio.o
+ .debug_info    0x0000a4b5      0x457 objdir-CWHUSKY/system_sam4s.o
+ .debug_info    0x0000a90c     0x1251 objdir-CWHUSKY/pmc.o
+ .debug_info    0x0000bb5d      0x10b /usr/lib/gcc/arm-none-eabi/14.2.1/../../../arm-none-eabi/lib/thumb/v7e-m/nofp/libg_nano.a(libc_a-init.o)
+ .debug_info    0x0000bc68      0x135 /usr/lib/gcc/arm-none-eabi/14.2.1/../../../arm-none-eabi/lib/thumb/v7e-m/nofp/libg_nano.a(libc_a-memset.o)
+ .debug_info    0x0000bd9d       0x33 /usr/lib/gcc/arm-none-eabi/14.2.1/../../../arm-none-eabi/lib/thumb/v7e-m/nofp/libg_nano.a(libc_a-memcpy.o)
+ .debug_info    0x0000bdd0      0x796 /usr/lib/gcc/arm-none-eabi/14.2.1/../../../arm-none-eabi/lib/thumb/v7e-m/nofp/libg_nano.a(libc_a-malloc.o)
+ .debug_info    0x0000c566      0x70b /usr/lib/gcc/arm-none-eabi/14.2.1/../../../arm-none-eabi/lib/thumb/v7e-m/nofp/libg_nano.a(libc_a-impure.o)
+ .debug_info    0x0000cc71      0x11b /usr/lib/gcc/arm-none-eabi/14.2.1/../../../arm-none-eabi/lib/thumb/v7e-m/nofp/libg_nano.a(libc_a-exit.o)
+ .debug_info    0x0000cd8c      0xe8c /usr/lib/gcc/arm-none-eabi/14.2.1/../../../arm-none-eabi/lib/thumb/v7e-m/nofp/libg_nano.a(libc_a-findfp.o)
+ .debug_info    0x0000dc18      0x9b6 /usr/lib/gcc/arm-none-eabi/14.2.1/../../../arm-none-eabi/lib/thumb/v7e-m/nofp/libg_nano.a(libc_a-mallocr.o)
+ .debug_info    0x0000e5ce      0x87f /usr/lib/gcc/arm-none-eabi/14.2.1/../../../arm-none-eabi/lib/thumb/v7e-m/nofp/libg_nano.a(libc_a-freer.o)
+ .debug_info    0x0000ee4d      0x71c /usr/lib/gcc/arm-none-eabi/14.2.1/../../../arm-none-eabi/lib/thumb/v7e-m/nofp/libg_nano.a(libc_a-mlock.o)
+ .debug_info    0x0000f569      0x778 /usr/lib/gcc/arm-none-eabi/14.2.1/../../../arm-none-eabi/lib/thumb/v7e-m/nofp/libg_nano.a(libc_a-sbrkr.o)
+ .debug_info    0x0000fce1      0x235 /usr/lib/gcc/arm-none-eabi/14.2.1/../../../arm-none-eabi/lib/thumb/v7e-m/nofp/libg_nano.a(libc_a-__call_atexit.o)
+ .debug_info    0x0000ff16      0x89f /usr/lib/gcc/arm-none-eabi/14.2.1/../../../arm-none-eabi/lib/thumb/v7e-m/nofp/libg_nano.a(libc_a-reent.o)
+ .debug_info    0x000107b5       0xac /usr/lib/gcc/arm-none-eabi/14.2.1/../../../arm-none-eabi/lib/thumb/v7e-m/nofp/libnosys.a(sbrk.o)
+ .debug_info    0x00010861       0xa4 /usr/lib/gcc/arm-none-eabi/14.2.1/../../../arm-none-eabi/lib/thumb/v7e-m/nofp/libnosys.a(_exit.o)
 
-.debug_abbrev   0x00000000     0x386c
- .debug_abbrev  0x00000000      0x3c2 objdir-CWHUSKY/simpleserial-ml-kem-512.o
- .debug_abbrev  0x000003c2      0x310 objdir-CWHUSKY/indcpa.o
- .debug_abbrev  0x000006d2      0x1b5 objdir-CWHUSKY/ntt.o
- .debug_abbrev  0x00000887      0x206 objdir-CWHUSKY/poly.o
- .debug_abbrev  0x00000a8d      0x15f objdir-CWHUSKY/polyvec.o
- .debug_abbrev  0x00000bec       0xb8 objdir-CWHUSKY/reduce.o
- .debug_abbrev  0x00000ca4      0x150 objdir-CWHUSKY/symmetric-shake.o
- .debug_abbrev  0x00000df4       0xdb objdir-CWHUSKY/verify.o
- .debug_abbrev  0x00000ecf      0x371 objdir-CWHUSKY/fips202.o
- .debug_abbrev  0x00001240      0x232 objdir-CWHUSKY/simpleserial.o
- .debug_abbrev  0x00001472      0x1b4 objdir-CWHUSKY/startup_sam4s.o
- .debug_abbrev  0x00001626      0x2c1 objdir-CWHUSKY/sam4s_hal.o
- .debug_abbrev  0x000018e7      0x21f objdir-CWHUSKY/uart.o
- .debug_abbrev  0x00001b06      0x371 objdir-CWHUSKY/pio.o
- .debug_abbrev  0x00001e77      0x11f objdir-CWHUSKY/system_sam4s.o
- .debug_abbrev  0x00001f96      0x2c6 objdir-CWHUSKY/pmc.o
- .debug_abbrev  0x0000225c       0xc9 /usr/lib/gcc/arm-none-eabi/14.2.1/../../../arm-none-eabi/lib/thumb/v7e-m/nofp/libg_nano.a(libc_a-init.o)
- .debug_abbrev  0x00002325       0xb7 /usr/lib/gcc/arm-none-eabi/14.2.1/../../../arm-none-eabi/lib/thumb/v7e-m/nofp/libg_nano.a(libc_a-memset.o)
- .debug_abbrev  0x000023dc       0x28 /usr/lib/gcc/arm-none-eabi/14.2.1/../../../arm-none-eabi/lib/thumb/v7e-m/nofp/libg_nano.a(libc_a-memcpy.o)
- .debug_abbrev  0x00002404      0x1cf /usr/lib/gcc/arm-none-eabi/14.2.1/../../../arm-none-eabi/lib/thumb/v7e-m/nofp/libg_nano.a(libc_a-malloc.o)
- .debug_abbrev  0x000025d3      0x149 /usr/lib/gcc/arm-none-eabi/14.2.1/../../../arm-none-eabi/lib/thumb/v7e-m/nofp/libg_nano.a(libc_a-impure.o)
- .debug_abbrev  0x0000271c       0xd8 /usr/lib/gcc/arm-none-eabi/14.2.1/../../../arm-none-eabi/lib/thumb/v7e-m/nofp/libg_nano.a(libc_a-exit.o)
- .debug_abbrev  0x000027f4      0x408 /usr/lib/gcc/arm-none-eabi/14.2.1/../../../arm-none-eabi/lib/thumb/v7e-m/nofp/libg_nano.a(libc_a-findfp.o)
- .debug_abbrev  0x00002bfc      0x24a /usr/lib/gcc/arm-none-eabi/14.2.1/../../../arm-none-eabi/lib/thumb/v7e-m/nofp/libg_nano.a(libc_a-mallocr.o)
- .debug_abbrev  0x00002e46      0x249 /usr/lib/gcc/arm-none-eabi/14.2.1/../../../arm-none-eabi/lib/thumb/v7e-m/nofp/libg_nano.a(libc_a-freer.o)
- .debug_abbrev  0x0000308f      0x192 /usr/lib/gcc/arm-none-eabi/14.2.1/../../../arm-none-eabi/lib/thumb/v7e-m/nofp/libg_nano.a(libc_a-mlock.o)
- .debug_abbrev  0x00003221      0x1da /usr/lib/gcc/arm-none-eabi/14.2.1/../../../arm-none-eabi/lib/thumb/v7e-m/nofp/libg_nano.a(libc_a-sbrkr.o)
- .debug_abbrev  0x000033fb      0x179 /usr/lib/gcc/arm-none-eabi/14.2.1/../../../arm-none-eabi/lib/thumb/v7e-m/nofp/libg_nano.a(libc_a-__call_atexit.o)
- .debug_abbrev  0x00003574      0x1ee /usr/lib/gcc/arm-none-eabi/14.2.1/../../../arm-none-eabi/lib/thumb/v7e-m/nofp/libg_nano.a(libc_a-reent.o)
- .debug_abbrev  0x00003762       0xa1 /usr/lib/gcc/arm-none-eabi/14.2.1/../../../arm-none-eabi/lib/thumb/v7e-m/nofp/libnosys.a(sbrk.o)
- .debug_abbrev  0x00003803       0x69 /usr/lib/gcc/arm-none-eabi/14.2.1/../../../arm-none-eabi/lib/thumb/v7e-m/nofp/libnosys.a(_exit.o)
+.debug_abbrev   0x00000000     0x3912
+ .debug_abbrev  0x00000000      0x468 objdir-CWHUSKY/simpleserial-ml-kem-512.o
+ .debug_abbrev  0x00000468      0x310 objdir-CWHUSKY/indcpa.o
+ .debug_abbrev  0x00000778      0x1b5 objdir-CWHUSKY/ntt.o
+ .debug_abbrev  0x0000092d      0x206 objdir-CWHUSKY/poly.o
+ .debug_abbrev  0x00000b33      0x15f objdir-CWHUSKY/polyvec.o
+ .debug_abbrev  0x00000c92       0xb8 objdir-CWHUSKY/reduce.o
+ .debug_abbrev  0x00000d4a      0x150 objdir-CWHUSKY/symmetric-shake.o
+ .debug_abbrev  0x00000e9a       0xdb objdir-CWHUSKY/verify.o
+ .debug_abbrev  0x00000f75      0x371 objdir-CWHUSKY/fips202.o
+ .debug_abbrev  0x000012e6      0x232 objdir-CWHUSKY/simpleserial.o
+ .debug_abbrev  0x00001518      0x1b4 objdir-CWHUSKY/startup_sam4s.o
+ .debug_abbrev  0x000016cc      0x2c1 objdir-CWHUSKY/sam4s_hal.o
+ .debug_abbrev  0x0000198d      0x21f objdir-CWHUSKY/uart.o
+ .debug_abbrev  0x00001bac      0x371 objdir-CWHUSKY/pio.o
+ .debug_abbrev  0x00001f1d      0x11f objdir-CWHUSKY/system_sam4s.o
+ .debug_abbrev  0x0000203c      0x2c6 objdir-CWHUSKY/pmc.o
+ .debug_abbrev  0x00002302       0xc9 /usr/lib/gcc/arm-none-eabi/14.2.1/../../../arm-none-eabi/lib/thumb/v7e-m/nofp/libg_nano.a(libc_a-init.o)
+ .debug_abbrev  0x000023cb       0xb7 /usr/lib/gcc/arm-none-eabi/14.2.1/../../../arm-none-eabi/lib/thumb/v7e-m/nofp/libg_nano.a(libc_a-memset.o)
+ .debug_abbrev  0x00002482       0x28 /usr/lib/gcc/arm-none-eabi/14.2.1/../../../arm-none-eabi/lib/thumb/v7e-m/nofp/libg_nano.a(libc_a-memcpy.o)
+ .debug_abbrev  0x000024aa      0x1cf /usr/lib/gcc/arm-none-eabi/14.2.1/../../../arm-none-eabi/lib/thumb/v7e-m/nofp/libg_nano.a(libc_a-malloc.o)
+ .debug_abbrev  0x00002679      0x149 /usr/lib/gcc/arm-none-eabi/14.2.1/../../../arm-none-eabi/lib/thumb/v7e-m/nofp/libg_nano.a(libc_a-impure.o)
+ .debug_abbrev  0x000027c2       0xd8 /usr/lib/gcc/arm-none-eabi/14.2.1/../../../arm-none-eabi/lib/thumb/v7e-m/nofp/libg_nano.a(libc_a-exit.o)
+ .debug_abbrev  0x0000289a      0x408 /usr/lib/gcc/arm-none-eabi/14.2.1/../../../arm-none-eabi/lib/thumb/v7e-m/nofp/libg_nano.a(libc_a-findfp.o)
+ .debug_abbrev  0x00002ca2      0x24a /usr/lib/gcc/arm-none-eabi/14.2.1/../../../arm-none-eabi/lib/thumb/v7e-m/nofp/libg_nano.a(libc_a-mallocr.o)
+ .debug_abbrev  0x00002eec      0x249 /usr/lib/gcc/arm-none-eabi/14.2.1/../../../arm-none-eabi/lib/thumb/v7e-m/nofp/libg_nano.a(libc_a-freer.o)
+ .debug_abbrev  0x00003135      0x192 /usr/lib/gcc/arm-none-eabi/14.2.1/../../../arm-none-eabi/lib/thumb/v7e-m/nofp/libg_nano.a(libc_a-mlock.o)
+ .debug_abbrev  0x000032c7      0x1da /usr/lib/gcc/arm-none-eabi/14.2.1/../../../arm-none-eabi/lib/thumb/v7e-m/nofp/libg_nano.a(libc_a-sbrkr.o)
+ .debug_abbrev  0x000034a1      0x179 /usr/lib/gcc/arm-none-eabi/14.2.1/../../../arm-none-eabi/lib/thumb/v7e-m/nofp/libg_nano.a(libc_a-__call_atexit.o)
+ .debug_abbrev  0x0000361a      0x1ee /usr/lib/gcc/arm-none-eabi/14.2.1/../../../arm-none-eabi/lib/thumb/v7e-m/nofp/libg_nano.a(libc_a-reent.o)
+ .debug_abbrev  0x00003808       0xa1 /usr/lib/gcc/arm-none-eabi/14.2.1/../../../arm-none-eabi/lib/thumb/v7e-m/nofp/libnosys.a(sbrk.o)
+ .debug_abbrev  0x000038a9       0x69 /usr/lib/gcc/arm-none-eabi/14.2.1/../../../arm-none-eabi/lib/thumb/v7e-m/nofp/libnosys.a(_exit.o)
 
-.debug_loc      0x00000000     0xa035
- .debug_loc     0x00000000     0x1155 objdir-CWHUSKY/simpleserial-ml-kem-512.o
- .debug_loc     0x00001155      0xb15 objdir-CWHUSKY/indcpa.o
- .debug_loc     0x00001c6a      0x54c objdir-CWHUSKY/ntt.o
- .debug_loc     0x000021b6      0xa9b objdir-CWHUSKY/poly.o
- .debug_loc     0x00002c51      0x7fd objdir-CWHUSKY/polyvec.o
- .debug_loc     0x0000344e      0x116 objdir-CWHUSKY/reduce.o
- .debug_loc     0x00003564      0x31a objdir-CWHUSKY/symmetric-shake.o
- .debug_loc     0x0000387e      0x263 objdir-CWHUSKY/verify.o
- .debug_loc     0x00003ae1     0x39c4 objdir-CWHUSKY/fips202.o
- .debug_loc     0x000074a5      0x9aa objdir-CWHUSKY/simpleserial.o
- .debug_loc     0x00007e4f       0xfb objdir-CWHUSKY/startup_sam4s.o
- .debug_loc     0x00007f4a      0x226 objdir-CWHUSKY/sam4s_hal.o
- .debug_loc     0x00008170      0x294 objdir-CWHUSKY/uart.o
- .debug_loc     0x00008404      0xf76 objdir-CWHUSKY/pio.o
- .debug_loc     0x0000937a       0x20 objdir-CWHUSKY/system_sam4s.o
- .debug_loc     0x0000939a      0xc9b objdir-CWHUSKY/pmc.o
+.debug_loc      0x00000000     0xa6d0
+ .debug_loc     0x00000000     0x17f0 objdir-CWHUSKY/simpleserial-ml-kem-512.o
+ .debug_loc     0x000017f0      0xb15 objdir-CWHUSKY/indcpa.o
+ .debug_loc     0x00002305      0x54c objdir-CWHUSKY/ntt.o
+ .debug_loc     0x00002851      0xa9b objdir-CWHUSKY/poly.o
+ .debug_loc     0x000032ec      0x7fd objdir-CWHUSKY/polyvec.o
+ .debug_loc     0x00003ae9      0x116 objdir-CWHUSKY/reduce.o
+ .debug_loc     0x00003bff      0x31a objdir-CWHUSKY/symmetric-shake.o
+ .debug_loc     0x00003f19      0x263 objdir-CWHUSKY/verify.o
+ .debug_loc     0x0000417c     0x39c4 objdir-CWHUSKY/fips202.o
+ .debug_loc     0x00007b40      0x9aa objdir-CWHUSKY/simpleserial.o
+ .debug_loc     0x000084ea       0xfb objdir-CWHUSKY/startup_sam4s.o
+ .debug_loc     0x000085e5      0x226 objdir-CWHUSKY/sam4s_hal.o
+ .debug_loc     0x0000880b      0x294 objdir-CWHUSKY/uart.o
+ .debug_loc     0x00008a9f      0xf76 objdir-CWHUSKY/pio.o
+ .debug_loc     0x00009a15       0x20 objdir-CWHUSKY/system_sam4s.o
+ .debug_loc     0x00009a35      0xc9b objdir-CWHUSKY/pmc.o
 
-.debug_aranges  0x00000000      0xb78
+.debug_aranges  0x00000000      0xb90
  .debug_aranges
-                0x00000000       0x78 objdir-CWHUSKY/simpleserial-ml-kem-512.o
+                0x00000000       0x90 objdir-CWHUSKY/simpleserial-ml-kem-512.o
  .debug_aranges
-                0x00000078       0x40 objdir-CWHUSKY/indcpa.o
+                0x00000090       0x40 objdir-CWHUSKY/indcpa.o
  .debug_aranges
-                0x000000b8       0x30 objdir-CWHUSKY/ntt.o
+                0x000000d0       0x30 objdir-CWHUSKY/ntt.o
  .debug_aranges
-                0x000000e8       0x90 objdir-CWHUSKY/poly.o
+                0x00000100       0x90 objdir-CWHUSKY/poly.o
  .debug_aranges
-                0x00000178       0x60 objdir-CWHUSKY/polyvec.o
+                0x00000190       0x60 objdir-CWHUSKY/polyvec.o
  .debug_aranges
-                0x000001d8       0x28 objdir-CWHUSKY/reduce.o
+                0x000001f0       0x28 objdir-CWHUSKY/reduce.o
  .debug_aranges
-                0x00000200       0x30 objdir-CWHUSKY/symmetric-shake.o
+                0x00000218       0x30 objdir-CWHUSKY/symmetric-shake.o
  .debug_aranges
-                0x00000230       0x30 objdir-CWHUSKY/verify.o
+                0x00000248       0x30 objdir-CWHUSKY/verify.o
  .debug_aranges
-                0x00000260      0x190 objdir-CWHUSKY/fips202.o
+                0x00000278      0x190 objdir-CWHUSKY/fips202.o
  .debug_aranges
-                0x000003f0       0x70 objdir-CWHUSKY/simpleserial.o
+                0x00000408       0x70 objdir-CWHUSKY/simpleserial.o
  .debug_aranges
-                0x00000460       0x28 objdir-CWHUSKY/startup_sam4s.o
+                0x00000478       0x28 objdir-CWHUSKY/startup_sam4s.o
  .debug_aranges
-                0x00000488       0x50 objdir-CWHUSKY/sam4s_hal.o
+                0x000004a0       0x50 objdir-CWHUSKY/sam4s_hal.o
  .debug_aranges
-                0x000004d8       0xe8 objdir-CWHUSKY/uart.o
+                0x000004f0       0xe8 objdir-CWHUSKY/uart.o
  .debug_aranges
-                0x000005c0      0x1a8 objdir-CWHUSKY/pio.o
+                0x000005d8      0x1a8 objdir-CWHUSKY/pio.o
  .debug_aranges
-                0x00000768       0x30 objdir-CWHUSKY/system_sam4s.o
+                0x00000780       0x30 objdir-CWHUSKY/system_sam4s.o
  .debug_aranges
-                0x00000798      0x208 objdir-CWHUSKY/pmc.o
+                0x000007b0      0x208 objdir-CWHUSKY/pmc.o
  .debug_aranges
-                0x000009a0       0x20 /usr/lib/gcc/arm-none-eabi/14.2.1/../../../arm-none-eabi/lib/thumb/v7e-m/nofp/libg_nano.a(libc_a-init.o)
+                0x000009b8       0x20 /usr/lib/gcc/arm-none-eabi/14.2.1/../../../arm-none-eabi/lib/thumb/v7e-m/nofp/libg_nano.a(libc_a-init.o)
  .debug_aranges
-                0x000009c0       0x20 /usr/lib/gcc/arm-none-eabi/14.2.1/../../../arm-none-eabi/lib/thumb/v7e-m/nofp/libg_nano.a(libc_a-memset.o)
+                0x000009d8       0x20 /usr/lib/gcc/arm-none-eabi/14.2.1/../../../arm-none-eabi/lib/thumb/v7e-m/nofp/libg_nano.a(libc_a-memset.o)
  .debug_aranges
-                0x000009e0       0x20 /usr/lib/gcc/arm-none-eabi/14.2.1/../../../arm-none-eabi/lib/thumb/v7e-m/nofp/libg_nano.a(libc_a-memcpy.o)
+                0x000009f8       0x20 /usr/lib/gcc/arm-none-eabi/14.2.1/../../../arm-none-eabi/lib/thumb/v7e-m/nofp/libg_nano.a(libc_a-memcpy.o)
  .debug_aranges
-                0x00000a00       0x20 /usr/lib/gcc/arm-none-eabi/14.2.1/../../../arm-none-eabi/lib/thumb/v7e-m/nofp/libg_nano.a(libc_a-malloc.o)
+                0x00000a18       0x20 /usr/lib/gcc/arm-none-eabi/14.2.1/../../../arm-none-eabi/lib/thumb/v7e-m/nofp/libg_nano.a(libc_a-malloc.o)
  .debug_aranges
-                0x00000a20       0x18 /usr/lib/gcc/arm-none-eabi/14.2.1/../../../arm-none-eabi/lib/thumb/v7e-m/nofp/libg_nano.a(libc_a-impure.o)
+                0x00000a38       0x18 /usr/lib/gcc/arm-none-eabi/14.2.1/../../../arm-none-eabi/lib/thumb/v7e-m/nofp/libg_nano.a(libc_a-impure.o)
  .debug_aranges
-                0x00000a38       0x20 /usr/lib/gcc/arm-none-eabi/14.2.1/../../../arm-none-eabi/lib/thumb/v7e-m/nofp/libg_nano.a(libc_a-exit.o)
+                0x00000a50       0x20 /usr/lib/gcc/arm-none-eabi/14.2.1/../../../arm-none-eabi/lib/thumb/v7e-m/nofp/libg_nano.a(libc_a-exit.o)
  .debug_aranges
-                0x00000a58       0x20 /usr/lib/gcc/arm-none-eabi/14.2.1/../../../arm-none-eabi/lib/thumb/v7e-m/nofp/libg_nano.a(libc_a-findfp.o)
+                0x00000a70       0x20 /usr/lib/gcc/arm-none-eabi/14.2.1/../../../arm-none-eabi/lib/thumb/v7e-m/nofp/libg_nano.a(libc_a-findfp.o)
  .debug_aranges
-                0x00000a78       0x20 /usr/lib/gcc/arm-none-eabi/14.2.1/../../../arm-none-eabi/lib/thumb/v7e-m/nofp/libg_nano.a(libc_a-mallocr.o)
+                0x00000a90       0x20 /usr/lib/gcc/arm-none-eabi/14.2.1/../../../arm-none-eabi/lib/thumb/v7e-m/nofp/libg_nano.a(libc_a-mallocr.o)
  .debug_aranges
-                0x00000a98       0x20 /usr/lib/gcc/arm-none-eabi/14.2.1/../../../arm-none-eabi/lib/thumb/v7e-m/nofp/libg_nano.a(libc_a-freer.o)
+                0x00000ab0       0x20 /usr/lib/gcc/arm-none-eabi/14.2.1/../../../arm-none-eabi/lib/thumb/v7e-m/nofp/libg_nano.a(libc_a-freer.o)
  .debug_aranges
-                0x00000ab8       0x20 /usr/lib/gcc/arm-none-eabi/14.2.1/../../../arm-none-eabi/lib/thumb/v7e-m/nofp/libg_nano.a(libc_a-mlock.o)
+                0x00000ad0       0x20 /usr/lib/gcc/arm-none-eabi/14.2.1/../../../arm-none-eabi/lib/thumb/v7e-m/nofp/libg_nano.a(libc_a-mlock.o)
  .debug_aranges
-                0x00000ad8       0x20 /usr/lib/gcc/arm-none-eabi/14.2.1/../../../arm-none-eabi/lib/thumb/v7e-m/nofp/libg_nano.a(libc_a-sbrkr.o)
+                0x00000af0       0x20 /usr/lib/gcc/arm-none-eabi/14.2.1/../../../arm-none-eabi/lib/thumb/v7e-m/nofp/libg_nano.a(libc_a-sbrkr.o)
  .debug_aranges
-                0x00000af8       0x20 /usr/lib/gcc/arm-none-eabi/14.2.1/../../../arm-none-eabi/lib/thumb/v7e-m/nofp/libg_nano.a(libc_a-__call_atexit.o)
+                0x00000b10       0x20 /usr/lib/gcc/arm-none-eabi/14.2.1/../../../arm-none-eabi/lib/thumb/v7e-m/nofp/libg_nano.a(libc_a-__call_atexit.o)
  .debug_aranges
-                0x00000b18       0x20 /usr/lib/gcc/arm-none-eabi/14.2.1/../../../arm-none-eabi/lib/thumb/v7e-m/nofp/libg_nano.a(libc_a-reent.o)
+                0x00000b30       0x20 /usr/lib/gcc/arm-none-eabi/14.2.1/../../../arm-none-eabi/lib/thumb/v7e-m/nofp/libg_nano.a(libc_a-reent.o)
  .debug_aranges
-                0x00000b38       0x20 /usr/lib/gcc/arm-none-eabi/14.2.1/../../../arm-none-eabi/lib/thumb/v7e-m/nofp/libnosys.a(sbrk.o)
+                0x00000b50       0x20 /usr/lib/gcc/arm-none-eabi/14.2.1/../../../arm-none-eabi/lib/thumb/v7e-m/nofp/libnosys.a(sbrk.o)
  .debug_aranges
-                0x00000b58       0x20 /usr/lib/gcc/arm-none-eabi/14.2.1/../../../arm-none-eabi/lib/thumb/v7e-m/nofp/libnosys.a(_exit.o)
+                0x00000b70       0x20 /usr/lib/gcc/arm-none-eabi/14.2.1/../../../arm-none-eabi/lib/thumb/v7e-m/nofp/libnosys.a(_exit.o)
 
-.debug_ranges   0x00000000      0xc30
- .debug_ranges  0x00000000       0xc8 objdir-CWHUSKY/simpleserial-ml-kem-512.o
- .debug_ranges  0x000000c8       0x78 objdir-CWHUSKY/indcpa.o
- .debug_ranges  0x00000140       0x88 objdir-CWHUSKY/ntt.o
- .debug_ranges  0x000001c8       0x80 objdir-CWHUSKY/poly.o
- .debug_ranges  0x00000248       0x50 objdir-CWHUSKY/polyvec.o
- .debug_ranges  0x00000298       0x18 objdir-CWHUSKY/reduce.o
- .debug_ranges  0x000002b0       0x20 objdir-CWHUSKY/symmetric-shake.o
- .debug_ranges  0x000002d0       0x20 objdir-CWHUSKY/verify.o
- .debug_ranges  0x000002f0      0x228 objdir-CWHUSKY/fips202.o
- .debug_ranges  0x00000518       0xf8 objdir-CWHUSKY/simpleserial.o
- .debug_ranges  0x00000610       0x18 objdir-CWHUSKY/startup_sam4s.o
- .debug_ranges  0x00000628       0xa8 objdir-CWHUSKY/sam4s_hal.o
- .debug_ranges  0x000006d0       0xd8 objdir-CWHUSKY/uart.o
- .debug_ranges  0x000007a8      0x228 objdir-CWHUSKY/pio.o
- .debug_ranges  0x000009d0       0x20 objdir-CWHUSKY/system_sam4s.o
- .debug_ranges  0x000009f0      0x240 objdir-CWHUSKY/pmc.o
+.debug_ranges   0x00000000      0xc88
+ .debug_ranges  0x00000000      0x120 objdir-CWHUSKY/simpleserial-ml-kem-512.o
+ .debug_ranges  0x00000120       0x78 objdir-CWHUSKY/indcpa.o
+ .debug_ranges  0x00000198       0x88 objdir-CWHUSKY/ntt.o
+ .debug_ranges  0x00000220       0x80 objdir-CWHUSKY/poly.o
+ .debug_ranges  0x000002a0       0x50 objdir-CWHUSKY/polyvec.o
+ .debug_ranges  0x000002f0       0x18 objdir-CWHUSKY/reduce.o
+ .debug_ranges  0x00000308       0x20 objdir-CWHUSKY/symmetric-shake.o
+ .debug_ranges  0x00000328       0x20 objdir-CWHUSKY/verify.o
+ .debug_ranges  0x00000348      0x228 objdir-CWHUSKY/fips202.o
+ .debug_ranges  0x00000570       0xf8 objdir-CWHUSKY/simpleserial.o
+ .debug_ranges  0x00000668       0x18 objdir-CWHUSKY/startup_sam4s.o
+ .debug_ranges  0x00000680       0xa8 objdir-CWHUSKY/sam4s_hal.o
+ .debug_ranges  0x00000728       0xd8 objdir-CWHUSKY/uart.o
+ .debug_ranges  0x00000800      0x228 objdir-CWHUSKY/pio.o
+ .debug_ranges  0x00000a28       0x20 objdir-CWHUSKY/system_sam4s.o
+ .debug_ranges  0x00000a48      0x240 objdir-CWHUSKY/pmc.o
 
-.debug_macro    0x00000000    0x10df7
- .debug_macro   0x00000000      0x60a objdir-CWHUSKY/simpleserial-ml-kem-512.o
- .debug_macro   0x0000060a      0xb2c objdir-CWHUSKY/simpleserial-ml-kem-512.o
- .debug_macro   0x00001136      0x34e objdir-CWHUSKY/simpleserial-ml-kem-512.o
- .debug_macro   0x00001484      0x17e objdir-CWHUSKY/simpleserial-ml-kem-512.o
- .debug_macro   0x00001602       0x22 objdir-CWHUSKY/simpleserial-ml-kem-512.o
- .debug_macro   0x00001624       0x24 objdir-CWHUSKY/simpleserial-ml-kem-512.o
- .debug_macro   0x00001648       0x22 objdir-CWHUSKY/simpleserial-ml-kem-512.o
- .debug_macro   0x0000166a       0x60 objdir-CWHUSKY/simpleserial-ml-kem-512.o
- .debug_macro   0x000016ca       0x94 objdir-CWHUSKY/simpleserial-ml-kem-512.o
- .debug_macro   0x0000175e       0x3c objdir-CWHUSKY/simpleserial-ml-kem-512.o
- .debug_macro   0x0000179a       0x34 objdir-CWHUSKY/simpleserial-ml-kem-512.o
- .debug_macro   0x000017ce       0x16 objdir-CWHUSKY/simpleserial-ml-kem-512.o
- .debug_macro   0x000017e4      0x11c objdir-CWHUSKY/simpleserial-ml-kem-512.o
- .debug_macro   0x00001900       0x94 objdir-CWHUSKY/simpleserial-ml-kem-512.o
- .debug_macro   0x00001994       0x57 objdir-CWHUSKY/simpleserial-ml-kem-512.o
- .debug_macro   0x000019eb      0x372 objdir-CWHUSKY/simpleserial-ml-kem-512.o
- .debug_macro   0x00001d5d       0x16 objdir-CWHUSKY/simpleserial-ml-kem-512.o
- .debug_macro   0x00001d73       0x4a objdir-CWHUSKY/simpleserial-ml-kem-512.o
- .debug_macro   0x00001dbd       0x34 objdir-CWHUSKY/simpleserial-ml-kem-512.o
- .debug_macro   0x00001df1       0x10 objdir-CWHUSKY/simpleserial-ml-kem-512.o
- .debug_macro   0x00001e01       0x52 objdir-CWHUSKY/simpleserial-ml-kem-512.o
- .debug_macro   0x00001e53      0x1e5 objdir-CWHUSKY/simpleserial-ml-kem-512.o
- .debug_macro   0x00002038       0x16 objdir-CWHUSKY/simpleserial-ml-kem-512.o
- .debug_macro   0x0000204e       0x29 objdir-CWHUSKY/simpleserial-ml-kem-512.o
- .debug_macro   0x00002077      0x6d7 objdir-CWHUSKY/simpleserial-ml-kem-512.o
- .debug_macro   0x0000274e       0x76 objdir-CWHUSKY/simpleserial-ml-kem-512.o
- .debug_macro   0x000027c4       0x16 objdir-CWHUSKY/simpleserial-ml-kem-512.o
- .debug_macro   0x000027da      0x6da objdir-CWHUSKY/simpleserial-ml-kem-512.o
- .debug_macro   0x00002eb4       0x2d objdir-CWHUSKY/simpleserial-ml-kem-512.o
- .debug_macro   0x00002ee1       0x3b objdir-CWHUSKY/simpleserial-ml-kem-512.o
- .debug_macro   0x00002f1c       0x2d objdir-CWHUSKY/simpleserial-ml-kem-512.o
- .debug_macro   0x00002f49       0x26 objdir-CWHUSKY/simpleserial-ml-kem-512.o
- .debug_macro   0x00002f6f      0xbbf objdir-CWHUSKY/simpleserial-ml-kem-512.o
- .debug_macro   0x00003b2e      0x154 objdir-CWHUSKY/simpleserial-ml-kem-512.o
- .debug_macro   0x00003c82      0xaa5 objdir-CWHUSKY/simpleserial-ml-kem-512.o
- .debug_macro   0x00004727      0x1b4 objdir-CWHUSKY/simpleserial-ml-kem-512.o
- .debug_macro   0x000048db       0xac objdir-CWHUSKY/simpleserial-ml-kem-512.o
- .debug_macro   0x00004987      0x3f7 objdir-CWHUSKY/simpleserial-ml-kem-512.o
- .debug_macro   0x00004d7e      0x106 objdir-CWHUSKY/simpleserial-ml-kem-512.o
- .debug_macro   0x00004e84       0x1c objdir-CWHUSKY/simpleserial-ml-kem-512.o
- .debug_macro   0x00004ea0      0x72f objdir-CWHUSKY/simpleserial-ml-kem-512.o
- .debug_macro   0x000055cf      0x2c9 objdir-CWHUSKY/simpleserial-ml-kem-512.o
- .debug_macro   0x00005898       0xbe objdir-CWHUSKY/simpleserial-ml-kem-512.o
- .debug_macro   0x00005956     0x2807 objdir-CWHUSKY/simpleserial-ml-kem-512.o
- .debug_macro   0x0000815d      0x76e objdir-CWHUSKY/simpleserial-ml-kem-512.o
- .debug_macro   0x000088cb      0xa84 objdir-CWHUSKY/simpleserial-ml-kem-512.o
- .debug_macro   0x0000934f       0x9a objdir-CWHUSKY/simpleserial-ml-kem-512.o
- .debug_macro   0x000093e9      0x3cf objdir-CWHUSKY/simpleserial-ml-kem-512.o
- .debug_macro   0x000097b8       0x64 objdir-CWHUSKY/simpleserial-ml-kem-512.o
- .debug_macro   0x0000981c      0x37c objdir-CWHUSKY/simpleserial-ml-kem-512.o
- .debug_macro   0x00009b98      0x61b objdir-CWHUSKY/simpleserial-ml-kem-512.o
- .debug_macro   0x0000a1b3      0x686 objdir-CWHUSKY/simpleserial-ml-kem-512.o
- .debug_macro   0x0000a839      0x595 objdir-CWHUSKY/simpleserial-ml-kem-512.o
- .debug_macro   0x0000adce      0x344 objdir-CWHUSKY/simpleserial-ml-kem-512.o
- .debug_macro   0x0000b112      0x283 objdir-CWHUSKY/simpleserial-ml-kem-512.o
- .debug_macro   0x0000b395      0x2cd objdir-CWHUSKY/simpleserial-ml-kem-512.o
- .debug_macro   0x0000b662      0x6cf objdir-CWHUSKY/simpleserial-ml-kem-512.o
- .debug_macro   0x0000bd31       0x76 objdir-CWHUSKY/simpleserial-ml-kem-512.o
- .debug_macro   0x0000bda7       0xb8 objdir-CWHUSKY/simpleserial-ml-kem-512.o
- .debug_macro   0x0000be5f       0xb2 objdir-CWHUSKY/simpleserial-ml-kem-512.o
- .debug_macro   0x0000bf11       0x88 objdir-CWHUSKY/simpleserial-ml-kem-512.o
- .debug_macro   0x0000bf99      0x100 objdir-CWHUSKY/simpleserial-ml-kem-512.o
- .debug_macro   0x0000c099       0x88 objdir-CWHUSKY/simpleserial-ml-kem-512.o
- .debug_macro   0x0000c121       0x88 objdir-CWHUSKY/simpleserial-ml-kem-512.o
- .debug_macro   0x0000c1a9      0x2cd objdir-CWHUSKY/simpleserial-ml-kem-512.o
- .debug_macro   0x0000c476       0xb2 objdir-CWHUSKY/simpleserial-ml-kem-512.o
- .debug_macro   0x0000c528       0xb2 objdir-CWHUSKY/simpleserial-ml-kem-512.o
- .debug_macro   0x0000c5da       0x52 objdir-CWHUSKY/simpleserial-ml-kem-512.o
- .debug_macro   0x0000c62c       0xac objdir-CWHUSKY/simpleserial-ml-kem-512.o
- .debug_macro   0x0000c6d8       0x7c objdir-CWHUSKY/simpleserial-ml-kem-512.o
- .debug_macro   0x0000c754       0x40 objdir-CWHUSKY/simpleserial-ml-kem-512.o
- .debug_macro   0x0000c794       0x64 objdir-CWHUSKY/simpleserial-ml-kem-512.o
- .debug_macro   0x0000c7f8       0x4c objdir-CWHUSKY/simpleserial-ml-kem-512.o
- .debug_macro   0x0000c844       0xa6 objdir-CWHUSKY/simpleserial-ml-kem-512.o
- .debug_macro   0x0000c8ea       0x7c objdir-CWHUSKY/simpleserial-ml-kem-512.o
- .debug_macro   0x0000c966       0x16 objdir-CWHUSKY/simpleserial-ml-kem-512.o
- .debug_macro   0x0000c97c       0x7c objdir-CWHUSKY/simpleserial-ml-kem-512.o
- .debug_macro   0x0000c9f8       0x22 objdir-CWHUSKY/simpleserial-ml-kem-512.o
- .debug_macro   0x0000ca1a      0x18b objdir-CWHUSKY/simpleserial-ml-kem-512.o
- .debug_macro   0x0000cba5      0x15b objdir-CWHUSKY/simpleserial-ml-kem-512.o
- .debug_macro   0x0000cd00       0x1c objdir-CWHUSKY/simpleserial-ml-kem-512.o
- .debug_macro   0x0000cd1c       0x2e objdir-CWHUSKY/simpleserial-ml-kem-512.o
- .debug_macro   0x0000cd4a       0x22 objdir-CWHUSKY/simpleserial-ml-kem-512.o
- .debug_macro   0x0000cd6c       0x1c objdir-CWHUSKY/simpleserial-ml-kem-512.o
- .debug_macro   0x0000cd88       0x52 objdir-CWHUSKY/simpleserial-ml-kem-512.o
- .debug_macro   0x0000cdda       0x10 objdir-CWHUSKY/simpleserial-ml-kem-512.o
- .debug_macro   0x0000cdea      0x1e7 objdir-CWHUSKY/simpleserial-ml-kem-512.o
- .debug_macro   0x0000cfd1      0x605 objdir-CWHUSKY/simpleserial-ml-kem-512.o
- .debug_macro   0x0000d5d6      0x107 objdir-CWHUSKY/simpleserial-ml-kem-512.o
- .debug_macro   0x0000d6dd       0x1c objdir-CWHUSKY/simpleserial-ml-kem-512.o
- .debug_macro   0x0000d6f9       0x3c objdir-CWHUSKY/simpleserial-ml-kem-512.o
- .debug_macro   0x0000d735       0x10 objdir-CWHUSKY/simpleserial-ml-kem-512.o
- .debug_macro   0x0000d745       0x1c objdir-CWHUSKY/simpleserial-ml-kem-512.o
- .debug_macro   0x0000d761       0x16 objdir-CWHUSKY/simpleserial-ml-kem-512.o
- .debug_macro   0x0000d777      0x170 objdir-CWHUSKY/simpleserial-ml-kem-512.o
- .debug_macro   0x0000d8e7       0x22 objdir-CWHUSKY/simpleserial-ml-kem-512.o
- .debug_macro   0x0000d909       0x73 objdir-CWHUSKY/simpleserial-ml-kem-512.o
- .debug_macro   0x0000d97c       0x3e objdir-CWHUSKY/simpleserial-ml-kem-512.o
- .debug_macro   0x0000d9ba      0x3ca objdir-CWHUSKY/simpleserial-ml-kem-512.o
- .debug_macro   0x0000dd84       0x8e objdir-CWHUSKY/simpleserial-ml-kem-512.o
- .debug_macro   0x0000de12       0x46 objdir-CWHUSKY/simpleserial-ml-kem-512.o
- .debug_macro   0x0000de58       0x76 objdir-CWHUSKY/simpleserial-ml-kem-512.o
- .debug_macro   0x0000dece       0x28 objdir-CWHUSKY/simpleserial-ml-kem-512.o
- .debug_macro   0x0000def6       0x16 objdir-CWHUSKY/simpleserial-ml-kem-512.o
- .debug_macro   0x0000df0c       0x10 objdir-CWHUSKY/simpleserial-ml-kem-512.o
- .debug_macro   0x0000df1c       0x6a objdir-CWHUSKY/simpleserial-ml-kem-512.o
- .debug_macro   0x0000df86       0x1c objdir-CWHUSKY/simpleserial-ml-kem-512.o
- .debug_macro   0x0000dfa2       0x52 objdir-CWHUSKY/simpleserial-ml-kem-512.o
- .debug_macro   0x0000dff4       0x22 objdir-CWHUSKY/simpleserial-ml-kem-512.o
- .debug_macro   0x0000e016       0x10 objdir-CWHUSKY/simpleserial-ml-kem-512.o
- .debug_macro   0x0000e026       0x52 objdir-CWHUSKY/simpleserial-ml-kem-512.o
- .debug_macro   0x0000e078       0xc1 objdir-CWHUSKY/simpleserial-ml-kem-512.o
- .debug_macro   0x0000e139       0x1c objdir-CWHUSKY/simpleserial-ml-kem-512.o
- .debug_macro   0x0000e155       0x3d objdir-CWHUSKY/simpleserial-ml-kem-512.o
- .debug_macro   0x0000e192      0x51a objdir-CWHUSKY/simpleserial-ml-kem-512.o
- .debug_macro   0x0000e6ac       0x2e objdir-CWHUSKY/simpleserial-ml-kem-512.o
- .debug_macro   0x0000e6da       0x34 objdir-CWHUSKY/simpleserial-ml-kem-512.o
- .debug_macro   0x0000e70e       0x16 objdir-CWHUSKY/simpleserial-ml-kem-512.o
- .debug_macro   0x0000e724      0x230 objdir-CWHUSKY/indcpa.o
- .debug_macro   0x0000e954       0x36 objdir-CWHUSKY/ntt.o
- .debug_macro   0x0000e98a       0x16 objdir-CWHUSKY/ntt.o
- .debug_macro   0x0000e9a0       0x83 objdir-CWHUSKY/poly.o
- .debug_macro   0x0000ea23      0x189 objdir-CWHUSKY/poly.o
- .debug_macro   0x0000ebac       0x37 objdir-CWHUSKY/polyvec.o
- .debug_macro   0x0000ebe3       0x32 objdir-CWHUSKY/reduce.o
- .debug_macro   0x0000ec15       0x10 objdir-CWHUSKY/reduce.o
- .debug_macro   0x0000ec25      0x12d objdir-CWHUSKY/symmetric-shake.o
- .debug_macro   0x0000ed52       0x43 objdir-CWHUSKY/verify.o
- .debug_macro   0x0000ed95       0x16 objdir-CWHUSKY/verify.o
- .debug_macro   0x0000edab      0x14b objdir-CWHUSKY/fips202.o
- .debug_macro   0x0000eef6       0x55 objdir-CWHUSKY/simpleserial.o
- .debug_macro   0x0000ef4b       0x1c objdir-CWHUSKY/simpleserial.o
- .debug_macro   0x0000ef67      0x184 objdir-CWHUSKY/simpleserial.o
- .debug_macro   0x0000f0eb      0x296 objdir-CWHUSKY/startup_sam4s.o
- .debug_macro   0x0000f381       0x27 objdir-CWHUSKY/startup_sam4s.o
- .debug_macro   0x0000f3a8      0x4e9 objdir-CWHUSKY/sam4s_hal.o
- .debug_macro   0x0000f891       0x16 objdir-CWHUSKY/sam4s_hal.o
- .debug_macro   0x0000f8a7       0x16 objdir-CWHUSKY/sam4s_hal.o
- .debug_macro   0x0000f8bd      0x2cb objdir-CWHUSKY/sam4s_hal.o
- .debug_macro   0x0000fb88       0x22 objdir-CWHUSKY/sam4s_hal.o
- .debug_macro   0x0000fbaa       0x58 objdir-CWHUSKY/sam4s_hal.o
- .debug_macro   0x0000fc02       0x64 objdir-CWHUSKY/sam4s_hal.o
- .debug_macro   0x0000fc66       0x46 objdir-CWHUSKY/sam4s_hal.o
- .debug_macro   0x0000fcac       0x16 objdir-CWHUSKY/sam4s_hal.o
- .debug_macro   0x0000fcc2       0x94 objdir-CWHUSKY/sam4s_hal.o
- .debug_macro   0x0000fd56       0x1c objdir-CWHUSKY/sam4s_hal.o
- .debug_macro   0x0000fd72       0xa4 objdir-CWHUSKY/sam4s_hal.o
- .debug_macro   0x0000fe16      0x445 objdir-CWHUSKY/uart.o
- .debug_macro   0x0001025b       0x16 objdir-CWHUSKY/uart.o
- .debug_macro   0x00010271      0x44b objdir-CWHUSKY/pio.o
- .debug_macro   0x000106bc      0x29e objdir-CWHUSKY/system_sam4s.o
- .debug_macro   0x0001095a      0x44b objdir-CWHUSKY/pmc.o
- .debug_macro   0x00010da5       0x52 objdir-CWHUSKY/pmc.o
+.debug_macro    0x00000000    0x10e03
+ .debug_macro   0x00000000      0x616 objdir-CWHUSKY/simpleserial-ml-kem-512.o
+ .debug_macro   0x00000616      0xb2c objdir-CWHUSKY/simpleserial-ml-kem-512.o
+ .debug_macro   0x00001142      0x34e objdir-CWHUSKY/simpleserial-ml-kem-512.o
+ .debug_macro   0x00001490      0x17e objdir-CWHUSKY/simpleserial-ml-kem-512.o
+ .debug_macro   0x0000160e       0x22 objdir-CWHUSKY/simpleserial-ml-kem-512.o
+ .debug_macro   0x00001630       0x24 objdir-CWHUSKY/simpleserial-ml-kem-512.o
+ .debug_macro   0x00001654       0x22 objdir-CWHUSKY/simpleserial-ml-kem-512.o
+ .debug_macro   0x00001676       0x60 objdir-CWHUSKY/simpleserial-ml-kem-512.o
+ .debug_macro   0x000016d6       0x94 objdir-CWHUSKY/simpleserial-ml-kem-512.o
+ .debug_macro   0x0000176a       0x3c objdir-CWHUSKY/simpleserial-ml-kem-512.o
+ .debug_macro   0x000017a6       0x34 objdir-CWHUSKY/simpleserial-ml-kem-512.o
+ .debug_macro   0x000017da       0x16 objdir-CWHUSKY/simpleserial-ml-kem-512.o
+ .debug_macro   0x000017f0      0x11c objdir-CWHUSKY/simpleserial-ml-kem-512.o
+ .debug_macro   0x0000190c       0x94 objdir-CWHUSKY/simpleserial-ml-kem-512.o
+ .debug_macro   0x000019a0       0x57 objdir-CWHUSKY/simpleserial-ml-kem-512.o
+ .debug_macro   0x000019f7      0x372 objdir-CWHUSKY/simpleserial-ml-kem-512.o
+ .debug_macro   0x00001d69       0x16 objdir-CWHUSKY/simpleserial-ml-kem-512.o
+ .debug_macro   0x00001d7f       0x4a objdir-CWHUSKY/simpleserial-ml-kem-512.o
+ .debug_macro   0x00001dc9       0x34 objdir-CWHUSKY/simpleserial-ml-kem-512.o
+ .debug_macro   0x00001dfd       0x10 objdir-CWHUSKY/simpleserial-ml-kem-512.o
+ .debug_macro   0x00001e0d       0x52 objdir-CWHUSKY/simpleserial-ml-kem-512.o
+ .debug_macro   0x00001e5f      0x1e5 objdir-CWHUSKY/simpleserial-ml-kem-512.o
+ .debug_macro   0x00002044       0x16 objdir-CWHUSKY/simpleserial-ml-kem-512.o
+ .debug_macro   0x0000205a       0x29 objdir-CWHUSKY/simpleserial-ml-kem-512.o
+ .debug_macro   0x00002083      0x6d7 objdir-CWHUSKY/simpleserial-ml-kem-512.o
+ .debug_macro   0x0000275a       0x76 objdir-CWHUSKY/simpleserial-ml-kem-512.o
+ .debug_macro   0x000027d0       0x16 objdir-CWHUSKY/simpleserial-ml-kem-512.o
+ .debug_macro   0x000027e6      0x6da objdir-CWHUSKY/simpleserial-ml-kem-512.o
+ .debug_macro   0x00002ec0       0x2d objdir-CWHUSKY/simpleserial-ml-kem-512.o
+ .debug_macro   0x00002eed       0x3b objdir-CWHUSKY/simpleserial-ml-kem-512.o
+ .debug_macro   0x00002f28       0x2d objdir-CWHUSKY/simpleserial-ml-kem-512.o
+ .debug_macro   0x00002f55       0x26 objdir-CWHUSKY/simpleserial-ml-kem-512.o
+ .debug_macro   0x00002f7b      0xbbf objdir-CWHUSKY/simpleserial-ml-kem-512.o
+ .debug_macro   0x00003b3a      0x154 objdir-CWHUSKY/simpleserial-ml-kem-512.o
+ .debug_macro   0x00003c8e      0xaa5 objdir-CWHUSKY/simpleserial-ml-kem-512.o
+ .debug_macro   0x00004733      0x1b4 objdir-CWHUSKY/simpleserial-ml-kem-512.o
+ .debug_macro   0x000048e7       0xac objdir-CWHUSKY/simpleserial-ml-kem-512.o
+ .debug_macro   0x00004993      0x3f7 objdir-CWHUSKY/simpleserial-ml-kem-512.o
+ .debug_macro   0x00004d8a      0x106 objdir-CWHUSKY/simpleserial-ml-kem-512.o
+ .debug_macro   0x00004e90       0x1c objdir-CWHUSKY/simpleserial-ml-kem-512.o
+ .debug_macro   0x00004eac      0x72f objdir-CWHUSKY/simpleserial-ml-kem-512.o
+ .debug_macro   0x000055db      0x2c9 objdir-CWHUSKY/simpleserial-ml-kem-512.o
+ .debug_macro   0x000058a4       0xbe objdir-CWHUSKY/simpleserial-ml-kem-512.o
+ .debug_macro   0x00005962     0x2807 objdir-CWHUSKY/simpleserial-ml-kem-512.o
+ .debug_macro   0x00008169      0x76e objdir-CWHUSKY/simpleserial-ml-kem-512.o
+ .debug_macro   0x000088d7      0xa84 objdir-CWHUSKY/simpleserial-ml-kem-512.o
+ .debug_macro   0x0000935b       0x9a objdir-CWHUSKY/simpleserial-ml-kem-512.o
+ .debug_macro   0x000093f5      0x3cf objdir-CWHUSKY/simpleserial-ml-kem-512.o
+ .debug_macro   0x000097c4       0x64 objdir-CWHUSKY/simpleserial-ml-kem-512.o
+ .debug_macro   0x00009828      0x37c objdir-CWHUSKY/simpleserial-ml-kem-512.o
+ .debug_macro   0x00009ba4      0x61b objdir-CWHUSKY/simpleserial-ml-kem-512.o
+ .debug_macro   0x0000a1bf      0x686 objdir-CWHUSKY/simpleserial-ml-kem-512.o
+ .debug_macro   0x0000a845      0x595 objdir-CWHUSKY/simpleserial-ml-kem-512.o
+ .debug_macro   0x0000adda      0x344 objdir-CWHUSKY/simpleserial-ml-kem-512.o
+ .debug_macro   0x0000b11e      0x283 objdir-CWHUSKY/simpleserial-ml-kem-512.o
+ .debug_macro   0x0000b3a1      0x2cd objdir-CWHUSKY/simpleserial-ml-kem-512.o
+ .debug_macro   0x0000b66e      0x6cf objdir-CWHUSKY/simpleserial-ml-kem-512.o
+ .debug_macro   0x0000bd3d       0x76 objdir-CWHUSKY/simpleserial-ml-kem-512.o
+ .debug_macro   0x0000bdb3       0xb8 objdir-CWHUSKY/simpleserial-ml-kem-512.o
+ .debug_macro   0x0000be6b       0xb2 objdir-CWHUSKY/simpleserial-ml-kem-512.o
+ .debug_macro   0x0000bf1d       0x88 objdir-CWHUSKY/simpleserial-ml-kem-512.o
+ .debug_macro   0x0000bfa5      0x100 objdir-CWHUSKY/simpleserial-ml-kem-512.o
+ .debug_macro   0x0000c0a5       0x88 objdir-CWHUSKY/simpleserial-ml-kem-512.o
+ .debug_macro   0x0000c12d       0x88 objdir-CWHUSKY/simpleserial-ml-kem-512.o
+ .debug_macro   0x0000c1b5      0x2cd objdir-CWHUSKY/simpleserial-ml-kem-512.o
+ .debug_macro   0x0000c482       0xb2 objdir-CWHUSKY/simpleserial-ml-kem-512.o
+ .debug_macro   0x0000c534       0xb2 objdir-CWHUSKY/simpleserial-ml-kem-512.o
+ .debug_macro   0x0000c5e6       0x52 objdir-CWHUSKY/simpleserial-ml-kem-512.o
+ .debug_macro   0x0000c638       0xac objdir-CWHUSKY/simpleserial-ml-kem-512.o
+ .debug_macro   0x0000c6e4       0x7c objdir-CWHUSKY/simpleserial-ml-kem-512.o
+ .debug_macro   0x0000c760       0x40 objdir-CWHUSKY/simpleserial-ml-kem-512.o
+ .debug_macro   0x0000c7a0       0x64 objdir-CWHUSKY/simpleserial-ml-kem-512.o
+ .debug_macro   0x0000c804       0x4c objdir-CWHUSKY/simpleserial-ml-kem-512.o
+ .debug_macro   0x0000c850       0xa6 objdir-CWHUSKY/simpleserial-ml-kem-512.o
+ .debug_macro   0x0000c8f6       0x7c objdir-CWHUSKY/simpleserial-ml-kem-512.o
+ .debug_macro   0x0000c972       0x16 objdir-CWHUSKY/simpleserial-ml-kem-512.o
+ .debug_macro   0x0000c988       0x7c objdir-CWHUSKY/simpleserial-ml-kem-512.o
+ .debug_macro   0x0000ca04       0x22 objdir-CWHUSKY/simpleserial-ml-kem-512.o
+ .debug_macro   0x0000ca26      0x18b objdir-CWHUSKY/simpleserial-ml-kem-512.o
+ .debug_macro   0x0000cbb1      0x15b objdir-CWHUSKY/simpleserial-ml-kem-512.o
+ .debug_macro   0x0000cd0c       0x1c objdir-CWHUSKY/simpleserial-ml-kem-512.o
+ .debug_macro   0x0000cd28       0x2e objdir-CWHUSKY/simpleserial-ml-kem-512.o
+ .debug_macro   0x0000cd56       0x22 objdir-CWHUSKY/simpleserial-ml-kem-512.o
+ .debug_macro   0x0000cd78       0x1c objdir-CWHUSKY/simpleserial-ml-kem-512.o
+ .debug_macro   0x0000cd94       0x52 objdir-CWHUSKY/simpleserial-ml-kem-512.o
+ .debug_macro   0x0000cde6       0x10 objdir-CWHUSKY/simpleserial-ml-kem-512.o
+ .debug_macro   0x0000cdf6      0x1e7 objdir-CWHUSKY/simpleserial-ml-kem-512.o
+ .debug_macro   0x0000cfdd      0x605 objdir-CWHUSKY/simpleserial-ml-kem-512.o
+ .debug_macro   0x0000d5e2      0x107 objdir-CWHUSKY/simpleserial-ml-kem-512.o
+ .debug_macro   0x0000d6e9       0x1c objdir-CWHUSKY/simpleserial-ml-kem-512.o
+ .debug_macro   0x0000d705       0x3c objdir-CWHUSKY/simpleserial-ml-kem-512.o
+ .debug_macro   0x0000d741       0x10 objdir-CWHUSKY/simpleserial-ml-kem-512.o
+ .debug_macro   0x0000d751       0x1c objdir-CWHUSKY/simpleserial-ml-kem-512.o
+ .debug_macro   0x0000d76d       0x16 objdir-CWHUSKY/simpleserial-ml-kem-512.o
+ .debug_macro   0x0000d783      0x170 objdir-CWHUSKY/simpleserial-ml-kem-512.o
+ .debug_macro   0x0000d8f3       0x22 objdir-CWHUSKY/simpleserial-ml-kem-512.o
+ .debug_macro   0x0000d915       0x73 objdir-CWHUSKY/simpleserial-ml-kem-512.o
+ .debug_macro   0x0000d988       0x3e objdir-CWHUSKY/simpleserial-ml-kem-512.o
+ .debug_macro   0x0000d9c6      0x3ca objdir-CWHUSKY/simpleserial-ml-kem-512.o
+ .debug_macro   0x0000dd90       0x8e objdir-CWHUSKY/simpleserial-ml-kem-512.o
+ .debug_macro   0x0000de1e       0x46 objdir-CWHUSKY/simpleserial-ml-kem-512.o
+ .debug_macro   0x0000de64       0x76 objdir-CWHUSKY/simpleserial-ml-kem-512.o
+ .debug_macro   0x0000deda       0x28 objdir-CWHUSKY/simpleserial-ml-kem-512.o
+ .debug_macro   0x0000df02       0x16 objdir-CWHUSKY/simpleserial-ml-kem-512.o
+ .debug_macro   0x0000df18       0x10 objdir-CWHUSKY/simpleserial-ml-kem-512.o
+ .debug_macro   0x0000df28       0x6a objdir-CWHUSKY/simpleserial-ml-kem-512.o
+ .debug_macro   0x0000df92       0x1c objdir-CWHUSKY/simpleserial-ml-kem-512.o
+ .debug_macro   0x0000dfae       0x52 objdir-CWHUSKY/simpleserial-ml-kem-512.o
+ .debug_macro   0x0000e000       0x22 objdir-CWHUSKY/simpleserial-ml-kem-512.o
+ .debug_macro   0x0000e022       0x10 objdir-CWHUSKY/simpleserial-ml-kem-512.o
+ .debug_macro   0x0000e032       0x52 objdir-CWHUSKY/simpleserial-ml-kem-512.o
+ .debug_macro   0x0000e084       0xc1 objdir-CWHUSKY/simpleserial-ml-kem-512.o
+ .debug_macro   0x0000e145       0x1c objdir-CWHUSKY/simpleserial-ml-kem-512.o
+ .debug_macro   0x0000e161       0x3d objdir-CWHUSKY/simpleserial-ml-kem-512.o
+ .debug_macro   0x0000e19e      0x51a objdir-CWHUSKY/simpleserial-ml-kem-512.o
+ .debug_macro   0x0000e6b8       0x2e objdir-CWHUSKY/simpleserial-ml-kem-512.o
+ .debug_macro   0x0000e6e6       0x34 objdir-CWHUSKY/simpleserial-ml-kem-512.o
+ .debug_macro   0x0000e71a       0x16 objdir-CWHUSKY/simpleserial-ml-kem-512.o
+ .debug_macro   0x0000e730      0x230 objdir-CWHUSKY/indcpa.o
+ .debug_macro   0x0000e960       0x36 objdir-CWHUSKY/ntt.o
+ .debug_macro   0x0000e996       0x16 objdir-CWHUSKY/ntt.o
+ .debug_macro   0x0000e9ac       0x83 objdir-CWHUSKY/poly.o
+ .debug_macro   0x0000ea2f      0x189 objdir-CWHUSKY/poly.o
+ .debug_macro   0x0000ebb8       0x37 objdir-CWHUSKY/polyvec.o
+ .debug_macro   0x0000ebef       0x32 objdir-CWHUSKY/reduce.o
+ .debug_macro   0x0000ec21       0x10 objdir-CWHUSKY/reduce.o
+ .debug_macro   0x0000ec31      0x12d objdir-CWHUSKY/symmetric-shake.o
+ .debug_macro   0x0000ed5e       0x43 objdir-CWHUSKY/verify.o
+ .debug_macro   0x0000eda1       0x16 objdir-CWHUSKY/verify.o
+ .debug_macro   0x0000edb7      0x14b objdir-CWHUSKY/fips202.o
+ .debug_macro   0x0000ef02       0x55 objdir-CWHUSKY/simpleserial.o
+ .debug_macro   0x0000ef57       0x1c objdir-CWHUSKY/simpleserial.o
+ .debug_macro   0x0000ef73      0x184 objdir-CWHUSKY/simpleserial.o
+ .debug_macro   0x0000f0f7      0x296 objdir-CWHUSKY/startup_sam4s.o
+ .debug_macro   0x0000f38d       0x27 objdir-CWHUSKY/startup_sam4s.o
+ .debug_macro   0x0000f3b4      0x4e9 objdir-CWHUSKY/sam4s_hal.o
+ .debug_macro   0x0000f89d       0x16 objdir-CWHUSKY/sam4s_hal.o
+ .debug_macro   0x0000f8b3       0x16 objdir-CWHUSKY/sam4s_hal.o
+ .debug_macro   0x0000f8c9      0x2cb objdir-CWHUSKY/sam4s_hal.o
+ .debug_macro   0x0000fb94       0x22 objdir-CWHUSKY/sam4s_hal.o
+ .debug_macro   0x0000fbb6       0x58 objdir-CWHUSKY/sam4s_hal.o
+ .debug_macro   0x0000fc0e       0x64 objdir-CWHUSKY/sam4s_hal.o
+ .debug_macro   0x0000fc72       0x46 objdir-CWHUSKY/sam4s_hal.o
+ .debug_macro   0x0000fcb8       0x16 objdir-CWHUSKY/sam4s_hal.o
+ .debug_macro   0x0000fcce       0x94 objdir-CWHUSKY/sam4s_hal.o
+ .debug_macro   0x0000fd62       0x1c objdir-CWHUSKY/sam4s_hal.o
+ .debug_macro   0x0000fd7e       0xa4 objdir-CWHUSKY/sam4s_hal.o
+ .debug_macro   0x0000fe22      0x445 objdir-CWHUSKY/uart.o
+ .debug_macro   0x00010267       0x16 objdir-CWHUSKY/uart.o
+ .debug_macro   0x0001027d      0x44b objdir-CWHUSKY/pio.o
+ .debug_macro   0x000106c8      0x29e objdir-CWHUSKY/system_sam4s.o
+ .debug_macro   0x00010966      0x44b objdir-CWHUSKY/pmc.o
+ .debug_macro   0x00010db1       0x52 objdir-CWHUSKY/pmc.o
 
-.debug_line     0x00000000     0xadde
- .debug_line    0x00000000     0x10de objdir-CWHUSKY/simpleserial-ml-kem-512.o
- .debug_line    0x000010de      0x65f objdir-CWHUSKY/indcpa.o
- .debug_line    0x0000173d      0x34d objdir-CWHUSKY/ntt.o
- .debug_line    0x00001a8a      0x631 objdir-CWHUSKY/poly.o
- .debug_line    0x000020bb      0x473 objdir-CWHUSKY/polyvec.o
- .debug_line    0x0000252e       0xc5 objdir-CWHUSKY/reduce.o
- .debug_line    0x000025f3      0x253 objdir-CWHUSKY/symmetric-shake.o
- .debug_line    0x00002846      0x14e objdir-CWHUSKY/verify.o
- .debug_line    0x00002994     0x17ee objdir-CWHUSKY/fips202.o
- .debug_line    0x00004182      0x5f1 objdir-CWHUSKY/simpleserial.o
- .debug_line    0x00004773      0x63d objdir-CWHUSKY/startup_sam4s.o
- .debug_line    0x00004db0      0xa8d objdir-CWHUSKY/sam4s_hal.o
- .debug_line    0x0000583d      0xa92 objdir-CWHUSKY/uart.o
- .debug_line    0x000062cf     0x1178 objdir-CWHUSKY/pio.o
- .debug_line    0x00007447      0x6ff objdir-CWHUSKY/system_sam4s.o
- .debug_line    0x00007b46     0x16b9 objdir-CWHUSKY/pmc.o
- .debug_line    0x000091ff      0x11e /usr/lib/gcc/arm-none-eabi/14.2.1/../../../arm-none-eabi/lib/thumb/v7e-m/nofp/libg_nano.a(libc_a-init.o)
- .debug_line    0x0000931d      0x1ba /usr/lib/gcc/arm-none-eabi/14.2.1/../../../arm-none-eabi/lib/thumb/v7e-m/nofp/libg_nano.a(libc_a-memset.o)
- .debug_line    0x000094d7       0xb9 /usr/lib/gcc/arm-none-eabi/14.2.1/../../../arm-none-eabi/lib/thumb/v7e-m/nofp/libg_nano.a(libc_a-memcpy.o)
- .debug_line    0x00009590      0x173 /usr/lib/gcc/arm-none-eabi/14.2.1/../../../arm-none-eabi/lib/thumb/v7e-m/nofp/libg_nano.a(libc_a-malloc.o)
- .debug_line    0x00009703       0xeb /usr/lib/gcc/arm-none-eabi/14.2.1/../../../arm-none-eabi/lib/thumb/v7e-m/nofp/libg_nano.a(libc_a-impure.o)
- .debug_line    0x000097ee      0x135 /usr/lib/gcc/arm-none-eabi/14.2.1/../../../arm-none-eabi/lib/thumb/v7e-m/nofp/libg_nano.a(libc_a-exit.o)
- .debug_line    0x00009923      0x504 /usr/lib/gcc/arm-none-eabi/14.2.1/../../../arm-none-eabi/lib/thumb/v7e-m/nofp/libg_nano.a(libc_a-findfp.o)
- .debug_line    0x00009e27      0x452 /usr/lib/gcc/arm-none-eabi/14.2.1/../../../arm-none-eabi/lib/thumb/v7e-m/nofp/libg_nano.a(libc_a-mallocr.o)
- .debug_line    0x0000a279      0x2cb /usr/lib/gcc/arm-none-eabi/14.2.1/../../../arm-none-eabi/lib/thumb/v7e-m/nofp/libg_nano.a(libc_a-freer.o)
- .debug_line    0x0000a544      0x15b /usr/lib/gcc/arm-none-eabi/14.2.1/../../../arm-none-eabi/lib/thumb/v7e-m/nofp/libg_nano.a(libc_a-mlock.o)
- .debug_line    0x0000a69f      0x19b /usr/lib/gcc/arm-none-eabi/14.2.1/../../../arm-none-eabi/lib/thumb/v7e-m/nofp/libg_nano.a(libc_a-sbrkr.o)
- .debug_line    0x0000a83a      0x24a /usr/lib/gcc/arm-none-eabi/14.2.1/../../../arm-none-eabi/lib/thumb/v7e-m/nofp/libg_nano.a(libc_a-__call_atexit.o)
- .debug_line    0x0000aa84      0x283 /usr/lib/gcc/arm-none-eabi/14.2.1/../../../arm-none-eabi/lib/thumb/v7e-m/nofp/libg_nano.a(libc_a-reent.o)
- .debug_line    0x0000ad07       0x76 /usr/lib/gcc/arm-none-eabi/14.2.1/../../../arm-none-eabi/lib/thumb/v7e-m/nofp/libnosys.a(sbrk.o)
- .debug_line    0x0000ad7d       0x61 /usr/lib/gcc/arm-none-eabi/14.2.1/../../../arm-none-eabi/lib/thumb/v7e-m/nofp/libnosys.a(_exit.o)
+.debug_line     0x00000000     0xaefa
+ .debug_line    0x00000000     0x11fa objdir-CWHUSKY/simpleserial-ml-kem-512.o
+ .debug_line    0x000011fa      0x65f objdir-CWHUSKY/indcpa.o
+ .debug_line    0x00001859      0x34d objdir-CWHUSKY/ntt.o
+ .debug_line    0x00001ba6      0x631 objdir-CWHUSKY/poly.o
+ .debug_line    0x000021d7      0x473 objdir-CWHUSKY/polyvec.o
+ .debug_line    0x0000264a       0xc5 objdir-CWHUSKY/reduce.o
+ .debug_line    0x0000270f      0x253 objdir-CWHUSKY/symmetric-shake.o
+ .debug_line    0x00002962      0x14e objdir-CWHUSKY/verify.o
+ .debug_line    0x00002ab0     0x17ee objdir-CWHUSKY/fips202.o
+ .debug_line    0x0000429e      0x5f1 objdir-CWHUSKY/simpleserial.o
+ .debug_line    0x0000488f      0x63d objdir-CWHUSKY/startup_sam4s.o
+ .debug_line    0x00004ecc      0xa8d objdir-CWHUSKY/sam4s_hal.o
+ .debug_line    0x00005959      0xa92 objdir-CWHUSKY/uart.o
+ .debug_line    0x000063eb     0x1178 objdir-CWHUSKY/pio.o
+ .debug_line    0x00007563      0x6ff objdir-CWHUSKY/system_sam4s.o
+ .debug_line    0x00007c62     0x16b9 objdir-CWHUSKY/pmc.o
+ .debug_line    0x0000931b      0x11e /usr/lib/gcc/arm-none-eabi/14.2.1/../../../arm-none-eabi/lib/thumb/v7e-m/nofp/libg_nano.a(libc_a-init.o)
+ .debug_line    0x00009439      0x1ba /usr/lib/gcc/arm-none-eabi/14.2.1/../../../arm-none-eabi/lib/thumb/v7e-m/nofp/libg_nano.a(libc_a-memset.o)
+ .debug_line    0x000095f3       0xb9 /usr/lib/gcc/arm-none-eabi/14.2.1/../../../arm-none-eabi/lib/thumb/v7e-m/nofp/libg_nano.a(libc_a-memcpy.o)
+ .debug_line    0x000096ac      0x173 /usr/lib/gcc/arm-none-eabi/14.2.1/../../../arm-none-eabi/lib/thumb/v7e-m/nofp/libg_nano.a(libc_a-malloc.o)
+ .debug_line    0x0000981f       0xeb /usr/lib/gcc/arm-none-eabi/14.2.1/../../../arm-none-eabi/lib/thumb/v7e-m/nofp/libg_nano.a(libc_a-impure.o)
+ .debug_line    0x0000990a      0x135 /usr/lib/gcc/arm-none-eabi/14.2.1/../../../arm-none-eabi/lib/thumb/v7e-m/nofp/libg_nano.a(libc_a-exit.o)
+ .debug_line    0x00009a3f      0x504 /usr/lib/gcc/arm-none-eabi/14.2.1/../../../arm-none-eabi/lib/thumb/v7e-m/nofp/libg_nano.a(libc_a-findfp.o)
+ .debug_line    0x00009f43      0x452 /usr/lib/gcc/arm-none-eabi/14.2.1/../../../arm-none-eabi/lib/thumb/v7e-m/nofp/libg_nano.a(libc_a-mallocr.o)
+ .debug_line    0x0000a395      0x2cb /usr/lib/gcc/arm-none-eabi/14.2.1/../../../arm-none-eabi/lib/thumb/v7e-m/nofp/libg_nano.a(libc_a-freer.o)
+ .debug_line    0x0000a660      0x15b /usr/lib/gcc/arm-none-eabi/14.2.1/../../../arm-none-eabi/lib/thumb/v7e-m/nofp/libg_nano.a(libc_a-mlock.o)
+ .debug_line    0x0000a7bb      0x19b /usr/lib/gcc/arm-none-eabi/14.2.1/../../../arm-none-eabi/lib/thumb/v7e-m/nofp/libg_nano.a(libc_a-sbrkr.o)
+ .debug_line    0x0000a956      0x24a /usr/lib/gcc/arm-none-eabi/14.2.1/../../../arm-none-eabi/lib/thumb/v7e-m/nofp/libg_nano.a(libc_a-__call_atexit.o)
+ .debug_line    0x0000aba0      0x283 /usr/lib/gcc/arm-none-eabi/14.2.1/../../../arm-none-eabi/lib/thumb/v7e-m/nofp/libg_nano.a(libc_a-reent.o)
+ .debug_line    0x0000ae23       0x76 /usr/lib/gcc/arm-none-eabi/14.2.1/../../../arm-none-eabi/lib/thumb/v7e-m/nofp/libnosys.a(sbrk.o)
+ .debug_line    0x0000ae99       0x61 /usr/lib/gcc/arm-none-eabi/14.2.1/../../../arm-none-eabi/lib/thumb/v7e-m/nofp/libnosys.a(_exit.o)
 
-.debug_str      0x00000000    0x4eba2
- .debug_str     0x00000000    0x4eba2 objdir-CWHUSKY/simpleserial-ml-kem-512.o
-                              0x4ab55 (size before relaxing)
- .debug_str     0x0004eba2        0x0 objdir-CWHUSKY/indcpa.o
+.debug_str      0x00000000    0x4ec30
+ .debug_str     0x00000000    0x4ec30 objdir-CWHUSKY/simpleserial-ml-kem-512.o
+                              0x4abf4 (size before relaxing)
+ .debug_str     0x0004ec30        0x0 objdir-CWHUSKY/indcpa.o
                                0x917c (size before relaxing)
- .debug_str     0x0004eba2        0x0 objdir-CWHUSKY/ntt.o
+ .debug_str     0x0004ec30        0x0 objdir-CWHUSKY/ntt.o
                                0x3e10 (size before relaxing)
- .debug_str     0x0004eba2        0x0 objdir-CWHUSKY/poly.o
+ .debug_str     0x0004ec30        0x0 objdir-CWHUSKY/poly.o
                                0x478c (size before relaxing)
- .debug_str     0x0004eba2        0x0 objdir-CWHUSKY/polyvec.o
+ .debug_str     0x0004ec30        0x0 objdir-CWHUSKY/polyvec.o
                                0x3fcd (size before relaxing)
- .debug_str     0x0004eba2        0x0 objdir-CWHUSKY/reduce.o
+ .debug_str     0x0004ec30        0x0 objdir-CWHUSKY/reduce.o
                                0x3d6f (size before relaxing)
- .debug_str     0x0004eba2        0x0 objdir-CWHUSKY/symmetric-shake.o
+ .debug_str     0x0004ec30        0x0 objdir-CWHUSKY/symmetric-shake.o
                                0x71f6 (size before relaxing)
- .debug_str     0x0004eba2        0x0 objdir-CWHUSKY/verify.o
+ .debug_str     0x0004ec30        0x0 objdir-CWHUSKY/verify.o
                                0x4134 (size before relaxing)
- .debug_str     0x0004eba2        0x0 objdir-CWHUSKY/fips202.o
+ .debug_str     0x0004ec30        0x0 objdir-CWHUSKY/fips202.o
                                0x719b (size before relaxing)
- .debug_str     0x0004eba2        0x0 objdir-CWHUSKY/simpleserial.o
+ .debug_str     0x0004ec30        0x0 objdir-CWHUSKY/simpleserial.o
                                0x3fcc (size before relaxing)
- .debug_str     0x0004eba2        0x0 objdir-CWHUSKY/startup_sam4s.o
+ .debug_str     0x0004ec30        0x0 objdir-CWHUSKY/startup_sam4s.o
                               0x383bd (size before relaxing)
- .debug_str     0x0004eba2        0x0 objdir-CWHUSKY/sam4s_hal.o
+ .debug_str     0x0004ec30        0x0 objdir-CWHUSKY/sam4s_hal.o
                               0x49597 (size before relaxing)
- .debug_str     0x0004eba2        0x0 objdir-CWHUSKY/uart.o
+ .debug_str     0x0004ec30        0x0 objdir-CWHUSKY/uart.o
                               0x47d22 (size before relaxing)
- .debug_str     0x0004eba2        0x0 objdir-CWHUSKY/pio.o
+ .debug_str     0x0004ec30        0x0 objdir-CWHUSKY/pio.o
                               0x48599 (size before relaxing)
- .debug_str     0x0004eba2        0x0 objdir-CWHUSKY/system_sam4s.o
+ .debug_str     0x0004ec30        0x0 objdir-CWHUSKY/system_sam4s.o
                               0x3818a (size before relaxing)
- .debug_str     0x0004eba2        0x0 objdir-CWHUSKY/pmc.o
+ .debug_str     0x0004ec30        0x0 objdir-CWHUSKY/pmc.o
                               0x483ed (size before relaxing)
- .debug_str     0x0004eba2        0x0 /usr/lib/gcc/arm-none-eabi/14.2.1/../../../arm-none-eabi/lib/thumb/v7e-m/nofp/libg_nano.a(libc_a-init.o)
+ .debug_str     0x0004ec30        0x0 /usr/lib/gcc/arm-none-eabi/14.2.1/../../../arm-none-eabi/lib/thumb/v7e-m/nofp/libg_nano.a(libc_a-init.o)
                                 0x1f8 (size before relaxing)
- .debug_str     0x0004eba2        0x0 /usr/lib/gcc/arm-none-eabi/14.2.1/../../../arm-none-eabi/lib/thumb/v7e-m/nofp/libg_nano.a(libc_a-memset.o)
+ .debug_str     0x0004ec30        0x0 /usr/lib/gcc/arm-none-eabi/14.2.1/../../../arm-none-eabi/lib/thumb/v7e-m/nofp/libg_nano.a(libc_a-memset.o)
                                 0x1ab (size before relaxing)
- .debug_str     0x0004eba2        0x0 /usr/lib/gcc/arm-none-eabi/14.2.1/../../../arm-none-eabi/lib/thumb/v7e-m/nofp/libg_nano.a(libc_a-memcpy.o)
+ .debug_str     0x0004ec30        0x0 /usr/lib/gcc/arm-none-eabi/14.2.1/../../../arm-none-eabi/lib/thumb/v7e-m/nofp/libg_nano.a(libc_a-memcpy.o)
                                  0xb0 (size before relaxing)
- .debug_str     0x0004eba2        0x0 /usr/lib/gcc/arm-none-eabi/14.2.1/../../../arm-none-eabi/lib/thumb/v7e-m/nofp/libg_nano.a(libc_a-malloc.o)
+ .debug_str     0x0004ec30        0x0 /usr/lib/gcc/arm-none-eabi/14.2.1/../../../arm-none-eabi/lib/thumb/v7e-m/nofp/libg_nano.a(libc_a-malloc.o)
                                 0x4df (size before relaxing)
- .debug_str     0x0004eba2        0x0 /usr/lib/gcc/arm-none-eabi/14.2.1/../../../arm-none-eabi/lib/thumb/v7e-m/nofp/libg_nano.a(libc_a-impure.o)
+ .debug_str     0x0004ec30        0x0 /usr/lib/gcc/arm-none-eabi/14.2.1/../../../arm-none-eabi/lib/thumb/v7e-m/nofp/libg_nano.a(libc_a-impure.o)
                                 0x4ba (size before relaxing)
- .debug_str     0x0004eba2        0x0 /usr/lib/gcc/arm-none-eabi/14.2.1/../../../arm-none-eabi/lib/thumb/v7e-m/nofp/libg_nano.a(libc_a-exit.o)
+ .debug_str     0x0004ec30        0x0 /usr/lib/gcc/arm-none-eabi/14.2.1/../../../arm-none-eabi/lib/thumb/v7e-m/nofp/libg_nano.a(libc_a-exit.o)
                                 0x1bd (size before relaxing)
- .debug_str     0x0004eba2        0x0 /usr/lib/gcc/arm-none-eabi/14.2.1/../../../arm-none-eabi/lib/thumb/v7e-m/nofp/libg_nano.a(libc_a-findfp.o)
+ .debug_str     0x0004ec30        0x0 /usr/lib/gcc/arm-none-eabi/14.2.1/../../../arm-none-eabi/lib/thumb/v7e-m/nofp/libg_nano.a(libc_a-findfp.o)
                                 0x6bd (size before relaxing)
- .debug_str     0x0004eba2        0x0 /usr/lib/gcc/arm-none-eabi/14.2.1/../../../arm-none-eabi/lib/thumb/v7e-m/nofp/libg_nano.a(libc_a-mallocr.o)
+ .debug_str     0x0004ec30        0x0 /usr/lib/gcc/arm-none-eabi/14.2.1/../../../arm-none-eabi/lib/thumb/v7e-m/nofp/libg_nano.a(libc_a-mallocr.o)
                                 0x59b (size before relaxing)
- .debug_str     0x0004eba2        0x0 /usr/lib/gcc/arm-none-eabi/14.2.1/../../../arm-none-eabi/lib/thumb/v7e-m/nofp/libg_nano.a(libc_a-freer.o)
+ .debug_str     0x0004ec30        0x0 /usr/lib/gcc/arm-none-eabi/14.2.1/../../../arm-none-eabi/lib/thumb/v7e-m/nofp/libg_nano.a(libc_a-freer.o)
                                 0x53a (size before relaxing)
- .debug_str     0x0004eba2        0x0 /usr/lib/gcc/arm-none-eabi/14.2.1/../../../arm-none-eabi/lib/thumb/v7e-m/nofp/libg_nano.a(libc_a-mlock.o)
+ .debug_str     0x0004ec30        0x0 /usr/lib/gcc/arm-none-eabi/14.2.1/../../../arm-none-eabi/lib/thumb/v7e-m/nofp/libg_nano.a(libc_a-mlock.o)
                                 0x4d8 (size before relaxing)
- .debug_str     0x0004eba2        0x0 /usr/lib/gcc/arm-none-eabi/14.2.1/../../../arm-none-eabi/lib/thumb/v7e-m/nofp/libg_nano.a(libc_a-sbrkr.o)
+ .debug_str     0x0004ec30        0x0 /usr/lib/gcc/arm-none-eabi/14.2.1/../../../arm-none-eabi/lib/thumb/v7e-m/nofp/libg_nano.a(libc_a-sbrkr.o)
                                 0x4c3 (size before relaxing)
- .debug_str     0x0004eba2        0x0 /usr/lib/gcc/arm-none-eabi/14.2.1/../../../arm-none-eabi/lib/thumb/v7e-m/nofp/libg_nano.a(libc_a-__call_atexit.o)
+ .debug_str     0x0004ec30        0x0 /usr/lib/gcc/arm-none-eabi/14.2.1/../../../arm-none-eabi/lib/thumb/v7e-m/nofp/libg_nano.a(libc_a-__call_atexit.o)
                                 0x240 (size before relaxing)
- .debug_str     0x0004eba2        0x0 /usr/lib/gcc/arm-none-eabi/14.2.1/../../../arm-none-eabi/lib/thumb/v7e-m/nofp/libg_nano.a(libc_a-reent.o)
+ .debug_str     0x0004ec30        0x0 /usr/lib/gcc/arm-none-eabi/14.2.1/../../../arm-none-eabi/lib/thumb/v7e-m/nofp/libg_nano.a(libc_a-reent.o)
                                 0x4d9 (size before relaxing)
- .debug_str     0x0004eba2        0x0 /usr/lib/gcc/arm-none-eabi/14.2.1/../../../arm-none-eabi/lib/thumb/v7e-m/nofp/libnosys.a(sbrk.o)
+ .debug_str     0x0004ec30        0x0 /usr/lib/gcc/arm-none-eabi/14.2.1/../../../arm-none-eabi/lib/thumb/v7e-m/nofp/libnosys.a(sbrk.o)
                                 0x11b (size before relaxing)
- .debug_str     0x0004eba2        0x0 /usr/lib/gcc/arm-none-eabi/14.2.1/../../../arm-none-eabi/lib/thumb/v7e-m/nofp/libnosys.a(_exit.o)
+ .debug_str     0x0004ec30        0x0 /usr/lib/gcc/arm-none-eabi/14.2.1/../../../arm-none-eabi/lib/thumb/v7e-m/nofp/libnosys.a(_exit.o)
                                 0x167 (size before relaxing)
 
-.debug_frame    0x00000000     0x1c24
- .debug_frame   0x00000000      0x138 objdir-CWHUSKY/simpleserial-ml-kem-512.o
- .debug_frame   0x00000138       0xd8 objdir-CWHUSKY/indcpa.o
- .debug_frame   0x00000210       0x8c objdir-CWHUSKY/ntt.o
- .debug_frame   0x0000029c      0x1d4 objdir-CWHUSKY/poly.o
- .debug_frame   0x00000470      0x160 objdir-CWHUSKY/polyvec.o
- .debug_frame   0x000005d0       0x30 objdir-CWHUSKY/reduce.o
- .debug_frame   0x00000600       0x78 objdir-CWHUSKY/symmetric-shake.o
- .debug_frame   0x00000678       0x58 objdir-CWHUSKY/verify.o
- .debug_frame   0x000006d0      0x59c objdir-CWHUSKY/fips202.o
- .debug_frame   0x00000c6c      0x16c objdir-CWHUSKY/simpleserial.o
- .debug_frame   0x00000dd8       0x38 objdir-CWHUSKY/startup_sam4s.o
- .debug_frame   0x00000e10       0xdc objdir-CWHUSKY/sam4s_hal.o
- .debug_frame   0x00000eec      0x1b8 objdir-CWHUSKY/uart.o
- .debug_frame   0x000010a4      0x370 objdir-CWHUSKY/pio.o
- .debug_frame   0x00001414       0x48 objdir-CWHUSKY/system_sam4s.o
- .debug_frame   0x0000145c      0x438 objdir-CWHUSKY/pmc.o
- .debug_frame   0x00001894       0x2c /usr/lib/gcc/arm-none-eabi/14.2.1/../../../arm-none-eabi/lib/thumb/v7e-m/nofp/libg_nano.a(libc_a-init.o)
- .debug_frame   0x000018c0       0x2c /usr/lib/gcc/arm-none-eabi/14.2.1/../../../arm-none-eabi/lib/thumb/v7e-m/nofp/libg_nano.a(libc_a-memset.o)
- .debug_frame   0x000018ec       0x28 /usr/lib/gcc/arm-none-eabi/14.2.1/../../../arm-none-eabi/lib/thumb/v7e-m/nofp/libg_nano.a(libc_a-memcpy.o)
- .debug_frame   0x00001914       0x30 /usr/lib/gcc/arm-none-eabi/14.2.1/../../../arm-none-eabi/lib/thumb/v7e-m/nofp/libg_nano.a(libc_a-malloc.o)
- .debug_frame   0x00001944       0x28 /usr/lib/gcc/arm-none-eabi/14.2.1/../../../arm-none-eabi/lib/thumb/v7e-m/nofp/libg_nano.a(libc_a-exit.o)
- .debug_frame   0x0000196c       0xf4 /usr/lib/gcc/arm-none-eabi/14.2.1/../../../arm-none-eabi/lib/thumb/v7e-m/nofp/libg_nano.a(libc_a-findfp.o)
- .debug_frame   0x00001a60       0x50 /usr/lib/gcc/arm-none-eabi/14.2.1/../../../arm-none-eabi/lib/thumb/v7e-m/nofp/libg_nano.a(libc_a-mallocr.o)
- .debug_frame   0x00001ab0       0x58 /usr/lib/gcc/arm-none-eabi/14.2.1/../../../arm-none-eabi/lib/thumb/v7e-m/nofp/libg_nano.a(libc_a-freer.o)
- .debug_frame   0x00001b08       0x30 /usr/lib/gcc/arm-none-eabi/14.2.1/../../../arm-none-eabi/lib/thumb/v7e-m/nofp/libg_nano.a(libc_a-mlock.o)
- .debug_frame   0x00001b38       0x2c /usr/lib/gcc/arm-none-eabi/14.2.1/../../../arm-none-eabi/lib/thumb/v7e-m/nofp/libg_nano.a(libc_a-sbrkr.o)
- .debug_frame   0x00001b64       0x40 /usr/lib/gcc/arm-none-eabi/14.2.1/../../../arm-none-eabi/lib/thumb/v7e-m/nofp/libg_nano.a(libc_a-__call_atexit.o)
- .debug_frame   0x00001ba4       0x40 /usr/lib/gcc/arm-none-eabi/14.2.1/../../../arm-none-eabi/lib/thumb/v7e-m/nofp/libg_nano.a(libc_a-reent.o)
- .debug_frame   0x00001be4       0x20 /usr/lib/gcc/arm-none-eabi/14.2.1/../../../arm-none-eabi/lib/thumb/v7e-m/nofp/libnosys.a(sbrk.o)
- .debug_frame   0x00001c04       0x20 /usr/lib/gcc/arm-none-eabi/14.2.1/../../../arm-none-eabi/lib/thumb/v7e-m/nofp/libnosys.a(_exit.o)
+.debug_frame    0x00000000     0x1c68
+ .debug_frame   0x00000000      0x17c objdir-CWHUSKY/simpleserial-ml-kem-512.o
+ .debug_frame   0x0000017c       0xd8 objdir-CWHUSKY/indcpa.o
+ .debug_frame   0x00000254       0x8c objdir-CWHUSKY/ntt.o
+ .debug_frame   0x000002e0      0x1d4 objdir-CWHUSKY/poly.o
+ .debug_frame   0x000004b4      0x160 objdir-CWHUSKY/polyvec.o
+ .debug_frame   0x00000614       0x30 objdir-CWHUSKY/reduce.o
+ .debug_frame   0x00000644       0x78 objdir-CWHUSKY/symmetric-shake.o
+ .debug_frame   0x000006bc       0x58 objdir-CWHUSKY/verify.o
+ .debug_frame   0x00000714      0x59c objdir-CWHUSKY/fips202.o
+ .debug_frame   0x00000cb0      0x16c objdir-CWHUSKY/simpleserial.o
+ .debug_frame   0x00000e1c       0x38 objdir-CWHUSKY/startup_sam4s.o
+ .debug_frame   0x00000e54       0xdc objdir-CWHUSKY/sam4s_hal.o
+ .debug_frame   0x00000f30      0x1b8 objdir-CWHUSKY/uart.o
+ .debug_frame   0x000010e8      0x370 objdir-CWHUSKY/pio.o
+ .debug_frame   0x00001458       0x48 objdir-CWHUSKY/system_sam4s.o
+ .debug_frame   0x000014a0      0x438 objdir-CWHUSKY/pmc.o
+ .debug_frame   0x000018d8       0x2c /usr/lib/gcc/arm-none-eabi/14.2.1/../../../arm-none-eabi/lib/thumb/v7e-m/nofp/libg_nano.a(libc_a-init.o)
+ .debug_frame   0x00001904       0x2c /usr/lib/gcc/arm-none-eabi/14.2.1/../../../arm-none-eabi/lib/thumb/v7e-m/nofp/libg_nano.a(libc_a-memset.o)
+ .debug_frame   0x00001930       0x28 /usr/lib/gcc/arm-none-eabi/14.2.1/../../../arm-none-eabi/lib/thumb/v7e-m/nofp/libg_nano.a(libc_a-memcpy.o)
+ .debug_frame   0x00001958       0x30 /usr/lib/gcc/arm-none-eabi/14.2.1/../../../arm-none-eabi/lib/thumb/v7e-m/nofp/libg_nano.a(libc_a-malloc.o)
+ .debug_frame   0x00001988       0x28 /usr/lib/gcc/arm-none-eabi/14.2.1/../../../arm-none-eabi/lib/thumb/v7e-m/nofp/libg_nano.a(libc_a-exit.o)
+ .debug_frame   0x000019b0       0xf4 /usr/lib/gcc/arm-none-eabi/14.2.1/../../../arm-none-eabi/lib/thumb/v7e-m/nofp/libg_nano.a(libc_a-findfp.o)
+ .debug_frame   0x00001aa4       0x50 /usr/lib/gcc/arm-none-eabi/14.2.1/../../../arm-none-eabi/lib/thumb/v7e-m/nofp/libg_nano.a(libc_a-mallocr.o)
+ .debug_frame   0x00001af4       0x58 /usr/lib/gcc/arm-none-eabi/14.2.1/../../../arm-none-eabi/lib/thumb/v7e-m/nofp/libg_nano.a(libc_a-freer.o)
+ .debug_frame   0x00001b4c       0x30 /usr/lib/gcc/arm-none-eabi/14.2.1/../../../arm-none-eabi/lib/thumb/v7e-m/nofp/libg_nano.a(libc_a-mlock.o)
+ .debug_frame   0x00001b7c       0x2c /usr/lib/gcc/arm-none-eabi/14.2.1/../../../arm-none-eabi/lib/thumb/v7e-m/nofp/libg_nano.a(libc_a-sbrkr.o)
+ .debug_frame   0x00001ba8       0x40 /usr/lib/gcc/arm-none-eabi/14.2.1/../../../arm-none-eabi/lib/thumb/v7e-m/nofp/libg_nano.a(libc_a-__call_atexit.o)
+ .debug_frame   0x00001be8       0x40 /usr/lib/gcc/arm-none-eabi/14.2.1/../../../arm-none-eabi/lib/thumb/v7e-m/nofp/libg_nano.a(libc_a-reent.o)
+ .debug_frame   0x00001c28       0x20 /usr/lib/gcc/arm-none-eabi/14.2.1/../../../arm-none-eabi/lib/thumb/v7e-m/nofp/libnosys.a(sbrk.o)
+ .debug_frame   0x00001c48       0x20 /usr/lib/gcc/arm-none-eabi/14.2.1/../../../arm-none-eabi/lib/thumb/v7e-m/nofp/libnosys.a(_exit.o)
 
 .debug_loclists
                 0x00000000      0xa31
@@ -4317,6 +4322,7 @@ simpleserial_get                                  objdir-CWHUSKY/simpleserial.o
 simpleserial_init                                 objdir-CWHUSKY/simpleserial.o
                                                   objdir-CWHUSKY/simpleserial-ml-kem-512.o
 simpleserial_put                                  objdir-CWHUSKY/simpleserial.o
+                                                  objdir-CWHUSKY/simpleserial-ml-kem-512.o
 sk                                                objdir-CWHUSKY/simpleserial-ml-kem-512.o
 software_init_hook                                /usr/lib/gcc/arm-none-eabi/14.2.1/../../../arm-none-eabi/lib/thumb/v7e-m/nofp/crt0.o
 ss                                                objdir-CWHUSKY/simpleserial-ml-kem-512.o
