@@ -25,12 +25,14 @@
 
 #define SK_LEN 1632
 #define PK_LEN 800
+#define CT_LEN 768
 #define SS_LEN 32
 
 uint16_t CHUNK_SZ = 248;  // Tamaño de chunk por defecto (1-249)
 
 static uint8_t sk[SK_LEN] = {0};
 static uint8_t pk[PK_LEN] = {0};
+static uint8_t ct[CT_LEN] = {0};
 static uint8_t ss[SS_LEN] = {0};
 
 uint8_t get_key(uint8_t* k, uint8_t len)
@@ -104,6 +106,24 @@ uint8_t tx_pk(uint8_t cmd, uint8_t scmd, uint8_t len, uint8_t *buf)
     if (offset >= PK_LEN) return SS_ERR_LEN;
     uint16_t to_send = (offset + CHUNK_SZ > PK_LEN) ? PK_LEN - offset : CHUNK_SZ;
     simpleserial_put('p', to_send, pk + offset);
+    return 0x00;
+}
+
+uint8_t rx_ct(uint8_t cmd, uint8_t scmd, uint8_t len, uint8_t *buf)
+{
+    uint16_t offset = scmd * CHUNK_SZ;
+    if (offset >= CT_LEN) return SS_ERR_LEN;
+    uint16_t to_copy = (offset + len > CT_LEN) ? CT_LEN - offset : len;
+    memcpy(ct + offset, buf, to_copy);
+    return 0x00;
+}
+
+uint8_t tx_ct(uint8_t cmd, uint8_t scmd, uint8_t len, uint8_t *buf)
+{
+    uint16_t offset = scmd * CHUNK_SZ;
+    if (offset >= CT_LEN) return SS_ERR_LEN;
+    uint16_t to_send = (offset + CHUNK_SZ > CT_LEN) ? CT_LEN - offset : CHUNK_SZ;
+    simpleserial_put('c', to_send, ct + offset);
     return 0x00;
 }
 
@@ -196,8 +216,10 @@ int main(void)
     simpleserial_addcmd(0x04, 2, set_chunk_size);  // set chunk size
     simpleserial_addcmd(0x05, 248, rx_pk);    // PK: receive chunk
     simpleserial_addcmd(0x06, 0, tx_pk);      // PK: send chunk
-    simpleserial_addcmd(0x07, 248, rx_ss);    // SS: receive chunk
-    simpleserial_addcmd(0x08, 0, tx_ss);      // SS: send chunk
+    simpleserial_addcmd(0x07, 248, rx_ct);    // CT: receive chunk
+    simpleserial_addcmd(0x08, 0, tx_ct);      // CT: send chunk
+    simpleserial_addcmd(0x09, 248, rx_ss);    // SS: receive chunk
+    simpleserial_addcmd(0x0A, 0, tx_ss);      // SS: send chunk
 
 #endif
 	while(1)
