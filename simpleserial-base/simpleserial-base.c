@@ -23,9 +23,10 @@
 
 #include "simpleserial.h"
 
-#define KEY_LEN 2000
-#define CHUNK_SZ 200
-static uint8_t key_buf[KEY_LEN];
+#define KEY_LEN 1632
+uint16_t CHUNK_SZ = 248;  // Tamaño de chunk por defecto (1-249)
+
+static uint8_t key_buf[KEY_LEN] = {0};
 
 uint8_t get_key(uint8_t* k, uint8_t len)
 {
@@ -55,6 +56,40 @@ uint8_t get_pt(uint8_t* pt, uint8_t len)
 uint8_t reset(uint8_t* x, uint8_t len)
 {
 	// Reset key here if needed
+	return 0x00;
+}
+
+uint8_t rx_key(uint8_t cmd, uint8_t scmd, uint8_t len, uint8_t *buf)
+{
+    uint16_t offset = scmd * CHUNK_SZ;
+    // Validar que no sobrepasamos los límites
+    if (offset >= KEY_LEN) return SS_ERR_LEN;
+    // Limitar la cantidad a copiar al espacio disponible
+    uint16_t to_copy = (offset + len > KEY_LEN) ? KEY_LEN - offset : len;
+    memcpy(key_buf + offset, buf, to_copy);
+    // Debug: retornar el primer byte del buffer para verificar
+    trigger_high();
+    trigger_low();
+    return 0x00;
+}
+
+uint8_t tx_key(uint8_t cmd, uint8_t scmd, uint8_t len, uint8_t *buf)
+{
+    uint16_t offset = scmd * CHUNK_SZ;
+    // Validar que el offset está dentro de límites
+    if (offset >= KEY_LEN) return SS_ERR_LEN;
+    // Enviar el chunk de datos (CHUNK_SZ o menos si llegamos al final)
+    uint16_t to_send = (offset + CHUNK_SZ > KEY_LEN) ? KEY_LEN - offset : CHUNK_SZ;
+    simpleserial_put('k', to_send, key_buf + offset);
+    return 0x00;
+}
+
+uint8_t set_chunk_size(uint8_t cmd, uint8_t scmd, uint8_t len, uint8_t *buf)
+{
+	if (len != 2) return SS_ERR_LEN;  // Esperamos exactamente 2 bytes (uint16_t)
+	uint16_t new_size = buf[0] | (buf[1] << 8);
+	if (new_size < 1 || new_size > 249) return SS_ERR_LEN;  // Límite de SimpleSerial v2.1
+	CHUNK_SZ = new_size;
 	return 0x00;
 }
 
@@ -88,24 +123,8 @@ uint8_t aes(uint8_t cmd, uint8_t scmd, uint8_t len, uint8_t *buf)
     }
 
     return 0x00;
-}
- 
-uint8_t rx_key(uint8_t cmd, uint8_t scmd, uint8_t len, uint8_t *buf)
-{
-    uint16_t offset = scmd * CHUNK_SZ;
-    if (offset + len > KEY_LEN) return SS_ERR_LEN;
-    memcpy(key_buf + offset, buf, len);
-    return 0x00;
-}
 
-uint8_t tx_key(uint8_t cmd, uint8_t scmd, uint8_t len, uint8_t *buf)
-{
-    uint16_t offset = scmd * CHUNK_SZ;
-    uint16_t to_send = (offset + CHUNK_SZ > KEY_LEN) ? KEY_LEN - offset : CHUNK_SZ;
-    simpleserial_put('k', to_send, key_buf + offset);
-    return 0x00;
 }
-
 #endif
 
 int main(void)
@@ -131,8 +150,9 @@ int main(void)
 	simpleserial_addcmd('x', 0, reset);
 #else
     simpleserial_addcmd(0x01, 16, aes);
-    simpleserial_addcmd(0x02, CHUNK_SZ, rx_key);   // receive chunk
-    simpleserial_addcmd(0x03, 0, tx_key);          // send chunk (scmd = index)
+    simpleserial_addcmd(0x02, 248, rx_key);   // receive chunk (max V2 size - 1)
+    simpleserial_addcmd(0x03, 0, tx_key);     // send chunk (scmd = index only, no data)
+    simpleserial_addcmd(0x04, 2, set_chunk_size);  // set chunk size
 
 #endif
 	while(1)
