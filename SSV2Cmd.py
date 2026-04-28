@@ -145,6 +145,76 @@ else:
                 print(f"Primera diferencia en byte {i}: esperado 0x{pk[i]:02x}, recibido 0x{rec_pk[i]:02x}")
                 break
 
+
+#CT_LEN = 768 test
+CT_LEN = 768
+chunk_size = 100  # Mantener <= 100 para reducir riesgo de UART overrun
+num_chunks = (CT_LEN + chunk_size - 1) // chunk_size
+
+# Limpiar basura de ejecuciones anteriores para evitar desincronizacion del parser
+target.reset_comms()
+target.flush()
+
+# Verificar comandos disponibles en el firmware cargado
+cmds = target.get_simpleserial_commands()
+print("Comandos reportados:", cmds)
+
+# 1) Configurar chunk size en firmware y esperar ACK
+target.send_cmd(0x04, 0, [chunk_size & 0xFF, (chunk_size >> 8) & 0xFF])
+ack = target.simpleserial_wait_ack()
+print(f"ACK 0x04: {ack}")
+if ack is None or len(ack) == 0 or ack[0] != 0x00:
+    raise RuntimeError(f"Fallo en cmd 0x04, ack={ack}")
+time.sleep(0.05)
+
+# 2) Enviar CT en chunks con ACK por cada envio
+for i in range(num_chunks):
+    start = i * chunk_size
+    end = min(start + chunk_size, CT_LEN)
+    tx_chunk = ct[start:end]
+    target.send_cmd(0x07, i, tx_chunk)
+    ack = target.simpleserial_wait_ack()
+    if ack is None or len(ack) == 0 or ack[0] != 0x00:
+        raise RuntimeError(f"ERROR envio chunk {i}: ack={ack}")
+    print(f"Enviado chunk {i}/{num_chunks-1}: {len(tx_chunk)} bytes")
+    time.sleep(0.02)
+
+# 3) Leer cada chunk: primero paquete 'k', luego ACK del comando 0x03
+rec_ct = bytearray()
+target.con()
+for i in range(num_chunks):
+    start = i * chunk_size
+    expected_len = min(chunk_size, CT_LEN - start)
+
+    target.send_cmd(0x08, i, [])
+
+    # Leer respuesta de datos sin consumir ACK automaticamente
+    rx_chunk = target.simpleserial_read('c', expected_len, ack=False)
+    if rx_chunk is None:
+        raise RuntimeError(f"Timeout leyendo chunk {i}")
+
+    ack = target.simpleserial_wait_ack()
+    if ack is None or len(ack) == 0 or ack[0] != 0x00:
+        raise RuntimeError(f"ERROR ACK lectura chunk {i}: ack={ack}")
+
+    rec_ct.extend(rx_chunk)
+    print(f"Recibido chunk {i}/{num_chunks-1}: {len(rx_chunk)} bytes")
+    time.sleep(0.02)
+
+print("\n--- Verificación ---")
+if len(rec_ct) != len(ct):
+    print(f"ERROR: Longitud mismatch. Esperado: {len(ct)}, Recibido: {len(rec_ct)}")
+else:
+    if rec_ct == ct:
+        print("ÉXITO: Ct recibido idéntico al enviado")
+    else:
+        print("ERROR: Ct recibido no coincide")
+        # Encontrar primera diferencia
+        for i in range(len(ct)):
+            if ct[i] != rec_ct[i]:
+                print(f"Primera diferencia en byte {i}: esperado 0x{ct[i]:02x}, recibido 0x{rec_ct[i]:02x}")
+                break
+
 # SS_LEN = 32  test
 SS_LEN = 32
 chunk_size = 32  # Mantener <= 100 para reducir riesgo de UART overrun
@@ -171,7 +241,7 @@ for i in range(num_chunks):
     start = i * chunk_size
     end = min(start + chunk_size, SS_LEN)
     tx_chunk = ss[start:end]
-    target.send_cmd(0x07, i, tx_chunk)
+    target.send_cmd(0x09, i, tx_chunk)
     ack = target.simpleserial_wait_ack()
     if ack is None or len(ack) == 0 or ack[0] != 0x00:
         raise RuntimeError(f"ERROR envio chunk {i}: ack={ack}")
@@ -184,7 +254,7 @@ for i in range(num_chunks):
     start = i * chunk_size
     expected_len = min(chunk_size, SS_LEN - start)
 
-    target.send_cmd(0x08, i, [])
+    target.send_cmd(0x0A, i, [])
 
     # Leer respuesta de datos sin consumir ACK automaticamente
     rx_chunk = target.simpleserial_read('s', expected_len, ack=False)
