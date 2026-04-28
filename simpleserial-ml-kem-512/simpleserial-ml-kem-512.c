@@ -60,9 +60,17 @@ static uint8_t decap_decrypted_buf[KYBER_SYMBYTES];
 #define MLKEM_SS_V21_CMD         0x01
 #define MLKEM_SS_V21_CMD_RX      0x02
 #define MLKEM_SS_V21_CMD_TX      0x03
+#define MLKEM_SS_V21_CMD_SET_CHUNK 0x04
+#define MLKEM_SS_V21_CMD_RX_PK   0x05
+#define MLKEM_SS_V21_CMD_TX_PK   0x06
+#define MLKEM_SS_V21_CMD_RX_CT   0x07
+#define MLKEM_SS_V21_CMD_TX_CT   0x08
+#define MLKEM_SS_V21_CMD_RX_SS   0x09
+#define MLKEM_SS_V21_CMD_TX_SS   0x0A
 #define MLKEM_SS_V21_CHUNK_SK    204u
 #define MLKEM_SS_V21_CHUNK_PK    200u
 #define MLKEM_SS_V21_CHUNK_CT    192u
+#define MLKEM_SS_V21_CHUNK_MAX   249u
 #define MLKEM_SS_V21_SK_CHUNKS   8u
 #define MLKEM_SS_V21_PK_CHUNKS   4u
 #define MLKEM_SS_V21_CT_CHUNKS   4u
@@ -82,6 +90,7 @@ static uint8_t sk_chunks_loaded = 0;
 static uint8_t pk_chunks_loaded = 0;
 static uint8_t ct_chunks_loaded = 0;
 static uint8_t ss_loaded = 0;
+static uint8_t v21_chunk_sz = MLKEM_SS_V21_CHUNK_SK;
 #endif
 
 /*Led functions*/
@@ -359,6 +368,120 @@ static uint8_t v21_readback_bounds(uint8_t scmd, const uint8_t **src, uint8_t *o
     return SS_ERR_CMD;
 }
 
+static uint8_t v21_rx_vector_chunk(uint8_t *dst, size_t dst_len, uint8_t scmd,
+                                   uint8_t len, const uint8_t *buf)
+{
+    size_t offset;
+    size_t remaining;
+
+    if ((v21_chunk_sz == 0u) || (len == 0u) || (len > v21_chunk_sz)) {
+        return SS_ERR_LEN;
+    }
+
+    offset = (size_t)scmd * (size_t)v21_chunk_sz;
+    if (offset >= dst_len) {
+        return SS_ERR_LEN;
+    }
+
+    remaining = dst_len - offset;
+    if ((size_t)len > remaining) {
+        return SS_ERR_LEN;
+    }
+
+    memcpy(dst + offset, buf, len);
+    return SS_ERR_OK;
+}
+
+static uint8_t v21_tx_vector_chunk(uint8_t tag, const uint8_t *src, size_t src_len,
+                                   uint8_t scmd, uint8_t len)
+{
+    size_t offset;
+    size_t remaining;
+    uint8_t out_len;
+
+    if ((v21_chunk_sz == 0u) || (len != 0u)) {
+        return SS_ERR_LEN;
+    }
+
+    offset = (size_t)scmd * (size_t)v21_chunk_sz;
+    if (offset >= src_len) {
+        return SS_ERR_LEN;
+    }
+
+    remaining = src_len - offset;
+    out_len = (remaining > (size_t)v21_chunk_sz) ? v21_chunk_sz : (uint8_t)remaining;
+    simpleserial_put(tag, out_len, src + offset);
+    return SS_ERR_OK;
+}
+
+static uint8_t v21_set_chunk_size(uint8_t cmd, uint8_t scmd, uint8_t len, uint8_t *buf)
+{
+    uint16_t new_size;
+
+    (void)cmd;
+    (void)scmd;
+    if (len != 2u) {
+        return SS_ERR_LEN;
+    }
+
+    new_size = (uint16_t)buf[0] | ((uint16_t)buf[1] << 8);
+    if ((new_size < 1u) || (new_size > MLKEM_SS_V21_CHUNK_MAX)) {
+        return SS_ERR_LEN;
+    }
+
+    v21_chunk_sz = (uint8_t)new_size;
+    return SS_ERR_OK;
+}
+
+static uint8_t v21_rx_pk_cmd(uint8_t cmd, uint8_t scmd, uint8_t len, uint8_t *buf)
+{
+    uint8_t err;
+    (void)cmd;
+    err = v21_rx_vector_chunk(pk, sizeof(pk), scmd, len, buf);
+    if (err == SS_ERR_OK) {
+        v21_sync_pk_into_sk();
+    }
+    return err;
+}
+
+static uint8_t v21_tx_pk_cmd(uint8_t cmd, uint8_t scmd, uint8_t len, uint8_t *buf)
+{
+    (void)cmd;
+    (void)buf;
+    return v21_tx_vector_chunk('p', pk, sizeof(pk), scmd, len);
+}
+
+static uint8_t v21_rx_ct_cmd(uint8_t cmd, uint8_t scmd, uint8_t len, uint8_t *buf)
+{
+    (void)cmd;
+    return v21_rx_vector_chunk(ct, sizeof(ct), scmd, len, buf);
+}
+
+static uint8_t v21_tx_ct_cmd(uint8_t cmd, uint8_t scmd, uint8_t len, uint8_t *buf)
+{
+    (void)cmd;
+    (void)buf;
+    return v21_tx_vector_chunk('c', ct, sizeof(ct), scmd, len);
+}
+
+static uint8_t v21_rx_ss_cmd(uint8_t cmd, uint8_t scmd, uint8_t len, uint8_t *buf)
+{
+    uint8_t err;
+    (void)cmd;
+    err = v21_rx_vector_chunk(ss, sizeof(ss), scmd, len, buf);
+    if (err == SS_ERR_OK) {
+        ss_loaded = 1u;
+    }
+    return err;
+}
+
+static uint8_t v21_tx_ss_cmd(uint8_t cmd, uint8_t scmd, uint8_t len, uint8_t *buf)
+{
+    (void)cmd;
+    (void)buf;
+    return v21_tx_vector_chunk('s', ss, sizeof(ss), scmd, len);
+}
+
 static uint8_t led_on_cmd_v21(uint8_t cmd, uint8_t scmd, uint8_t len, uint8_t *buf)
 {
     (void)cmd;
@@ -479,6 +602,13 @@ int main(void)
     simpleserial_addcmd(MLKEM_SS_V21_CMD, MLKEM_SS_V21_CHUNK_SK, ml_kem_512);
     simpleserial_addcmd(MLKEM_SS_V21_CMD_RX, MLKEM_SS_V21_CHUNK_SK, ml_kem_512_rx_chunk);
     simpleserial_addcmd(MLKEM_SS_V21_CMD_TX, 0, ml_kem_512_tx_chunk);
+    simpleserial_addcmd(MLKEM_SS_V21_CMD_SET_CHUNK, 2, v21_set_chunk_size);
+    simpleserial_addcmd(MLKEM_SS_V21_CMD_RX_PK, MLKEM_SS_V21_CHUNK_MAX, v21_rx_pk_cmd);
+    simpleserial_addcmd(MLKEM_SS_V21_CMD_TX_PK, 0, v21_tx_pk_cmd);
+    simpleserial_addcmd(MLKEM_SS_V21_CMD_RX_CT, MLKEM_SS_V21_CHUNK_MAX, v21_rx_ct_cmd);
+    simpleserial_addcmd(MLKEM_SS_V21_CMD_TX_CT, 0, v21_tx_ct_cmd);
+    simpleserial_addcmd(MLKEM_SS_V21_CMD_RX_SS, MLKEM_SS_V21_CHUNK_MAX, v21_rx_ss_cmd);
+    simpleserial_addcmd(MLKEM_SS_V21_CMD_TX_SS, 0, v21_tx_ss_cmd);
     simpleserial_addcmd('h', 1, led_on_cmd_v21);
     simpleserial_addcmd('l', 1, led_off_cmd_v21);
     simpleserial_addcmd('t', 1, led_toggle_v21);

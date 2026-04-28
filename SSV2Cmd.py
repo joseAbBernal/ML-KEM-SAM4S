@@ -79,7 +79,7 @@ else:
 
 #PK_LEN = 800 test
 PK_LEN = 800
-chunk_size = 200  # Mantener <= 100 para reducir riesgo de UART overrun
+chunk_size = 100  # Mantener <= 100 para reducir riesgo de UART overrun
 num_chunks = (PK_LEN + chunk_size - 1) // chunk_size
 
 # Limpiar basura de ejecuciones anteriores para evitar desincronizacion del parser
