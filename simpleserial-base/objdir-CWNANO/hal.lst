@@ -231,25 +231,25 @@
  212              	.Letext0:
 DEFINED SYMBOLS
                             *ABS*:00000000 hal.c
-     /tmp/ccUkPMxk.s:19     .text.led_ok:00000000 $t
-     /tmp/ccUkPMxk.s:25     .text.led_ok:00000000 led_ok
-     /tmp/ccUkPMxk.s:38     .text.led_error:00000000 $t
-     /tmp/ccUkPMxk.s:44     .text.led_error:00000000 led_error
-     /tmp/ccUkPMxk.s:59     .text._close:00000000 $t
-     /tmp/ccUkPMxk.s:65     .text._close:00000000 _close
-     /tmp/ccUkPMxk.s:79     .text._fstat:00000000 $t
-     /tmp/ccUkPMxk.s:85     .text._fstat:00000000 _fstat
-     /tmp/ccUkPMxk.s:98     .text._getpid:00000000 $t
-     /tmp/ccUkPMxk.s:104    .text._getpid:00000000 _getpid
-     /tmp/ccUkPMxk.s:117    .text._isatty:00000000 $t
-     /tmp/ccUkPMxk.s:123    .text._isatty:00000000 _isatty
-     /tmp/ccUkPMxk.s:136    .text._kill:00000000 $t
-     /tmp/ccUkPMxk.s:142    .text._kill:00000000 _kill
-     /tmp/ccUkPMxk.s:155    .text._lseek:00000000 $t
-     /tmp/ccUkPMxk.s:161    .text._lseek:00000000 _lseek
-     /tmp/ccUkPMxk.s:174    .text._read:00000000 $t
-     /tmp/ccUkPMxk.s:180    .text._read:00000000 _read
-     /tmp/ccUkPMxk.s:193    .text._write:00000000 $t
-     /tmp/ccUkPMxk.s:199    .text._write:00000000 _write
+     /tmp/cc6L7UEY.s:19     .text.led_ok:00000000 $t
+     /tmp/cc6L7UEY.s:25     .text.led_ok:00000000 led_ok
+     /tmp/cc6L7UEY.s:38     .text.led_error:00000000 $t
+     /tmp/cc6L7UEY.s:44     .text.led_error:00000000 led_error
+     /tmp/cc6L7UEY.s:59     .text._close:00000000 $t
+     /tmp/cc6L7UEY.s:65     .text._close:00000000 _close
+     /tmp/cc6L7UEY.s:79     .text._fstat:00000000 $t
+     /tmp/cc6L7UEY.s:85     .text._fstat:00000000 _fstat
+     /tmp/cc6L7UEY.s:98     .text._getpid:00000000 $t
+     /tmp/cc6L7UEY.s:104    .text._getpid:00000000 _getpid
+     /tmp/cc6L7UEY.s:117    .text._isatty:00000000 $t
+     /tmp/cc6L7UEY.s:123    .text._isatty:00000000 _isatty
+     /tmp/cc6L7UEY.s:136    .text._kill:00000000 $t
+     /tmp/cc6L7UEY.s:142    .text._kill:00000000 _kill
+     /tmp/cc6L7UEY.s:155    .text._lseek:00000000 $t
+     /tmp/cc6L7UEY.s:161    .text._lseek:00000000 _lseek
+     /tmp/cc6L7UEY.s:174    .text._read:00000000 $t
+     /tmp/cc6L7UEY.s:180    .text._read:00000000 _read
+     /tmp/cc6L7UEY.s:193    .text._write:00000000 $t
+     /tmp/cc6L7UEY.s:199    .text._write:00000000 _write
 
 NO UNDEFINED SYMBOLS

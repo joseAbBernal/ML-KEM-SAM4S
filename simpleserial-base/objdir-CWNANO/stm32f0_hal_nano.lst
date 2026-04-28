@@ -973,30 +973,30 @@
  727              		.file 9 ".././hal//stm32f0/stm32f0xx_hal_uart.h"
 DEFINED SYMBOLS
                             *ABS*:00000000 stm32f0_hal_nano.c
-     /tmp/cciLZWlZ.s:19     .text.platform_init:00000000 $t
-     /tmp/cciLZWlZ.s:25     .text.platform_init:00000000 platform_init
-     /tmp/cciLZWlZ.s:143    .text.init_uart:00000000 $t
-     /tmp/cciLZWlZ.s:149    .text.init_uart:00000000 init_uart
-     /tmp/cciLZWlZ.s:292    .text.init_uart:00000074 $d
-     /tmp/cciLZWlZ.s:299    .text.trigger_setup:00000000 $t
-     /tmp/cciLZWlZ.s:305    .text.trigger_setup:00000000 trigger_setup
-     /tmp/cciLZWlZ.s:449    .text.trigger_setup:0000007c $d
-     /tmp/cciLZWlZ.s:454    .text.trigger_high:00000000 $t
-     /tmp/cciLZWlZ.s:460    .text.trigger_high:00000000 trigger_high
-     /tmp/cciLZWlZ.s:489    .text.trigger_low:00000000 $t
-     /tmp/cciLZWlZ.s:495    .text.trigger_low:00000000 trigger_low
-     /tmp/cciLZWlZ.s:524    .text.getch:00000000 $t
-     /tmp/cciLZWlZ.s:530    .text.getch:00000000 getch
-     /tmp/cciLZWlZ.s:583    .text.getch:00000028 $d
-     /tmp/cciLZWlZ.s:589    .text.putch:00000000 $t
-     /tmp/cciLZWlZ.s:595    .text.putch:00000000 putch
-     /tmp/cciLZWlZ.s:631    .text.putch:00000014 $d
-     /tmp/cciLZWlZ.s:637    .text.led_error:00000000 $t
-     /tmp/cciLZWlZ.s:643    .text.led_error:00000000 led_error
-     /tmp/cciLZWlZ.s:674    .text.led_ok:00000000 $t
-     /tmp/cciLZWlZ.s:680    .text.led_ok:00000000 led_ok
-     /tmp/cciLZWlZ.s:716    .bss:00000000 UartHandle
-     /tmp/cciLZWlZ.s:712    .bss:00000000 $d
+     /tmp/cccAwAMT.s:19     .text.platform_init:00000000 $t
+     /tmp/cccAwAMT.s:25     .text.platform_init:00000000 platform_init
+     /tmp/cccAwAMT.s:143    .text.init_uart:00000000 $t
+     /tmp/cccAwAMT.s:149    .text.init_uart:00000000 init_uart
+     /tmp/cccAwAMT.s:292    .text.init_uart:00000074 $d
+     /tmp/cccAwAMT.s:299    .text.trigger_setup:00000000 $t
+     /tmp/cccAwAMT.s:305    .text.trigger_setup:00000000 trigger_setup
+     /tmp/cccAwAMT.s:449    .text.trigger_setup:0000007c $d
+     /tmp/cccAwAMT.s:454    .text.trigger_high:00000000 $t
+     /tmp/cccAwAMT.s:460    .text.trigger_high:00000000 trigger_high
+     /tmp/cccAwAMT.s:489    .text.trigger_low:00000000 $t
+     /tmp/cccAwAMT.s:495    .text.trigger_low:00000000 trigger_low
+     /tmp/cccAwAMT.s:524    .text.getch:00000000 $t
+     /tmp/cccAwAMT.s:530    .text.getch:00000000 getch
+     /tmp/cccAwAMT.s:583    .text.getch:00000028 $d
+     /tmp/cccAwAMT.s:589    .text.putch:00000000 $t
+     /tmp/cccAwAMT.s:595    .text.putch:00000000 putch
+     /tmp/cccAwAMT.s:631    .text.putch:00000014 $d
+     /tmp/cccAwAMT.s:637    .text.led_error:00000000 $t
+     /tmp/cccAwAMT.s:643    .text.led_error:00000000 led_error
+     /tmp/cccAwAMT.s:674    .text.led_ok:00000000 $t
+     /tmp/cccAwAMT.s:680    .text.led_ok:00000000 led_ok
+     /tmp/cccAwAMT.s:716    .bss:00000000 UartHandle
+     /tmp/cccAwAMT.s:712    .bss:00000000 $d
 
 UNDEFINED SYMBOLS
 HAL_GPIO_Init
