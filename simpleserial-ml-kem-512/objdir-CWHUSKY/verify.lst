@@ -261,7 +261,7 @@ DEFINED SYMBOLS
     {standard input}:86     .text.PQCLEAN_MLKEM512_CLEAN_cmov:00000000 PQCLEAN_MLKEM512_CLEAN_cmov
     {standard input}:142    .text.PQCLEAN_MLKEM512_CLEAN_cmov_int16:00000000 $t
     {standard input}:148    .text.PQCLEAN_MLKEM512_CLEAN_cmov_int16:00000000 PQCLEAN_MLKEM512_CLEAN_cmov_int16
-                           .group:00000000 wm4.0.534b8d408cafabed4abbc6a1c4e55e02
+                           .group:00000000 wm4.0.2b10ec159abbf65f4ef33f6bb625bef4
                            .group:00000000 wm4.compat_arm.h.2.9f5fa7b7dc4110ce9c090f5722efc75e
                            .group:00000000 wm4.params.h.2.d79c82d51e9988956f2b45f64d62e466
                            .group:00000000 wm4.stddef.h.39.38eb7ec030421799c657b13be5aa21c7

@@ -1639,7 +1639,7 @@ DEFINED SYMBOLS
     {standard input}:1122   .text.simpleserial_get:000000ec $d
     {standard input}:1132   .bss.commands:00000000 $d
     {standard input}:1138   .bss.num_commands:00000000 $d
-                           .group:00000000 wm4.0.534b8d408cafabed4abbc6a1c4e55e02
+                           .group:00000000 wm4.0.2b10ec159abbf65f4ef33f6bb625bef4
                            .group:00000000 wm4.stdint.h.29.6d480f4ba0f60596e88234283d42444f
                            .group:00000000 wm4.simpleserial.h.9.3c991d492f97ffebbf27da62be68538d
                            .group:00000000 wm4.hal.h.20.4ce509bfa0d05e14954b01d3e94d8ba2

@@ -1409,7 +1409,7 @@ DEFINED SYMBOLS
     {standard input}:815    .text.PQCLEAN_MLKEM512_CLEAN_indcpa_dec:00000000 $t
     {standard input}:821    .text.PQCLEAN_MLKEM512_CLEAN_indcpa_dec:00000000 PQCLEAN_MLKEM512_CLEAN_indcpa_dec
     {standard input}:936    .text.PQCLEAN_MLKEM512_CLEAN_indcpa_dec:00000064 $d
-                           .group:00000000 wm4.0.534b8d408cafabed4abbc6a1c4e55e02
+                           .group:00000000 wm4.0.2b10ec159abbf65f4ef33f6bb625bef4
                            .group:00000000 wm4.params.h.2.d79c82d51e9988956f2b45f64d62e466
                            .group:00000000 wm4.stdint.h.29.6d480f4ba0f60596e88234283d42444f
                            .group:00000000 wm4._newlib_version.h.4.0eb654b64686e2bd29646258853f6c22

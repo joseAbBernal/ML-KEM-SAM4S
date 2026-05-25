@@ -1,0 +1,484 @@
+   1              		.cpu cortex-m4
+   2              		.arch armv7e-m
+   3              		.fpu softvfp
+   4              		.eabi_attribute 20, 1
+   5              		.eabi_attribute 21, 1
+   6              		.eabi_attribute 23, 3
+   7              		.eabi_attribute 24, 1
+   8              		.eabi_attribute 25, 1
+   9              		.eabi_attribute 26, 1
+  10              		.eabi_attribute 30, 4
+  11              		.eabi_attribute 34, 1
+  12              		.eabi_attribute 18, 4
+  13              		.file	"cbd.c"
+  14              		.text
+  15              	.Ltext0:
+  16              		.cfi_sections	.debug_frame
+  17              		.file 1 "cbd.c"
+  18              		.section	.text.PQCLEAN_MLKEM512_CLEAN_poly_cbd_eta1,"ax",%progbits
+  19              		.align	1
+  20              		.global	PQCLEAN_MLKEM512_CLEAN_poly_cbd_eta1
+  21              		.syntax unified
+  22              		.thumb
+  23              		.thumb_func
+  25              	PQCLEAN_MLKEM512_CLEAN_poly_cbd_eta1:
+  26              	.LVL0:
+  27              	.LFB4:
+   1:cbd.c         **** #include "cbd.h"
+   2:cbd.c         **** #include "params.h"
+   3:cbd.c         **** #include <stdint.h>
+   4:cbd.c         **** 
+   5:cbd.c         **** /*************************************************
+   6:cbd.c         **** * Name:        load32_littleendian
+   7:cbd.c         **** *
+   8:cbd.c         **** * Description: load 4 bytes into a 32-bit integer
+   9:cbd.c         **** *              in little-endian order
+  10:cbd.c         **** *
+  11:cbd.c         **** * Arguments:   - const uint8_t *x: pointer to input byte array
+  12:cbd.c         **** *
+  13:cbd.c         **** * Returns 32-bit unsigned integer loaded from x
+  14:cbd.c         **** **************************************************/
+  15:cbd.c         **** static uint32_t load32_littleendian(const uint8_t x[4]) {
+  16:cbd.c         ****     uint32_t r;
+  17:cbd.c         ****     r  = (uint32_t)x[0];
+  18:cbd.c         ****     r |= (uint32_t)x[1] << 8;
+  19:cbd.c         ****     r |= (uint32_t)x[2] << 16;
+  20:cbd.c         ****     r |= (uint32_t)x[3] << 24;
+  21:cbd.c         ****     return r;
+  22:cbd.c         **** }
+  23:cbd.c         **** 
+  24:cbd.c         **** /*************************************************
+  25:cbd.c         **** * Name:        load24_littleendian
+  26:cbd.c         **** *
+  27:cbd.c         **** * Description: load 3 bytes into a 32-bit integer
+  28:cbd.c         **** *              in little-endian order.
+  29:cbd.c         **** *              This function is only needed for Kyber-512
+  30:cbd.c         **** *
+  31:cbd.c         **** * Arguments:   - const uint8_t *x: pointer to input byte array
+  32:cbd.c         **** *
+  33:cbd.c         **** * Returns 32-bit unsigned integer loaded from x (most significant byte is zero)
+  34:cbd.c         **** **************************************************/
+  35:cbd.c         **** static uint32_t load24_littleendian(const uint8_t x[3]) {
+  36:cbd.c         ****     uint32_t r;
+  37:cbd.c         ****     r  = (uint32_t)x[0];
+  38:cbd.c         ****     r |= (uint32_t)x[1] << 8;
+  39:cbd.c         ****     r |= (uint32_t)x[2] << 16;
+  40:cbd.c         ****     return r;
+  41:cbd.c         **** }
+  42:cbd.c         **** 
+  43:cbd.c         **** 
+  44:cbd.c         **** /*************************************************
+  45:cbd.c         **** * Name:        cbd2
+  46:cbd.c         **** *
+  47:cbd.c         **** * Description: Given an array of uniformly random bytes, compute
+  48:cbd.c         **** *              polynomial with coefficients distributed according to
+  49:cbd.c         **** *              a centered binomial distribution with parameter eta=2
+  50:cbd.c         **** *
+  51:cbd.c         **** * Arguments:   - poly *r: pointer to output polynomial
+  52:cbd.c         **** *              - const uint8_t *buf: pointer to input byte array
+  53:cbd.c         **** **************************************************/
+  54:cbd.c         **** static void cbd2(poly *r, const uint8_t buf[2 * KYBER_N / 4]) {
+  55:cbd.c         ****     unsigned int i, j;
+  56:cbd.c         ****     uint32_t t, d;
+  57:cbd.c         ****     int16_t a, b;
+  58:cbd.c         **** 
+  59:cbd.c         ****     for (i = 0; i < KYBER_N / 8; i++) {
+  60:cbd.c         ****         t  = load32_littleendian(buf + 4 * i);
+  61:cbd.c         ****         d  = t & 0x55555555;
+  62:cbd.c         ****         d += (t >> 1) & 0x55555555;
+  63:cbd.c         **** 
+  64:cbd.c         ****         for (j = 0; j < 8; j++) {
+  65:cbd.c         ****             a = (d >> (4 * j + 0)) & 0x3;
+  66:cbd.c         ****             b = (d >> (4 * j + 2)) & 0x3;
+  67:cbd.c         ****             r->coeffs[8 * i + j] = a - b;
+  68:cbd.c         ****         }
+  69:cbd.c         ****     }
+  70:cbd.c         **** }
+  71:cbd.c         **** 
+  72:cbd.c         **** /*************************************************
+  73:cbd.c         **** * Name:        cbd3
+  74:cbd.c         **** *
+  75:cbd.c         **** * Description: Given an array of uniformly random bytes, compute
+  76:cbd.c         **** *              polynomial with coefficients distributed according to
+  77:cbd.c         **** *              a centered binomial distribution with parameter eta=3.
+  78:cbd.c         **** *              This function is only needed for Kyber-512
+  79:cbd.c         **** *
+  80:cbd.c         **** * Arguments:   - poly *r: pointer to output polynomial
+  81:cbd.c         **** *              - const uint8_t *buf: pointer to input byte array
+  82:cbd.c         **** **************************************************/
+  83:cbd.c         **** static void cbd3(poly *r, const uint8_t buf[3 * KYBER_N / 4]) {
+  84:cbd.c         ****     unsigned int i, j;
+  85:cbd.c         ****     uint32_t t, d;
+  86:cbd.c         ****     int16_t a, b;
+  87:cbd.c         **** 
+  88:cbd.c         ****     for (i = 0; i < KYBER_N / 4; i++) {
+  89:cbd.c         ****         t  = load24_littleendian(buf + 3 * i);
+  90:cbd.c         ****         d  = t & 0x00249249;
+  91:cbd.c         ****         d += (t >> 1) & 0x00249249;
+  92:cbd.c         ****         d += (t >> 2) & 0x00249249;
+  93:cbd.c         **** 
+  94:cbd.c         ****         for (j = 0; j < 4; j++) {
+  95:cbd.c         ****             a = (d >> (6 * j + 0)) & 0x7;
+  96:cbd.c         ****             b = (d >> (6 * j + 3)) & 0x7;
+  97:cbd.c         ****             r->coeffs[4 * i + j] = a - b;
+  98:cbd.c         ****         }
+  99:cbd.c         ****     }
+ 100:cbd.c         **** }
+ 101:cbd.c         **** 
+ 102:cbd.c         **** void PQCLEAN_MLKEM512_CLEAN_poly_cbd_eta1(poly *r, const uint8_t buf[KYBER_ETA1 * KYBER_N / 4]) {
+  28              		.loc 1 102 97 view -0
+  29              		.cfi_startproc
+  30              		@ args = 0, pretend = 0, frame = 0
+  31              		@ frame_needed = 0, uses_anonymous_args = 0
+ 103:cbd.c         ****     cbd3(r, buf);
+  32              		.loc 1 103 5 view .LVU1
+  33              	.LBB6:
+  34              	.LBI6:
+  83:cbd.c         ****     unsigned int i, j;
+  35              		.loc 1 83 13 view .LVU2
+  36              	.LBB7:
+  84:cbd.c         ****     uint32_t t, d;
+  37              		.loc 1 84 5 view .LVU3
+  85:cbd.c         ****     int16_t a, b;
+  38              		.loc 1 85 5 view .LVU4
+  86:cbd.c         **** 
+  39              		.loc 1 86 5 view .LVU5
+  88:cbd.c         ****         t  = load24_littleendian(buf + 3 * i);
+  40              		.loc 1 88 5 view .LVU6
+  88:cbd.c         ****         t  = load24_littleendian(buf + 3 * i);
+  41              		.loc 1 88 19 discriminator 1 view .LVU7
+  88:cbd.c         ****         t  = load24_littleendian(buf + 3 * i);
+  42              		.loc 1 88 19 is_stmt 0 discriminator 1 view .LVU8
+  43              	.LBE7:
+  44              	.LBE6:
+ 102:cbd.c         ****     cbd3(r, buf);
+  45              		.loc 1 102 97 view .LVU9
+  46 0000 F0B5     		push	{r4, r5, r6, r7, lr}
+  47              	.LCFI0:
+  48              		.cfi_def_cfa_offset 20
+  49              		.cfi_offset 4, -20
+  50              		.cfi_offset 5, -16
+  51              		.cfi_offset 6, -12
+  52              		.cfi_offset 7, -8
+  53              		.cfi_offset 14, -4
+  54              	.LBB12:
+  55              	.LBB10:
+  90:cbd.c         ****         d += (t >> 1) & 0x00249249;
+  56              		.loc 1 90 12 view .LVU10
+  57 0002 154D     		ldr	r5, .L6
+  58              	.LBE10:
+  59              	.LBE12:
+ 102:cbd.c         ****     cbd3(r, buf);
+  60              		.loc 1 102 97 view .LVU11
+  61 0004 0024     		movs	r4, #0
+  62              	.LVL1:
+  63              	.L3:
+  64              	.LBB13:
+  65              	.LBB11:
+  89:cbd.c         ****         d  = t & 0x00249249;
+  66              		.loc 1 89 9 is_stmt 1 view .LVU12
+  67              	.LBB8:
+  68              	.LBI8:
+  35:cbd.c         ****     uint32_t r;
+  69              		.loc 1 35 17 view .LVU13
+  70              	.LBB9:
+  36:cbd.c         ****     r  = (uint32_t)x[0];
+  71              		.loc 1 36 5 view .LVU14
+  37:cbd.c         ****     r |= (uint32_t)x[1] << 8;
+  72              		.loc 1 37 5 view .LVU15
+  39:cbd.c         ****     return r;
+  73              		.loc 1 39 10 is_stmt 0 view .LVU16
+  74 0006 8B78     		ldrb	r3, [r1, #2]	@ zero_extendqisi2
+  38:cbd.c         ****     r |= (uint32_t)x[2] << 16;
+  75              		.loc 1 38 10 view .LVU17
+  76 0008 4E78     		ldrb	r6, [r1, #1]	@ zero_extendqisi2
+  37:cbd.c         ****     r |= (uint32_t)x[1] << 8;
+  77              		.loc 1 37 8 view .LVU18
+  78 000a 0A78     		ldrb	r2, [r1]	@ zero_extendqisi2
+  79              	.LVL2:
+  38:cbd.c         ****     r |= (uint32_t)x[2] << 16;
+  80              		.loc 1 38 5 is_stmt 1 view .LVU19
+  39:cbd.c         ****     return r;
+  81              		.loc 1 39 5 view .LVU20
+  39:cbd.c         ****     return r;
+  82              		.loc 1 39 25 is_stmt 0 view .LVU21
+  83 000c 1B04     		lsls	r3, r3, #16
+  39:cbd.c         ****     return r;
+  84              		.loc 1 39 7 view .LVU22
+  85 000e 43EA0623 		orr	r3, r3, r6, lsl #8
+  86 0012 1343     		orrs	r3, r3, r2
+  87              	.LVL3:
+  40:cbd.c         **** }
+  88              		.loc 1 40 5 is_stmt 1 view .LVU23
+  40:cbd.c         **** }
+  89              		.loc 1 40 5 is_stmt 0 view .LVU24
+  90              	.LBE9:
+  91              	.LBE8:
+  90:cbd.c         ****         d += (t >> 1) & 0x00249249;
+  92              		.loc 1 90 9 is_stmt 1 view .LVU25
+  90:cbd.c         ****         d += (t >> 1) & 0x00249249;
+  93              		.loc 1 90 12 is_stmt 0 view .LVU26
+  94 0014 03EA0506 		and	r6, r3, r5
+  95              	.LVL4:
+  91:cbd.c         ****         d += (t >> 2) & 0x00249249;
+  96              		.loc 1 91 9 is_stmt 1 view .LVU27
+  92:cbd.c         **** 
+  97              		.loc 1 92 9 view .LVU28
+  91:cbd.c         ****         d += (t >> 2) & 0x00249249;
+  98              		.loc 1 91 23 is_stmt 0 view .LVU29
+  99 0018 05EA5302 		and	r2, r5, r3, lsr #1
+  92:cbd.c         **** 
+ 100              		.loc 1 92 23 view .LVU30
+ 101 001c 05EA9303 		and	r3, r5, r3, lsr #2
+ 102              	.LVL5:
+  92:cbd.c         **** 
+ 103              		.loc 1 92 11 view .LVU31
+ 104 0020 1A44     		add	r2, r2, r3
+ 105 0022 3244     		add	r2, r2, r6
+ 106              	.LVL6:
+  94:cbd.c         ****             a = (d >> (6 * j + 0)) & 0x7;
+ 107              		.loc 1 94 9 is_stmt 1 view .LVU32
+  94:cbd.c         ****             a = (d >> (6 * j + 0)) & 0x7;
+ 108              		.loc 1 94 23 discriminator 1 view .LVU33
+ 109 0024 00EB440C 		add	ip, r0, r4, lsl #1
+  92:cbd.c         **** 
+ 110              		.loc 1 92 11 is_stmt 0 view .LVU34
+ 111 0028 0326     		movs	r6, #3
+ 112              	.LVL7:
+ 113              	.L2:
+  95:cbd.c         ****             b = (d >> (6 * j + 3)) & 0x7;
+ 114              		.loc 1 95 13 is_stmt 1 view .LVU35
+  96:cbd.c         ****             r->coeffs[4 * i + j] = a - b;
+ 115              		.loc 1 96 13 view .LVU36
+  97:cbd.c         ****         }
+ 116              		.loc 1 97 13 view .LVU37
+  95:cbd.c         ****             b = (d >> (6 * j + 3)) & 0x7;
+ 117              		.loc 1 95 30 is_stmt 0 view .LVU38
+ 118 002a F31E     		subs	r3, r6, #3
+  96:cbd.c         ****             r->coeffs[4 * i + j] = a - b;
+ 119              		.loc 1 96 20 view .LVU39
+ 120 002c 22FA06F7 		lsr	r7, r2, r6
+  95:cbd.c         ****             b = (d >> (6 * j + 3)) & 0x7;
+ 121              		.loc 1 95 20 view .LVU40
+ 122 0030 22FA03F3 		lsr	r3, r2, r3
+  95:cbd.c         ****             b = (d >> (6 * j + 3)) & 0x7;
+ 123              		.loc 1 95 15 view .LVU41
+ 124 0034 03F00703 		and	r3, r3, #7
+  96:cbd.c         ****             r->coeffs[4 * i + j] = a - b;
+ 125              		.loc 1 96 15 view .LVU42
+ 126 0038 07F00707 		and	r7, r7, #7
+  94:cbd.c         ****             a = (d >> (6 * j + 0)) & 0x7;
+ 127              		.loc 1 94 23 discriminator 1 view .LVU43
+ 128 003c 0636     		adds	r6, r6, #6
+ 129              	.LVL8:
+  97:cbd.c         ****         }
+ 130              		.loc 1 97 38 view .LVU44
+ 131 003e DB1B     		subs	r3, r3, r7
+  94:cbd.c         ****             a = (d >> (6 * j + 0)) & 0x7;
+ 132              		.loc 1 94 23 discriminator 1 view .LVU45
+ 133 0040 1B2E     		cmp	r6, #27
+  97:cbd.c         ****         }
+ 134              		.loc 1 97 34 view .LVU46
+ 135 0042 2CF8023B 		strh	r3, [ip], #2	@ movhi
+  94:cbd.c         ****             a = (d >> (6 * j + 0)) & 0x7;
+ 136              		.loc 1 94 29 is_stmt 1 discriminator 3 view .LVU47
+  94:cbd.c         ****             a = (d >> (6 * j + 0)) & 0x7;
+ 137              		.loc 1 94 23 discriminator 1 view .LVU48
+ 138 0046 F0D1     		bne	.L2
+  88:cbd.c         ****         t  = load24_littleendian(buf + 3 * i);
+ 139              		.loc 1 88 35 discriminator 2 view .LVU49
+  88:cbd.c         ****         t  = load24_littleendian(buf + 3 * i);
+ 140              		.loc 1 88 19 discriminator 1 view .LVU50
+ 141 0048 0434     		adds	r4, r4, #4
+ 142 004a B4F5807F 		cmp	r4, #256
+ 143 004e 01F10301 		add	r1, r1, #3
+ 144 0052 D8D1     		bne	.L3
+ 145              	.LBE11:
+ 146              	.LBE13:
+ 104:cbd.c         **** }
+ 147              		.loc 1 104 1 is_stmt 0 view .LVU51
+ 148 0054 F0BD     		pop	{r4, r5, r6, r7, pc}
+ 149              	.LVL9:
+ 150              	.L7:
+ 151              		.loc 1 104 1 view .LVU52
+ 152 0056 00BF     		.align	2
+ 153              	.L6:
+ 154 0058 49922400 		.word	2396745
+ 155              		.cfi_endproc
+ 156              	.LFE4:
+ 158              		.section	.text.PQCLEAN_MLKEM512_CLEAN_poly_cbd_eta2,"ax",%progbits
+ 159              		.align	1
+ 160              		.global	PQCLEAN_MLKEM512_CLEAN_poly_cbd_eta2
+ 161              		.syntax unified
+ 162              		.thumb
+ 163              		.thumb_func
+ 165              	PQCLEAN_MLKEM512_CLEAN_poly_cbd_eta2:
+ 166              	.LVL10:
+ 167              	.LFB5:
+ 105:cbd.c         **** 
+ 106:cbd.c         **** void PQCLEAN_MLKEM512_CLEAN_poly_cbd_eta2(poly *r, const uint8_t buf[KYBER_ETA2 * KYBER_N / 4]) {
+ 168              		.loc 1 106 97 is_stmt 1 view -0
+ 169              		.cfi_startproc
+ 170              		@ args = 0, pretend = 0, frame = 0
+ 171              		@ frame_needed = 0, uses_anonymous_args = 0
+ 107:cbd.c         ****     cbd2(r, buf);
+ 172              		.loc 1 107 5 view .LVU54
+ 173              	.LBB18:
+ 174              	.LBI18:
+  54:cbd.c         ****     unsigned int i, j;
+ 175              		.loc 1 54 13 view .LVU55
+ 176              	.LBB19:
+  55:cbd.c         ****     uint32_t t, d;
+ 177              		.loc 1 55 5 view .LVU56
+  56:cbd.c         ****     int16_t a, b;
+ 178              		.loc 1 56 5 view .LVU57
+  57:cbd.c         **** 
+ 179              		.loc 1 57 5 view .LVU58
+  59:cbd.c         ****         t  = load32_littleendian(buf + 4 * i);
+ 180              		.loc 1 59 5 view .LVU59
+  59:cbd.c         ****         t  = load32_littleendian(buf + 4 * i);
+ 181              		.loc 1 59 19 discriminator 1 view .LVU60
+  59:cbd.c         ****         t  = load32_littleendian(buf + 4 * i);
+ 182              		.loc 1 59 19 is_stmt 0 discriminator 1 view .LVU61
+ 183              	.LBE19:
+ 184              	.LBE18:
+ 106:cbd.c         ****     cbd2(r, buf);
+ 185              		.loc 1 106 97 view .LVU62
+ 186 0000 F0B5     		push	{r4, r5, r6, r7, lr}
+ 187              	.LCFI1:
+ 188              		.cfi_def_cfa_offset 20
+ 189              		.cfi_offset 4, -20
+ 190              		.cfi_offset 5, -16
+ 191              		.cfi_offset 6, -12
+ 192              		.cfi_offset 7, -8
+ 193              		.cfi_offset 14, -4
+ 106:cbd.c         ****     cbd2(r, buf);
+ 194              		.loc 1 106 97 view .LVU63
+ 195 0002 0025     		movs	r5, #0
+ 196              	.LVL11:
+ 197              	.L10:
+ 198              	.LBB23:
+ 199              	.LBB22:
+  60:cbd.c         ****         d  = t & 0x55555555;
+ 200              		.loc 1 60 9 is_stmt 1 view .LVU64
+ 201              	.LBB20:
+ 202              	.LBI20:
+  15:cbd.c         ****     uint32_t r;
+ 203              		.loc 1 15 17 view .LVU65
+ 204              	.LBB21:
+  16:cbd.c         ****     r  = (uint32_t)x[0];
+ 205              		.loc 1 16 5 view .LVU66
+  17:cbd.c         ****     r |= (uint32_t)x[1] << 8;
+ 206              		.loc 1 17 5 view .LVU67
+  20:cbd.c         ****     return r;
+ 207              		.loc 1 20 7 is_stmt 0 view .LVU68
+ 208 0004 0B68     		ldr	r3, [r1]	@ unaligned
+ 209              	.LVL12:
+  18:cbd.c         ****     r |= (uint32_t)x[2] << 16;
+ 210              		.loc 1 18 5 is_stmt 1 view .LVU69
+  19:cbd.c         ****     r |= (uint32_t)x[3] << 24;
+ 211              		.loc 1 19 5 view .LVU70
+  20:cbd.c         ****     return r;
+ 212              		.loc 1 20 5 view .LVU71
+  21:cbd.c         **** }
+ 213              		.loc 1 21 5 view .LVU72
+  21:cbd.c         **** }
+ 214              		.loc 1 21 5 is_stmt 0 view .LVU73
+ 215              	.LBE21:
+ 216              	.LBE20:
+  61:cbd.c         ****         d += (t >> 1) & 0x55555555;
+ 217              		.loc 1 61 9 is_stmt 1 view .LVU74
+  61:cbd.c         ****         d += (t >> 1) & 0x55555555;
+ 218              		.loc 1 61 12 is_stmt 0 view .LVU75
+ 219 0006 03F05532 		and	r2, r3, #1431655765
+ 220              	.LVL13:
+  62:cbd.c         **** 
+ 221              		.loc 1 62 9 is_stmt 1 view .LVU76
+  62:cbd.c         **** 
+ 222              		.loc 1 62 17 is_stmt 0 view .LVU77
+ 223 000a 5B08     		lsrs	r3, r3, #1
+  62:cbd.c         **** 
+ 224              		.loc 1 62 23 view .LVU78
+ 225 000c 03F05533 		and	r3, r3, #1431655765
+  62:cbd.c         **** 
+ 226              		.loc 1 62 11 view .LVU79
+ 227 0010 1344     		add	r3, r3, r2
+ 228              	.LVL14:
+  64:cbd.c         ****             a = (d >> (4 * j + 0)) & 0x3;
+ 229              		.loc 1 64 9 is_stmt 1 view .LVU80
+  64:cbd.c         ****             a = (d >> (4 * j + 0)) & 0x3;
+ 230              		.loc 1 64 23 discriminator 1 view .LVU81
+ 231 0012 00EB4507 		add	r7, r0, r5, lsl #1
+  62:cbd.c         **** 
+ 232              		.loc 1 62 11 is_stmt 0 view .LVU82
+ 233 0016 0224     		movs	r4, #2
+ 234              	.LVL15:
+ 235              	.L9:
+  65:cbd.c         ****             b = (d >> (4 * j + 2)) & 0x3;
+ 236              		.loc 1 65 13 is_stmt 1 view .LVU83
+  66:cbd.c         ****             r->coeffs[8 * i + j] = a - b;
+ 237              		.loc 1 66 13 view .LVU84
+  67:cbd.c         ****         }
+ 238              		.loc 1 67 13 view .LVU85
+  65:cbd.c         ****             b = (d >> (4 * j + 2)) & 0x3;
+ 239              		.loc 1 65 30 is_stmt 0 view .LVU86
+ 240 0018 A21E     		subs	r2, r4, #2
+  66:cbd.c         ****             r->coeffs[8 * i + j] = a - b;
+ 241              		.loc 1 66 20 view .LVU87
+ 242 001a 23FA04F6 		lsr	r6, r3, r4
+  65:cbd.c         ****             b = (d >> (4 * j + 2)) & 0x3;
+ 243              		.loc 1 65 20 view .LVU88
+ 244 001e 23FA02F2 		lsr	r2, r3, r2
+  65:cbd.c         ****             b = (d >> (4 * j + 2)) & 0x3;
+ 245              		.loc 1 65 15 view .LVU89
+ 246 0022 02F00302 		and	r2, r2, #3
+  66:cbd.c         ****             r->coeffs[8 * i + j] = a - b;
+ 247              		.loc 1 66 15 view .LVU90
+ 248 0026 06F00306 		and	r6, r6, #3
+  64:cbd.c         ****             a = (d >> (4 * j + 0)) & 0x3;
+ 249              		.loc 1 64 23 discriminator 1 view .LVU91
+ 250 002a 0434     		adds	r4, r4, #4
+ 251              	.LVL16:
+  67:cbd.c         ****         }
+ 252              		.loc 1 67 38 view .LVU92
+ 253 002c 921B     		subs	r2, r2, r6
+  64:cbd.c         ****             a = (d >> (4 * j + 0)) & 0x3;
+ 254              		.loc 1 64 23 discriminator 1 view .LVU93
+ 255 002e 222C     		cmp	r4, #34
+  67:cbd.c         ****         }
+ 256              		.loc 1 67 34 view .LVU94
+ 257 0030 27F8022B 		strh	r2, [r7], #2	@ movhi
+  64:cbd.c         ****             a = (d >> (4 * j + 0)) & 0x3;
+ 258              		.loc 1 64 29 is_stmt 1 discriminator 3 view .LVU95
+  64:cbd.c         ****             a = (d >> (4 * j + 0)) & 0x3;
+ 259              		.loc 1 64 23 discriminator 1 view .LVU96
+ 260 0034 F0D1     		bne	.L9
+  59:cbd.c         ****         t  = load32_littleendian(buf + 4 * i);
+ 261              		.loc 1 59 35 discriminator 2 view .LVU97
+  59:cbd.c         ****         t  = load32_littleendian(buf + 4 * i);
+ 262              		.loc 1 59 19 discriminator 1 view .LVU98
+ 263 0036 0835     		adds	r5, r5, #8
+ 264 0038 B5F5807F 		cmp	r5, #256
+ 265 003c 01F10401 		add	r1, r1, #4
+ 266 0040 E0D1     		bne	.L10
+ 267              	.LBE22:
+ 268              	.LBE23:
+ 108:cbd.c         **** }
+ 269              		.loc 1 108 1 is_stmt 0 view .LVU99
+ 270 0042 F0BD     		pop	{r4, r5, r6, r7, pc}
+ 271              		.loc 1 108 1 view .LVU100
+ 272              		.cfi_endproc
+ 273              	.LFE5:
+ 275              		.text
+ 276              	.Letext0:
+ 277              		.file 2 "/usr/lib/gcc/arm-none-eabi/14.2.1/include/stdint.h"
+ 278              		.file 3 "poly.h"
+DEFINED SYMBOLS
+                            *ABS*:00000000 cbd.c
+     /tmp/ccFyI6Mc.s:19     .text.PQCLEAN_MLKEM512_CLEAN_poly_cbd_eta1:00000000 $t
+     /tmp/ccFyI6Mc.s:25     .text.PQCLEAN_MLKEM512_CLEAN_poly_cbd_eta1:00000000 PQCLEAN_MLKEM512_CLEAN_poly_cbd_eta1
+     /tmp/ccFyI6Mc.s:154    .text.PQCLEAN_MLKEM512_CLEAN_poly_cbd_eta1:00000058 $d
+     /tmp/ccFyI6Mc.s:159    .text.PQCLEAN_MLKEM512_CLEAN_poly_cbd_eta2:00000000 $t
+     /tmp/ccFyI6Mc.s:165    .text.PQCLEAN_MLKEM512_CLEAN_poly_cbd_eta2:00000000 PQCLEAN_MLKEM512_CLEAN_poly_cbd_eta2
+
+NO UNDEFINED SYMBOLS

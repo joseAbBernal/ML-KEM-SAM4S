@@ -5315,7 +5315,7 @@ DEFINED SYMBOLS
     {standard input}:3074   .bss.cpu_irq_prev_interrupt_state:00000000 $d
     {standard input}:3076   .bss.cpu_irq_critical_section_counter:00000000 $d
     {standard input}:3079   .bss.cpu_irq_critical_section_counter:00000000 cpu_irq_critical_section_counter
-                           .group:00000000 wm4.0.534b8d408cafabed4abbc6a1c4e55e02
+                           .group:00000000 wm4.0.2b10ec159abbf65f4ef33f6bb625bef4
                            .group:00000000 wm4.stddef.h.39.38eb7ec030421799c657b13be5aa21c7
                            .group:00000000 wm4.parts.h.38.09ccce703cc30b12360b0e797fac8cb6
                            .group:00000000 wm4.tpaste.h.38.f9caafafc33cddaf7097f68661fce374

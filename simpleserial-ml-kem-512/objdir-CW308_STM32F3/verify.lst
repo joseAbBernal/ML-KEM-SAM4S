@@ -1,0 +1,265 @@
+   1              		.cpu cortex-m4
+   2              		.arch armv7e-m
+   3              		.fpu softvfp
+   4              		.eabi_attribute 20, 1
+   5              		.eabi_attribute 21, 1
+   6              		.eabi_attribute 23, 3
+   7              		.eabi_attribute 24, 1
+   8              		.eabi_attribute 25, 1
+   9              		.eabi_attribute 26, 1
+  10              		.eabi_attribute 30, 4
+  11              		.eabi_attribute 34, 1
+  12              		.eabi_attribute 18, 4
+  13              		.file	"verify.c"
+  14              		.text
+  15              	.Ltext0:
+  16              		.cfi_sections	.debug_frame
+  17              		.file 1 "verify.c"
+  18              		.section	.text.PQCLEAN_MLKEM512_CLEAN_verify,"ax",%progbits
+  19              		.align	1
+  20              		.global	PQCLEAN_MLKEM512_CLEAN_verify
+  21              		.syntax unified
+  22              		.thumb
+  23              		.thumb_func
+  25              	PQCLEAN_MLKEM512_CLEAN_verify:
+  26              	.LVL0:
+  27              	.LFB0:
+   1:verify.c      **** #if defined(__arm__) || defined(__ARM_EABI__)
+   2:verify.c      **** #include "compat_arm.h"
+   3:verify.c      **** #else
+   4:verify.c      **** #include "compat.h"
+   5:verify.c      **** #endif
+   6:verify.c      **** #include "verify.h"
+   7:verify.c      **** #include <stddef.h>
+   8:verify.c      **** #include <stdint.h>
+   9:verify.c      **** 
+  10:verify.c      **** /*************************************************
+  11:verify.c      **** * Name:        PQCLEAN_MLKEM512_CLEAN_verify
+  12:verify.c      **** *
+  13:verify.c      **** * Description: Compare two arrays for equality in constant time.
+  14:verify.c      **** *
+  15:verify.c      **** * Arguments:   const uint8_t *a: pointer to first byte array
+  16:verify.c      **** *              const uint8_t *b: pointer to second byte array
+  17:verify.c      **** *              size_t len:       length of the byte arrays
+  18:verify.c      **** *
+  19:verify.c      **** * Returns 0 if the byte arrays are equal, 1 otherwise
+  20:verify.c      **** **************************************************/
+  21:verify.c      **** int PQCLEAN_MLKEM512_CLEAN_verify(const uint8_t *a, const uint8_t *b, size_t len) {
+  28              		.loc 1 21 83 view -0
+  29              		.cfi_startproc
+  30              		@ args = 0, pretend = 0, frame = 0
+  31              		@ frame_needed = 0, uses_anonymous_args = 0
+  22:verify.c      ****     size_t i;
+  32              		.loc 1 22 5 view .LVU1
+  23:verify.c      ****     uint8_t r = 0;
+  33              		.loc 1 23 5 view .LVU2
+  24:verify.c      **** 
+  25:verify.c      ****     for (i = 0; i < len; i++) {
+  34              		.loc 1 25 5 view .LVU3
+  23:verify.c      ****     uint8_t r = 0;
+  35              		.loc 1 23 13 is_stmt 0 view .LVU4
+  36 0000 0023     		movs	r3, #0
+  21:verify.c      ****     size_t i;
+  37              		.loc 1 21 83 view .LVU5
+  38 0002 70B5     		push	{r4, r5, r6, lr}
+  39              	.LCFI0:
+  40              		.cfi_def_cfa_offset 16
+  41              		.cfi_offset 4, -16
+  42              		.cfi_offset 5, -12
+  43              		.cfi_offset 6, -8
+  44              		.cfi_offset 14, -4
+  45              		.loc 1 25 12 view .LVU6
+  46 0004 1C46     		mov	r4, r3
+  47              	.LVL1:
+  48              	.L2:
+  49              		.loc 1 25 19 is_stmt 1 discriminator 1 view .LVU7
+  50 0006 9442     		cmp	r4, r2
+  51 0008 04D1     		bne	.L3
+  26:verify.c      ****         r |= a[i] ^ b[i];
+  27:verify.c      ****     }
+  28:verify.c      **** 
+  29:verify.c      ****     return (-(uint64_t)r) >> 63;
+  52              		.loc 1 29 5 view .LVU8
+  53              		.loc 1 29 13 is_stmt 0 view .LVU9
+  54 000a 5B42     		negs	r3, r3
+  55              	.LVL2:
+  56              		.loc 1 29 13 view .LVU10
+  57 000c 60EB0000 		sbc	r0, r0, r0
+  58              	.LVL3:
+  30:verify.c      **** }
+  59              		.loc 1 30 1 view .LVU11
+  60 0010 C00F     		lsrs	r0, r0, #31
+  61 0012 70BD     		pop	{r4, r5, r6, pc}
+  62              	.LVL4:
+  63              	.L3:
+  26:verify.c      ****         r |= a[i] ^ b[i];
+  64              		.loc 1 26 9 is_stmt 1 view .LVU12
+  26:verify.c      ****         r |= a[i] ^ b[i];
+  65              		.loc 1 26 11 is_stmt 0 view .LVU13
+  66 0014 055D     		ldrb	r5, [r0, r4]	@ zero_extendqisi2
+  67 0016 0E5D     		ldrb	r6, [r1, r4]	@ zero_extendqisi2
+  68 0018 7540     		eors	r5, r5, r6
+  69 001a 2B43     		orrs	r3, r3, r5
+  70              	.LVL5:
+  25:verify.c      ****         r |= a[i] ^ b[i];
+  71              		.loc 1 25 27 is_stmt 1 discriminator 3 view .LVU14
+  72 001c 0134     		adds	r4, r4, #1
+  73              	.LVL6:
+  25:verify.c      ****         r |= a[i] ^ b[i];
+  74              		.loc 1 25 27 is_stmt 0 discriminator 3 view .LVU15
+  75 001e F2E7     		b	.L2
+  76              		.cfi_endproc
+  77              	.LFE0:
+  79              		.section	.text.PQCLEAN_MLKEM512_CLEAN_cmov,"ax",%progbits
+  80              		.align	1
+  81              		.global	PQCLEAN_MLKEM512_CLEAN_cmov
+  82              		.syntax unified
+  83              		.thumb
+  84              		.thumb_func
+  86              	PQCLEAN_MLKEM512_CLEAN_cmov:
+  87              	.LVL7:
+  88              	.LFB1:
+  31:verify.c      **** 
+  32:verify.c      **** /*************************************************
+  33:verify.c      **** * Name:        PQCLEAN_MLKEM512_CLEAN_cmov
+  34:verify.c      **** *
+  35:verify.c      **** * Description: Copy len bytes from x to r if b is 1;
+  36:verify.c      **** *              don't modify x if b is 0. Requires b to be in {0,1};
+  37:verify.c      **** *              assumes two's complement representation of negative integers.
+  38:verify.c      **** *              Runs in constant time.
+  39:verify.c      **** *
+  40:verify.c      **** * Arguments:   uint8_t *r:       pointer to output byte array
+  41:verify.c      **** *              const uint8_t *x: pointer to input byte array
+  42:verify.c      **** *              size_t len:       Amount of bytes to be copied
+  43:verify.c      **** *              uint8_t b:        Condition bit; has to be in {0,1}
+  44:verify.c      **** **************************************************/
+  45:verify.c      **** void PQCLEAN_MLKEM512_CLEAN_cmov(uint8_t *r, const uint8_t *x, size_t len, uint8_t b) {
+  89              		.loc 1 45 87 is_stmt 1 view -0
+  90              		.cfi_startproc
+  91              		@ args = 0, pretend = 0, frame = 0
+  92              		@ frame_needed = 0, uses_anonymous_args = 0
+  46:verify.c      ****     size_t i;
+  93              		.loc 1 46 5 view .LVU17
+  47:verify.c      **** 
+  48:verify.c      ****     PQCLEAN_PREVENT_BRANCH_HACK(b);
+  94              		.loc 1 48 5 view .LVU18
+  45:verify.c      ****     size_t i;
+  95              		.loc 1 45 87 is_stmt 0 view .LVU19
+  96 0000 30B5     		push	{r4, r5, lr}
+  97              	.LCFI1:
+  98              		.cfi_def_cfa_offset 12
+  99              		.cfi_offset 4, -12
+ 100              		.cfi_offset 5, -8
+ 101              		.cfi_offset 14, -4
+ 102              		.loc 1 48 5 view .LVU20
+ 103              	.LVL8:
+ 104              		.loc 1 48 35 is_stmt 1 view .LVU21
+  49:verify.c      **** 
+  50:verify.c      ****     b = -b;
+ 105              		.loc 1 50 5 view .LVU22
+ 106              		.loc 1 50 7 is_stmt 0 view .LVU23
+ 107 0002 5B42     		rsbs	r3, r3, #0
+ 108              	.LVL9:
+ 109              		.loc 1 50 7 view .LVU24
+ 110 0004 DBB2     		uxtb	r3, r3
+ 111              	.LVL10:
+  51:verify.c      ****     for (i = 0; i < len; i++) {
+ 112              		.loc 1 51 5 is_stmt 1 view .LVU25
+ 113              		.loc 1 51 5 is_stmt 0 view .LVU26
+ 114 0006 0139     		subs	r1, r1, #1
+ 115              	.LVL11:
+ 116              		.loc 1 51 5 view .LVU27
+ 117 0008 0244     		add	r2, r2, r0
+ 118              	.LVL12:
+ 119              	.L5:
+ 120              		.loc 1 51 19 is_stmt 1 discriminator 1 view .LVU28
+ 121 000a 9042     		cmp	r0, r2
+ 122 000c 00D1     		bne	.L6
+  52:verify.c      ****         r[i] ^= b & (r[i] ^ x[i]);
+  53:verify.c      ****     }
+  54:verify.c      **** }
+ 123              		.loc 1 54 1 is_stmt 0 view .LVU29
+ 124 000e 30BD     		pop	{r4, r5, pc}
+ 125              	.L6:
+  52:verify.c      ****         r[i] ^= b & (r[i] ^ x[i]);
+ 126              		.loc 1 52 9 is_stmt 1 view .LVU30
+  52:verify.c      ****         r[i] ^= b & (r[i] ^ x[i]);
+ 127              		.loc 1 52 10 is_stmt 0 view .LVU31
+ 128 0010 0578     		ldrb	r5, [r0]	@ zero_extendqisi2
+  52:verify.c      ****         r[i] ^= b & (r[i] ^ x[i]);
+ 129              		.loc 1 52 14 view .LVU32
+ 130 0012 11F8014F 		ldrb	r4, [r1, #1]!	@ zero_extendqisi2
+ 131 0016 6C40     		eors	r4, r4, r5
+ 132 0018 1C40     		ands	r4, r4, r3
+ 133 001a 6540     		eors	r5, r5, r4
+ 134 001c 00F8015B 		strb	r5, [r0], #1
+ 135              	.LVL13:
+  51:verify.c      ****     for (i = 0; i < len; i++) {
+ 136              		.loc 1 51 27 is_stmt 1 discriminator 3 view .LVU33
+ 137 0020 F3E7     		b	.L5
+ 138              		.cfi_endproc
+ 139              	.LFE1:
+ 141              		.section	.text.PQCLEAN_MLKEM512_CLEAN_cmov_int16,"ax",%progbits
+ 142              		.align	1
+ 143              		.global	PQCLEAN_MLKEM512_CLEAN_cmov_int16
+ 144              		.syntax unified
+ 145              		.thumb
+ 146              		.thumb_func
+ 148              	PQCLEAN_MLKEM512_CLEAN_cmov_int16:
+ 149              	.LVL14:
+ 150              	.LFB2:
+  55:verify.c      **** 
+  56:verify.c      **** 
+  57:verify.c      **** /*************************************************
+  58:verify.c      **** * Name:        PQCLEAN_MLKEM512_CLEAN_cmov_int16
+  59:verify.c      **** *
+  60:verify.c      **** * Description: Copy input v to *r if b is 1, don't modify *r if b is 0.
+  61:verify.c      **** *              Requires b to be in {0,1};
+  62:verify.c      **** *              Runs in constant time.
+  63:verify.c      **** *
+  64:verify.c      **** * Arguments:   int16_t *r:       pointer to output int16_t
+  65:verify.c      **** *              int16_t v:        input int16_t
+  66:verify.c      **** *              uint8_t b:        Condition bit; has to be in {0,1}
+  67:verify.c      **** **************************************************/
+  68:verify.c      **** void PQCLEAN_MLKEM512_CLEAN_cmov_int16(int16_t *r, int16_t v, uint16_t b) {
+ 151              		.loc 1 68 75 view -0
+ 152              		.cfi_startproc
+ 153              		@ args = 0, pretend = 0, frame = 0
+ 154              		@ frame_needed = 0, uses_anonymous_args = 0
+ 155              		@ link register save eliminated.
+  69:verify.c      ****     b = -b;
+ 156              		.loc 1 69 5 view .LVU35
+  70:verify.c      ****     *r ^= b & ((*r) ^ v);
+ 157              		.loc 1 70 5 view .LVU36
+ 158 0000 B0F90030 		ldrsh	r3, [r0]
+  69:verify.c      ****     b = -b;
+ 159              		.loc 1 69 7 is_stmt 0 view .LVU37
+ 160 0004 5242     		rsbs	r2, r2, #0
+ 161              	.LVL15:
+ 162              		.loc 1 70 13 view .LVU38
+ 163 0006 5940     		eors	r1, r1, r3
+ 164              	.LVL16:
+ 165              		.loc 1 70 13 view .LVU39
+ 166 0008 1140     		ands	r1, r1, r2
+ 167              		.loc 1 70 8 view .LVU40
+ 168 000a 4B40     		eors	r3, r3, r1
+ 169 000c 0380     		strh	r3, [r0]	@ movhi
+  71:verify.c      **** }
+ 170              		.loc 1 71 1 view .LVU41
+ 171 000e 7047     		bx	lr
+ 172              		.cfi_endproc
+ 173              	.LFE2:
+ 175              		.text
+ 176              	.Letext0:
+ 177              		.file 2 "/usr/lib/gcc/arm-none-eabi/14.2.1/include/stddef.h"
+ 178              		.file 3 "/usr/lib/gcc/arm-none-eabi/14.2.1/include/stdint.h"
+DEFINED SYMBOLS
+                            *ABS*:00000000 verify.c
+     /tmp/ccm0u1h7.s:19     .text.PQCLEAN_MLKEM512_CLEAN_verify:00000000 $t
+     /tmp/ccm0u1h7.s:25     .text.PQCLEAN_MLKEM512_CLEAN_verify:00000000 PQCLEAN_MLKEM512_CLEAN_verify
+     /tmp/ccm0u1h7.s:80     .text.PQCLEAN_MLKEM512_CLEAN_cmov:00000000 $t
+     /tmp/ccm0u1h7.s:86     .text.PQCLEAN_MLKEM512_CLEAN_cmov:00000000 PQCLEAN_MLKEM512_CLEAN_cmov
+     /tmp/ccm0u1h7.s:142    .text.PQCLEAN_MLKEM512_CLEAN_cmov_int16:00000000 $t
+     /tmp/ccm0u1h7.s:148    .text.PQCLEAN_MLKEM512_CLEAN_cmov_int16:00000000 PQCLEAN_MLKEM512_CLEAN_cmov_int16
+
+NO UNDEFINED SYMBOLS

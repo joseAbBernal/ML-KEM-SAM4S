@@ -1,0 +1,2914 @@
+   1              		.cpu cortex-m4
+   2              		.arch armv7e-m
+   3              		.fpu softvfp
+   4              		.eabi_attribute 20, 1
+   5              		.eabi_attribute 21, 1
+   6              		.eabi_attribute 23, 3
+   7              		.eabi_attribute 24, 1
+   8              		.eabi_attribute 25, 1
+   9              		.eabi_attribute 26, 1
+  10              		.eabi_attribute 30, 4
+  11              		.eabi_attribute 34, 1
+  12              		.eabi_attribute 18, 4
+  13              		.file	"simpleserial-ml-kem-512.c"
+  14              		.text
+  15              	.Ltext0:
+  16              		.cfi_sections	.debug_frame
+  17              		.file 1 "simpleserial-ml-kem-512.c"
+  18              		.section	.text.led_on_cmd_v21,"ax",%progbits
+  19              		.align	1
+  20              		.syntax unified
+  21              		.thumb
+  22              		.thumb_func
+  24              	led_on_cmd_v21:
+  25              	.LVL0:
+  26              	.LFB17:
+   1:simpleserial-ml-kem-512.c **** /*
+   2:simpleserial-ml-kem-512.c ****     This file is part of the ChipWhisperer Example Targets
+   3:simpleserial-ml-kem-512.c ****     Copyright (C) 2012-2017 NewAE Technology Inc.
+   4:simpleserial-ml-kem-512.c **** 
+   5:simpleserial-ml-kem-512.c ****     This program is free software: you can redistribute it and/or modify
+   6:simpleserial-ml-kem-512.c ****     it under the terms of the GNU General Public License as published by
+   7:simpleserial-ml-kem-512.c ****     the Free Software Foundation, either version 3 of the License, or
+   8:simpleserial-ml-kem-512.c ****     (at your option) any later version.
+   9:simpleserial-ml-kem-512.c **** 
+  10:simpleserial-ml-kem-512.c ****     This program is distributed in the hope that it will be useful,
+  11:simpleserial-ml-kem-512.c ****     but WITHOUT ANY WARRANTY; without even the implied warranty of
+  12:simpleserial-ml-kem-512.c ****     MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+  13:simpleserial-ml-kem-512.c ****     GNU General Public License for more details.
+  14:simpleserial-ml-kem-512.c **** 
+  15:simpleserial-ml-kem-512.c ****     You should have received a copy of the GNU General Public License
+  16:simpleserial-ml-kem-512.c ****     along with this program.  If not, see <http://www.gnu.org/licenses/>.
+  17:simpleserial-ml-kem-512.c **** */
+  18:simpleserial-ml-kem-512.c **** 
+  19:simpleserial-ml-kem-512.c **** #include "hal.h"
+  20:simpleserial-ml-kem-512.c **** #include "simpleserial.h"
+  21:simpleserial-ml-kem-512.c **** #include <stdint.h>
+  22:simpleserial-ml-kem-512.c **** #include <stdlib.h>
+  23:simpleserial-ml-kem-512.c **** /* GPIO: SAM (ASF) vs otros (STM32, AVR, etc.) */
+  24:simpleserial-ml-kem-512.c **** #if defined(__SAM4LS4C__) || defined(__SAM4LS4B__) || defined(__SAM4S__)
+  25:simpleserial-ml-kem-512.c **** #include "pio.h"
+  26:simpleserial-ml-kem-512.c **** #include "gpio.h"
+  27:simpleserial-ml-kem-512.c **** #else
+  28:simpleserial-ml-kem-512.c **** /* Stubs para plataformas sin ASF (STM32, AVR, etc.) */
+  29:simpleserial-ml-kem-512.c **** #define gpio_set_pin_high(pin) do { (void)(pin); } while(0)
+  30:simpleserial-ml-kem-512.c **** #define gpio_set_pin_low(pin)  do { (void)(pin); } while(0)
+  31:simpleserial-ml-kem-512.c **** #endif
+  32:simpleserial-ml-kem-512.c **** 
+  33:simpleserial-ml-kem-512.c **** /* ML-KEM-512 includes */
+  34:simpleserial-ml-kem-512.c **** #include "indcpa.h"
+  35:simpleserial-ml-kem-512.c **** #include "kem.h"
+  36:simpleserial-ml-kem-512.c **** #include "params.h"
+  37:simpleserial-ml-kem-512.c **** #include "randombytes.h"
+  38:simpleserial-ml-kem-512.c **** #include "symmetric.h"
+  39:simpleserial-ml-kem-512.c **** #include "verify.h"
+  40:simpleserial-ml-kem-512.c **** #include <stddef.h>
+  41:simpleserial-ml-kem-512.c **** #include <stdint.h>
+  42:simpleserial-ml-kem-512.c **** #include <string.h>
+  43:simpleserial-ml-kem-512.c **** 
+  44:simpleserial-ml-kem-512.c **** uint8_t pk[KYBER_PUBLICKEYBYTES] = {0};
+  45:simpleserial-ml-kem-512.c **** 
+  46:simpleserial-ml-kem-512.c **** uint8_t sk[KYBER_SECRETKEYBYTES] = {0};
+  47:simpleserial-ml-kem-512.c **** 
+  48:simpleserial-ml-kem-512.c **** uint8_t ct[KYBER_CIPHERTEXTBYTES] = {0};
+  49:simpleserial-ml-kem-512.c **** 
+  50:simpleserial-ml-kem-512.c **** uint8_t ss[KYBER_SSBYTES] = {0};
+  51:simpleserial-ml-kem-512.c **** 
+  52:simpleserial-ml-kem-512.c **** uint8_t ss2[KYBER_SSBYTES] = {0};
+  53:simpleserial-ml-kem-512.c **** 
+  54:simpleserial-ml-kem-512.c **** static uint8_t ss_result[KYBER_SSBYTES];
+  55:simpleserial-ml-kem-512.c **** static uint8_t decap_buf[2 * KYBER_SYMBYTES];
+  56:simpleserial-ml-kem-512.c **** static uint8_t decap_kr[2 * KYBER_SYMBYTES];
+  57:simpleserial-ml-kem-512.c **** static uint8_t decap_decrypted_buf[KYBER_SYMBYTES];
+  58:simpleserial-ml-kem-512.c **** static uint8_t cmov_probe_buf[KYBER_SECRETKEYBYTES];
+  59:simpleserial-ml-kem-512.c **** 
+  60:simpleserial-ml-kem-512.c **** #if SS_VER == SS_VER_2_1
+  61:simpleserial-ml-kem-512.c **** #define MLKEM_SS_V21_CMD         0x01
+  62:simpleserial-ml-kem-512.c **** #define MLKEM_SS_V21_CMD_RX      0x02
+  63:simpleserial-ml-kem-512.c **** #define MLKEM_SS_V21_CMD_TX      0x03
+  64:simpleserial-ml-kem-512.c **** #define MLKEM_SS_V21_CMD_SET_CHUNK 0x04
+  65:simpleserial-ml-kem-512.c **** #define MLKEM_SS_V21_CMD_RX_PK   0x05
+  66:simpleserial-ml-kem-512.c **** #define MLKEM_SS_V21_CMD_TX_PK   0x06
+  67:simpleserial-ml-kem-512.c **** #define MLKEM_SS_V21_CMD_RX_CT   0x07
+  68:simpleserial-ml-kem-512.c **** #define MLKEM_SS_V21_CMD_TX_CT   0x08
+  69:simpleserial-ml-kem-512.c **** #define MLKEM_SS_V21_CMD_RX_SS   0x09
+  70:simpleserial-ml-kem-512.c **** #define MLKEM_SS_V21_CMD_TX_SS   0x0A
+  71:simpleserial-ml-kem-512.c **** #define MLKEM_SS_V21_CMD_DECAP   0x0B
+  72:simpleserial-ml-kem-512.c **** #define MLKEM_SS_V21_CMD_CMOV_SK 0x0C
+  73:simpleserial-ml-kem-512.c **** #define MLKEM_SS_V21_CHUNK_SK    204u
+  74:simpleserial-ml-kem-512.c **** #define MLKEM_SS_V21_CHUNK_PK    200u
+  75:simpleserial-ml-kem-512.c **** #define MLKEM_SS_V21_CHUNK_CT    192u
+  76:simpleserial-ml-kem-512.c **** #define MLKEM_SS_V21_CHUNK_MAX   248u
+  77:simpleserial-ml-kem-512.c **** #define MLKEM_SS_V21_SK_CHUNKS   8u
+  78:simpleserial-ml-kem-512.c **** #define MLKEM_SS_V21_PK_CHUNKS   4u
+  79:simpleserial-ml-kem-512.c **** #define MLKEM_SS_V21_CT_CHUNKS   4u
+  80:simpleserial-ml-kem-512.c **** #define MLKEM_SS_V21_SK_MASK     ((1u << MLKEM_SS_V21_SK_CHUNKS) - 1u)
+  81:simpleserial-ml-kem-512.c **** #define MLKEM_SS_V21_PK_MASK     ((1u << MLKEM_SS_V21_PK_CHUNKS) - 1u)
+  82:simpleserial-ml-kem-512.c **** #define MLKEM_SS_V21_CT_MASK     ((1u << MLKEM_SS_V21_CT_CHUNKS) - 1u)
+  83:simpleserial-ml-kem-512.c **** 
+  84:simpleserial-ml-kem-512.c **** enum {
+  85:simpleserial-ml-kem-512.c ****     MLKEM_SS_V21_SCMD_SK_BASE = 0x00,
+  86:simpleserial-ml-kem-512.c ****     MLKEM_SS_V21_SCMD_PK_BASE = 0x10,
+  87:simpleserial-ml-kem-512.c ****     MLKEM_SS_V21_SCMD_CT_BASE = 0x20,
+  88:simpleserial-ml-kem-512.c ****     MLKEM_SS_V21_SCMD_SS = 0x30,
+  89:simpleserial-ml-kem-512.c ****     MLKEM_SS_V21_SCMD_DECAP = 0x40
+  90:simpleserial-ml-kem-512.c **** };
+  91:simpleserial-ml-kem-512.c **** 
+  92:simpleserial-ml-kem-512.c **** static uint8_t sk_chunks_loaded = 0;
+  93:simpleserial-ml-kem-512.c **** static uint8_t pk_chunks_loaded = 0;
+  94:simpleserial-ml-kem-512.c **** static uint8_t ct_chunks_loaded = 0;
+  95:simpleserial-ml-kem-512.c **** static uint8_t ss_loaded = 0;
+  96:simpleserial-ml-kem-512.c **** static uint8_t v21_chunk_sz = MLKEM_SS_V21_CHUNK_SK;
+  97:simpleserial-ml-kem-512.c **** #endif
+  98:simpleserial-ml-kem-512.c **** 
+  99:simpleserial-ml-kem-512.c **** /* LED GPIO utilities kept as generic board controls (not tied to ML-KEM flow). */
+ 100:simpleserial-ml-kem-512.c **** #define LED1    16
+ 101:simpleserial-ml-kem-512.c **** #define LED2    15
+ 102:simpleserial-ml-kem-512.c **** #define LED3    14
+ 103:simpleserial-ml-kem-512.c **** 
+ 104:simpleserial-ml-kem-512.c **** static volatile uint8_t LED1State = 0;
+ 105:simpleserial-ml-kem-512.c **** static volatile uint8_t LED2State = 0;
+ 106:simpleserial-ml-kem-512.c **** static volatile uint8_t LED3State = 0;
+ 107:simpleserial-ml-kem-512.c **** 
+ 108:simpleserial-ml-kem-512.c **** static uint8_t led_on_cmd(uint8_t* m, uint8_t len)
+ 109:simpleserial-ml-kem-512.c **** {
+ 110:simpleserial-ml-kem-512.c ****     int led;
+ 111:simpleserial-ml-kem-512.c **** 
+ 112:simpleserial-ml-kem-512.c ****     if (len != 1u) {
+ 113:simpleserial-ml-kem-512.c ****         return SS_ERR_LEN;
+ 114:simpleserial-ml-kem-512.c ****     }
+ 115:simpleserial-ml-kem-512.c **** 
+ 116:simpleserial-ml-kem-512.c ****     led = m[0];
+ 117:simpleserial-ml-kem-512.c ****     gpio_set_pin_high(led);
+ 118:simpleserial-ml-kem-512.c ****     if (led == LED1) LED1State = 1;
+ 119:simpleserial-ml-kem-512.c ****     else if (led == LED2) LED2State = 1;
+ 120:simpleserial-ml-kem-512.c ****     else if (led == LED3) LED3State = 1;
+ 121:simpleserial-ml-kem-512.c ****     return 0;
+ 122:simpleserial-ml-kem-512.c **** }
+ 123:simpleserial-ml-kem-512.c **** 
+ 124:simpleserial-ml-kem-512.c **** static uint8_t led_off_cmd(uint8_t* m, uint8_t len)
+ 125:simpleserial-ml-kem-512.c **** {
+ 126:simpleserial-ml-kem-512.c ****     int led;
+ 127:simpleserial-ml-kem-512.c **** 
+ 128:simpleserial-ml-kem-512.c ****     if (len != 1u) {
+ 129:simpleserial-ml-kem-512.c ****         return SS_ERR_LEN;
+ 130:simpleserial-ml-kem-512.c ****     }
+ 131:simpleserial-ml-kem-512.c **** 
+ 132:simpleserial-ml-kem-512.c ****     led = m[0];
+ 133:simpleserial-ml-kem-512.c ****     gpio_set_pin_low(led);
+ 134:simpleserial-ml-kem-512.c ****     if (led == LED1) LED1State = 0;
+ 135:simpleserial-ml-kem-512.c ****     else if (led == LED2) LED2State = 0;
+ 136:simpleserial-ml-kem-512.c ****     else if (led == LED3) LED3State = 0;
+ 137:simpleserial-ml-kem-512.c ****     return 0;
+ 138:simpleserial-ml-kem-512.c **** }
+ 139:simpleserial-ml-kem-512.c **** 
+ 140:simpleserial-ml-kem-512.c **** static uint8_t led_toggle(uint8_t* m, uint8_t len)
+ 141:simpleserial-ml-kem-512.c **** {
+ 142:simpleserial-ml-kem-512.c ****     int led;
+ 143:simpleserial-ml-kem-512.c ****     uint8_t state = 0;
+ 144:simpleserial-ml-kem-512.c **** 
+ 145:simpleserial-ml-kem-512.c ****     if (len != 1u) {
+ 146:simpleserial-ml-kem-512.c ****         return SS_ERR_LEN;
+ 147:simpleserial-ml-kem-512.c ****     }
+ 148:simpleserial-ml-kem-512.c **** 
+ 149:simpleserial-ml-kem-512.c ****     led = m[0];
+ 150:simpleserial-ml-kem-512.c ****     if (led == LED1) state = LED1State;
+ 151:simpleserial-ml-kem-512.c ****     else if (led == LED2) state = LED2State;
+ 152:simpleserial-ml-kem-512.c ****     else if (led == LED3) state = LED3State;
+ 153:simpleserial-ml-kem-512.c **** 
+ 154:simpleserial-ml-kem-512.c ****     if (state) {
+ 155:simpleserial-ml-kem-512.c ****         gpio_set_pin_low(led);
+ 156:simpleserial-ml-kem-512.c ****         if (led == LED1) LED1State = 0;
+ 157:simpleserial-ml-kem-512.c ****         else if (led == LED2) LED2State = 0;
+ 158:simpleserial-ml-kem-512.c ****         else if (led == LED3) LED3State = 0;
+ 159:simpleserial-ml-kem-512.c ****     } else {
+ 160:simpleserial-ml-kem-512.c ****         gpio_set_pin_high(led);
+ 161:simpleserial-ml-kem-512.c ****         if (led == LED1) LED1State = 1;
+ 162:simpleserial-ml-kem-512.c ****         else if (led == LED2) LED2State = 1;
+ 163:simpleserial-ml-kem-512.c ****         else if (led == LED3) LED3State = 1;
+ 164:simpleserial-ml-kem-512.c ****     }
+ 165:simpleserial-ml-kem-512.c **** 
+ 166:simpleserial-ml-kem-512.c ****     return 0;
+ 167:simpleserial-ml-kem-512.c **** }
+ 168:simpleserial-ml-kem-512.c **** 
+ 169:simpleserial-ml-kem-512.c **** /* ML-KEM-512 Decapsulation: Complete with indcpa_dec, hash_g, verify, cmov */
+ 170:simpleserial-ml-kem-512.c **** uint8_t ml_kem_512_decap(uint8_t* k, uint8_t len)
+ 171:simpleserial-ml-kem-512.c **** {
+ 172:simpleserial-ml-kem-512.c ****     int fail;  /* Global fail variable for cmov comparison */
+ 173:simpleserial-ml-kem-512.c ****     (void)k;
+ 174:simpleserial-ml-kem-512.c ****     (void)len;
+ 175:simpleserial-ml-kem-512.c **** 
+ 176:simpleserial-ml-kem-512.c ****     /* Decrypt ciphertext using secret key */
+ 177:simpleserial-ml-kem-512.c ****     PQCLEAN_MLKEM512_CLEAN_indcpa_dec(decap_decrypted_buf, ct, sk);
+ 178:simpleserial-ml-kem-512.c ****     
+ 179:simpleserial-ml-kem-512.c ****     /* Prepare buffer for hash_g (decrypted_msg || secret_seed) */
+ 180:simpleserial-ml-kem-512.c ****     memcpy(decap_buf, decap_decrypted_buf, KYBER_SYMBYTES);
+ 181:simpleserial-ml-kem-512.c ****     memcpy(decap_buf + KYBER_SYMBYTES, sk + KYBER_SECRETKEYBYTES - 2 * KYBER_SYMBYTES, KYBER_SYMBYT
+ 182:simpleserial-ml-kem-512.c ****     
+ 183:simpleserial-ml-kem-512.c ****     /* Compute hash_g(kr, buf, 2 * KYBER_SYMBYTES) */
+ 184:simpleserial-ml-kem-512.c ****     hash_g(decap_kr, decap_buf, 2 * KYBER_SYMBYTES);
+ 185:simpleserial-ml-kem-512.c **** 
+ 186:simpleserial-ml-kem-512.c ****     /* coins are in kr+KYBER_SYMBYTES */
+ 187:simpleserial-ml-kem-512.c ****     //PQCLEAN_MLKEM512_CLEAN_indcpa_enc(cmp, decrypted_buf, pk, kr + KYBER_SYMBYTES);
+ 188:simpleserial-ml-kem-512.c **** 
+ 189:simpleserial-ml-kem-512.c ****     /* Verify: compare input ct with re-encrypted cmp */
+ 190:simpleserial-ml-kem-512.c ****     fail = PQCLEAN_MLKEM512_CLEAN_verify(ct, ct, KYBER_CIPHERTEXTBYTES);
+ 191:simpleserial-ml-kem-512.c **** 
+ 192:simpleserial-ml-kem-512.c ****     /* Compute rejection key for invalid ciphertexts */
+ 193:simpleserial-ml-kem-512.c ****     rkprf(ss_result, sk + KYBER_SECRETKEYBYTES - KYBER_SYMBYTES, ct);
+ 194:simpleserial-ml-kem-512.c **** 
+ 195:simpleserial-ml-kem-512.c ****     /* CONDITIONAL MOVE: Copy true key if fail==0 (valid), else keep rejection key */
+ 196:simpleserial-ml-kem-512.c ****     trigger_high();
+ 197:simpleserial-ml-kem-512.c ****     PQCLEAN_MLKEM512_CLEAN_cmov(ss_result, decap_kr, KYBER_SYMBYTES, (uint8_t)(1 - fail));
+ 198:simpleserial-ml-kem-512.c ****     trigger_low();
+ 199:simpleserial-ml-kem-512.c **** 
+ 200:simpleserial-ml-kem-512.c ****     /* Send shared secret back */
+ 201:simpleserial-ml-kem-512.c ****     /* (gpio_set_pin_high(LED1) removido: trigger_high/low ya marcan la ventana) */
+ 202:simpleserial-ml-kem-512.c ****     //simpleserial_put('r', PQCLEAN_MLKEM512_CLEAN_CRYPTO_BYTES, ss);
+ 203:simpleserial-ml-kem-512.c **** 
+ 204:simpleserial-ml-kem-512.c **** 	return 0x00;
+ 205:simpleserial-ml-kem-512.c **** }
+ 206:simpleserial-ml-kem-512.c **** 
+ 207:simpleserial-ml-kem-512.c **** #if SS_VER == SS_VER_2_1
+ 208:simpleserial-ml-kem-512.c **** static uint8_t v21_copy_chunk(uint8_t *dst, size_t dst_len, uint8_t chunk_len,
+ 209:simpleserial-ml-kem-512.c ****                               uint8_t chunk_index, uint8_t total_chunks,
+ 210:simpleserial-ml-kem-512.c ****                               uint8_t len, const uint8_t *buf)
+ 211:simpleserial-ml-kem-512.c **** {
+ 212:simpleserial-ml-kem-512.c ****     size_t offset;
+ 213:simpleserial-ml-kem-512.c **** 
+ 214:simpleserial-ml-kem-512.c ****     if ((chunk_index >= total_chunks) || (len != chunk_len)) {
+ 215:simpleserial-ml-kem-512.c ****         return SS_ERR_LEN;
+ 216:simpleserial-ml-kem-512.c ****     }
+ 217:simpleserial-ml-kem-512.c **** 
+ 218:simpleserial-ml-kem-512.c ****     offset = (size_t)chunk_index * chunk_len;
+ 219:simpleserial-ml-kem-512.c ****     if ((offset + chunk_len) > dst_len) {
+ 220:simpleserial-ml-kem-512.c ****         return SS_ERR_LEN;
+ 221:simpleserial-ml-kem-512.c ****     }
+ 222:simpleserial-ml-kem-512.c **** 
+ 223:simpleserial-ml-kem-512.c ****     memcpy(dst + offset, buf, chunk_len);
+ 224:simpleserial-ml-kem-512.c ****     return SS_ERR_OK;
+ 225:simpleserial-ml-kem-512.c **** }
+ 226:simpleserial-ml-kem-512.c **** 
+ 227:simpleserial-ml-kem-512.c **** static void v21_sync_pk_into_sk(void)
+ 228:simpleserial-ml-kem-512.c **** {
+ 229:simpleserial-ml-kem-512.c ****     memcpy(sk + KYBER_INDCPA_SECRETKEYBYTES, pk, KYBER_PUBLICKEYBYTES);
+ 230:simpleserial-ml-kem-512.c ****     hash_h(sk + KYBER_SECRETKEYBYTES - 2 * KYBER_SYMBYTES, pk, KYBER_PUBLICKEYBYTES);
+ 231:simpleserial-ml-kem-512.c **** }
+ 232:simpleserial-ml-kem-512.c **** 
+ 233:simpleserial-ml-kem-512.c **** static uint8_t v21_handle_vector_write(uint8_t scmd, uint8_t len, const uint8_t *buf)
+ 234:simpleserial-ml-kem-512.c **** {
+ 235:simpleserial-ml-kem-512.c ****     uint8_t chunk_index;
+ 236:simpleserial-ml-kem-512.c ****     uint8_t err;
+ 237:simpleserial-ml-kem-512.c **** 
+ 238:simpleserial-ml-kem-512.c ****     if ((scmd >= MLKEM_SS_V21_SCMD_SK_BASE) &&
+ 239:simpleserial-ml-kem-512.c ****         (scmd < (MLKEM_SS_V21_SCMD_SK_BASE + MLKEM_SS_V21_SK_CHUNKS))) {
+ 240:simpleserial-ml-kem-512.c ****         chunk_index = scmd - MLKEM_SS_V21_SCMD_SK_BASE;
+ 241:simpleserial-ml-kem-512.c ****         err = v21_copy_chunk(sk, sizeof(sk), MLKEM_SS_V21_CHUNK_SK, chunk_index,
+ 242:simpleserial-ml-kem-512.c ****                              MLKEM_SS_V21_SK_CHUNKS, len, buf);
+ 243:simpleserial-ml-kem-512.c ****         if (err == SS_ERR_OK) {
+ 244:simpleserial-ml-kem-512.c ****             sk_chunks_loaded |= (uint8_t)(1u << chunk_index);
+ 245:simpleserial-ml-kem-512.c ****         }
+ 246:simpleserial-ml-kem-512.c ****         return err;
+ 247:simpleserial-ml-kem-512.c ****     }
+ 248:simpleserial-ml-kem-512.c **** 
+ 249:simpleserial-ml-kem-512.c ****     if ((scmd >= MLKEM_SS_V21_SCMD_PK_BASE) &&
+ 250:simpleserial-ml-kem-512.c ****         (scmd < (MLKEM_SS_V21_SCMD_PK_BASE + MLKEM_SS_V21_PK_CHUNKS))) {
+ 251:simpleserial-ml-kem-512.c ****         chunk_index = scmd - MLKEM_SS_V21_SCMD_PK_BASE;
+ 252:simpleserial-ml-kem-512.c ****         err = v21_copy_chunk(pk, sizeof(pk), MLKEM_SS_V21_CHUNK_PK, chunk_index,
+ 253:simpleserial-ml-kem-512.c ****                              MLKEM_SS_V21_PK_CHUNKS, len, buf);
+ 254:simpleserial-ml-kem-512.c ****         if (err == SS_ERR_OK) {
+ 255:simpleserial-ml-kem-512.c ****             pk_chunks_loaded |= (uint8_t)(1u << chunk_index);
+ 256:simpleserial-ml-kem-512.c ****             memcpy(sk + KYBER_INDCPA_SECRETKEYBYTES + ((size_t)chunk_index * MLKEM_SS_V21_CHUNK_PK)
+ 257:simpleserial-ml-kem-512.c ****                    buf,
+ 258:simpleserial-ml-kem-512.c ****                    MLKEM_SS_V21_CHUNK_PK);
+ 259:simpleserial-ml-kem-512.c ****             if (pk_chunks_loaded == MLKEM_SS_V21_PK_MASK) {
+ 260:simpleserial-ml-kem-512.c ****                 v21_sync_pk_into_sk();
+ 261:simpleserial-ml-kem-512.c ****             }
+ 262:simpleserial-ml-kem-512.c ****         }
+ 263:simpleserial-ml-kem-512.c ****         return err;
+ 264:simpleserial-ml-kem-512.c ****     }
+ 265:simpleserial-ml-kem-512.c **** 
+ 266:simpleserial-ml-kem-512.c ****     if ((scmd >= MLKEM_SS_V21_SCMD_CT_BASE) &&
+ 267:simpleserial-ml-kem-512.c ****         (scmd < (MLKEM_SS_V21_SCMD_CT_BASE + MLKEM_SS_V21_CT_CHUNKS))) {
+ 268:simpleserial-ml-kem-512.c ****         chunk_index = scmd - MLKEM_SS_V21_SCMD_CT_BASE;
+ 269:simpleserial-ml-kem-512.c ****         err = v21_copy_chunk(ct, sizeof(ct), MLKEM_SS_V21_CHUNK_CT, chunk_index,
+ 270:simpleserial-ml-kem-512.c ****                              MLKEM_SS_V21_CT_CHUNKS, len, buf);
+ 271:simpleserial-ml-kem-512.c ****         if (err == SS_ERR_OK) {
+ 272:simpleserial-ml-kem-512.c ****             ct_chunks_loaded |= (uint8_t)(1u << chunk_index);
+ 273:simpleserial-ml-kem-512.c ****         }
+ 274:simpleserial-ml-kem-512.c ****         return err;
+ 275:simpleserial-ml-kem-512.c ****     }
+ 276:simpleserial-ml-kem-512.c **** 
+ 277:simpleserial-ml-kem-512.c ****     if (scmd == MLKEM_SS_V21_SCMD_SS) {
+ 278:simpleserial-ml-kem-512.c ****         if (len != KYBER_SSBYTES) {
+ 279:simpleserial-ml-kem-512.c ****             return SS_ERR_LEN;
+ 280:simpleserial-ml-kem-512.c ****         }
+ 281:simpleserial-ml-kem-512.c ****         memcpy(ss, buf, KYBER_SSBYTES);
+ 282:simpleserial-ml-kem-512.c ****         ss_loaded = 1;
+ 283:simpleserial-ml-kem-512.c ****         return SS_ERR_OK;
+ 284:simpleserial-ml-kem-512.c ****     }
+ 285:simpleserial-ml-kem-512.c **** 
+ 286:simpleserial-ml-kem-512.c ****     return SS_ERR_CMD;
+ 287:simpleserial-ml-kem-512.c **** }
+ 288:simpleserial-ml-kem-512.c **** 
+ 289:simpleserial-ml-kem-512.c **** static uint8_t v21_readback_bounds(uint8_t scmd, const uint8_t **src, uint8_t *out_len)
+ 290:simpleserial-ml-kem-512.c **** {
+ 291:simpleserial-ml-kem-512.c ****     uint8_t chunk_index;
+ 292:simpleserial-ml-kem-512.c ****     size_t offset;
+ 293:simpleserial-ml-kem-512.c **** 
+ 294:simpleserial-ml-kem-512.c ****     if ((scmd >= MLKEM_SS_V21_SCMD_SK_BASE) &&
+ 295:simpleserial-ml-kem-512.c ****         (scmd < (MLKEM_SS_V21_SCMD_SK_BASE + MLKEM_SS_V21_SK_CHUNKS))) {
+ 296:simpleserial-ml-kem-512.c ****         chunk_index = scmd - MLKEM_SS_V21_SCMD_SK_BASE;
+ 297:simpleserial-ml-kem-512.c ****         offset = (size_t)chunk_index * MLKEM_SS_V21_CHUNK_SK;
+ 298:simpleserial-ml-kem-512.c ****         *src = sk + offset;
+ 299:simpleserial-ml-kem-512.c ****         *out_len = MLKEM_SS_V21_CHUNK_SK;
+ 300:simpleserial-ml-kem-512.c ****         return SS_ERR_OK;
+ 301:simpleserial-ml-kem-512.c ****     }
+ 302:simpleserial-ml-kem-512.c **** 
+ 303:simpleserial-ml-kem-512.c ****     if ((scmd >= MLKEM_SS_V21_SCMD_PK_BASE) &&
+ 304:simpleserial-ml-kem-512.c ****         (scmd < (MLKEM_SS_V21_SCMD_PK_BASE + MLKEM_SS_V21_PK_CHUNKS))) {
+ 305:simpleserial-ml-kem-512.c ****         chunk_index = scmd - MLKEM_SS_V21_SCMD_PK_BASE;
+ 306:simpleserial-ml-kem-512.c ****         offset = (size_t)chunk_index * MLKEM_SS_V21_CHUNK_PK;
+ 307:simpleserial-ml-kem-512.c ****         *src = pk + offset;
+ 308:simpleserial-ml-kem-512.c ****         *out_len = MLKEM_SS_V21_CHUNK_PK;
+ 309:simpleserial-ml-kem-512.c ****         return SS_ERR_OK;
+ 310:simpleserial-ml-kem-512.c ****     }
+ 311:simpleserial-ml-kem-512.c **** 
+ 312:simpleserial-ml-kem-512.c ****     if ((scmd >= MLKEM_SS_V21_SCMD_CT_BASE) &&
+ 313:simpleserial-ml-kem-512.c ****         (scmd < (MLKEM_SS_V21_SCMD_CT_BASE + MLKEM_SS_V21_CT_CHUNKS))) {
+ 314:simpleserial-ml-kem-512.c ****         chunk_index = scmd - MLKEM_SS_V21_SCMD_CT_BASE;
+ 315:simpleserial-ml-kem-512.c ****         offset = (size_t)chunk_index * MLKEM_SS_V21_CHUNK_CT;
+ 316:simpleserial-ml-kem-512.c ****         *src = ct + offset;
+ 317:simpleserial-ml-kem-512.c ****         *out_len = MLKEM_SS_V21_CHUNK_CT;
+ 318:simpleserial-ml-kem-512.c ****         return SS_ERR_OK;
+ 319:simpleserial-ml-kem-512.c ****     }
+ 320:simpleserial-ml-kem-512.c **** 
+ 321:simpleserial-ml-kem-512.c ****     if (scmd == MLKEM_SS_V21_SCMD_SS) {
+ 322:simpleserial-ml-kem-512.c ****         *src = ss;
+ 323:simpleserial-ml-kem-512.c ****         *out_len = KYBER_SSBYTES;
+ 324:simpleserial-ml-kem-512.c ****         return SS_ERR_OK;
+ 325:simpleserial-ml-kem-512.c ****     }
+ 326:simpleserial-ml-kem-512.c **** 
+ 327:simpleserial-ml-kem-512.c ****     return SS_ERR_CMD;
+ 328:simpleserial-ml-kem-512.c **** }
+ 329:simpleserial-ml-kem-512.c **** 
+ 330:simpleserial-ml-kem-512.c **** static uint8_t v21_rx_vector_chunk(uint8_t *dst, size_t dst_len, uint8_t scmd,
+ 331:simpleserial-ml-kem-512.c ****                                    uint8_t len, const uint8_t *buf)
+ 332:simpleserial-ml-kem-512.c **** {
+ 333:simpleserial-ml-kem-512.c ****     size_t offset;
+ 334:simpleserial-ml-kem-512.c ****     size_t remaining;
+ 335:simpleserial-ml-kem-512.c **** 
+ 336:simpleserial-ml-kem-512.c ****     if ((v21_chunk_sz == 0u) || (len == 0u) || (len > v21_chunk_sz)) {
+ 337:simpleserial-ml-kem-512.c ****         return SS_ERR_LEN;
+ 338:simpleserial-ml-kem-512.c ****     }
+ 339:simpleserial-ml-kem-512.c **** 
+ 340:simpleserial-ml-kem-512.c ****     offset = (size_t)scmd * (size_t)v21_chunk_sz;
+ 341:simpleserial-ml-kem-512.c ****     if (offset >= dst_len) {
+ 342:simpleserial-ml-kem-512.c ****         return SS_ERR_LEN;
+ 343:simpleserial-ml-kem-512.c ****     }
+ 344:simpleserial-ml-kem-512.c **** 
+ 345:simpleserial-ml-kem-512.c ****     remaining = dst_len - offset;
+ 346:simpleserial-ml-kem-512.c ****     if ((size_t)len > remaining) {
+ 347:simpleserial-ml-kem-512.c ****         return SS_ERR_LEN;
+ 348:simpleserial-ml-kem-512.c ****     }
+ 349:simpleserial-ml-kem-512.c **** 
+ 350:simpleserial-ml-kem-512.c ****     memcpy(dst + offset, buf, len);
+ 351:simpleserial-ml-kem-512.c ****     return SS_ERR_OK;
+ 352:simpleserial-ml-kem-512.c **** }
+ 353:simpleserial-ml-kem-512.c **** 
+ 354:simpleserial-ml-kem-512.c **** static uint8_t v21_tx_vector_chunk(uint8_t tag, const uint8_t *src, size_t src_len,
+ 355:simpleserial-ml-kem-512.c ****                                    uint8_t scmd, uint8_t len)
+ 356:simpleserial-ml-kem-512.c **** {
+ 357:simpleserial-ml-kem-512.c ****     size_t offset;
+ 358:simpleserial-ml-kem-512.c ****     size_t remaining;
+ 359:simpleserial-ml-kem-512.c ****     uint8_t out_len;
+ 360:simpleserial-ml-kem-512.c **** 
+ 361:simpleserial-ml-kem-512.c ****     if ((v21_chunk_sz == 0u) || (len != 0u)) {
+ 362:simpleserial-ml-kem-512.c ****         return SS_ERR_LEN;
+ 363:simpleserial-ml-kem-512.c ****     }
+ 364:simpleserial-ml-kem-512.c **** 
+ 365:simpleserial-ml-kem-512.c ****     offset = (size_t)scmd * (size_t)v21_chunk_sz;
+ 366:simpleserial-ml-kem-512.c ****     if (offset >= src_len) {
+ 367:simpleserial-ml-kem-512.c ****         return SS_ERR_LEN;
+ 368:simpleserial-ml-kem-512.c ****     }
+ 369:simpleserial-ml-kem-512.c **** 
+ 370:simpleserial-ml-kem-512.c ****     remaining = src_len - offset;
+ 371:simpleserial-ml-kem-512.c ****     out_len = (remaining > (size_t)v21_chunk_sz) ? v21_chunk_sz : (uint8_t)remaining;
+ 372:simpleserial-ml-kem-512.c ****     simpleserial_put(tag, out_len, src + offset);
+ 373:simpleserial-ml-kem-512.c ****     return SS_ERR_OK;
+ 374:simpleserial-ml-kem-512.c **** }
+ 375:simpleserial-ml-kem-512.c **** 
+ 376:simpleserial-ml-kem-512.c **** static uint8_t v21_set_chunk_size(uint8_t cmd, uint8_t scmd, uint8_t len, uint8_t *buf)
+ 377:simpleserial-ml-kem-512.c **** {
+ 378:simpleserial-ml-kem-512.c ****     uint16_t new_size;
+ 379:simpleserial-ml-kem-512.c **** 
+ 380:simpleserial-ml-kem-512.c ****     (void)cmd;
+ 381:simpleserial-ml-kem-512.c ****     (void)scmd;
+ 382:simpleserial-ml-kem-512.c ****     if (len != 2u) {
+ 383:simpleserial-ml-kem-512.c ****         return SS_ERR_LEN;
+ 384:simpleserial-ml-kem-512.c ****     }
+ 385:simpleserial-ml-kem-512.c **** 
+ 386:simpleserial-ml-kem-512.c ****     new_size = (uint16_t)buf[0] | ((uint16_t)buf[1] << 8);
+ 387:simpleserial-ml-kem-512.c ****     if ((new_size < 1u) || (new_size > MLKEM_SS_V21_CHUNK_MAX)) {
+ 388:simpleserial-ml-kem-512.c ****         return SS_ERR_LEN;
+ 389:simpleserial-ml-kem-512.c ****     }
+ 390:simpleserial-ml-kem-512.c **** 
+ 391:simpleserial-ml-kem-512.c ****     v21_chunk_sz = (uint8_t)new_size;
+ 392:simpleserial-ml-kem-512.c ****     return SS_ERR_OK;
+ 393:simpleserial-ml-kem-512.c **** }
+ 394:simpleserial-ml-kem-512.c **** 
+ 395:simpleserial-ml-kem-512.c **** static uint8_t v21_rx_pk_cmd(uint8_t cmd, uint8_t scmd, uint8_t len, uint8_t *buf)
+ 396:simpleserial-ml-kem-512.c **** {
+ 397:simpleserial-ml-kem-512.c ****     uint8_t err;
+ 398:simpleserial-ml-kem-512.c ****     (void)cmd;
+ 399:simpleserial-ml-kem-512.c ****     err = v21_rx_vector_chunk(pk, sizeof(pk), scmd, len, buf);
+ 400:simpleserial-ml-kem-512.c ****     if (err == SS_ERR_OK) {
+ 401:simpleserial-ml-kem-512.c ****         v21_sync_pk_into_sk();
+ 402:simpleserial-ml-kem-512.c ****     }
+ 403:simpleserial-ml-kem-512.c ****     return err;
+ 404:simpleserial-ml-kem-512.c **** }
+ 405:simpleserial-ml-kem-512.c **** 
+ 406:simpleserial-ml-kem-512.c **** static uint8_t v21_tx_pk_cmd(uint8_t cmd, uint8_t scmd, uint8_t len, uint8_t *buf)
+ 407:simpleserial-ml-kem-512.c **** {
+ 408:simpleserial-ml-kem-512.c ****     (void)cmd;
+ 409:simpleserial-ml-kem-512.c ****     (void)buf;
+ 410:simpleserial-ml-kem-512.c ****     return v21_tx_vector_chunk('p', pk, sizeof(pk), scmd, len);
+ 411:simpleserial-ml-kem-512.c **** }
+ 412:simpleserial-ml-kem-512.c **** 
+ 413:simpleserial-ml-kem-512.c **** static uint8_t v21_rx_ct_cmd(uint8_t cmd, uint8_t scmd, uint8_t len, uint8_t *buf)
+ 414:simpleserial-ml-kem-512.c **** {
+ 415:simpleserial-ml-kem-512.c ****     (void)cmd;
+ 416:simpleserial-ml-kem-512.c ****     return v21_rx_vector_chunk(ct, sizeof(ct), scmd, len, buf);
+ 417:simpleserial-ml-kem-512.c **** }
+ 418:simpleserial-ml-kem-512.c **** 
+ 419:simpleserial-ml-kem-512.c **** static uint8_t v21_tx_ct_cmd(uint8_t cmd, uint8_t scmd, uint8_t len, uint8_t *buf)
+ 420:simpleserial-ml-kem-512.c **** {
+ 421:simpleserial-ml-kem-512.c ****     (void)cmd;
+ 422:simpleserial-ml-kem-512.c ****     (void)buf;
+ 423:simpleserial-ml-kem-512.c ****     return v21_tx_vector_chunk('c', ct, sizeof(ct), scmd, len);
+ 424:simpleserial-ml-kem-512.c **** }
+ 425:simpleserial-ml-kem-512.c **** 
+ 426:simpleserial-ml-kem-512.c **** static uint8_t v21_rx_ss_cmd(uint8_t cmd, uint8_t scmd, uint8_t len, uint8_t *buf)
+ 427:simpleserial-ml-kem-512.c **** {
+ 428:simpleserial-ml-kem-512.c ****     uint8_t err;
+ 429:simpleserial-ml-kem-512.c ****     (void)cmd;
+ 430:simpleserial-ml-kem-512.c ****     err = v21_rx_vector_chunk(ss, sizeof(ss), scmd, len, buf);
+ 431:simpleserial-ml-kem-512.c ****     if (err == SS_ERR_OK) {
+ 432:simpleserial-ml-kem-512.c ****         ss_loaded = 1u;
+ 433:simpleserial-ml-kem-512.c ****     }
+ 434:simpleserial-ml-kem-512.c ****     return err;
+ 435:simpleserial-ml-kem-512.c **** }
+ 436:simpleserial-ml-kem-512.c **** 
+ 437:simpleserial-ml-kem-512.c **** static uint8_t v21_tx_ss_cmd(uint8_t cmd, uint8_t scmd, uint8_t len, uint8_t *buf)
+ 438:simpleserial-ml-kem-512.c **** {
+ 439:simpleserial-ml-kem-512.c ****     (void)cmd;
+ 440:simpleserial-ml-kem-512.c ****     (void)buf;
+ 441:simpleserial-ml-kem-512.c ****     return v21_tx_vector_chunk('s', ss, sizeof(ss), scmd, len);
+ 442:simpleserial-ml-kem-512.c **** }
+ 443:simpleserial-ml-kem-512.c **** 
+ 444:simpleserial-ml-kem-512.c **** static uint8_t led_on_cmd_v21(uint8_t cmd, uint8_t scmd, uint8_t len, uint8_t *buf)
+ 445:simpleserial-ml-kem-512.c **** {
+  27              		.loc 1 445 1 view -0
+  28              		.cfi_startproc
+  29              		@ args = 0, pretend = 0, frame = 0
+  30              		@ frame_needed = 0, uses_anonymous_args = 0
+  31              		@ link register save eliminated.
+ 446:simpleserial-ml-kem-512.c ****     (void)cmd;
+  32              		.loc 1 446 5 view .LVU1
+ 447:simpleserial-ml-kem-512.c ****     (void)scmd;
+  33              		.loc 1 447 5 view .LVU2
+ 448:simpleserial-ml-kem-512.c ****     return led_on_cmd(buf, len);
+  34              		.loc 1 448 5 view .LVU3
+  35              	.LBB4:
+  36              	.LBI4:
+ 108:simpleserial-ml-kem-512.c **** {
+  37              		.loc 1 108 16 view .LVU4
+  38              	.LBB5:
+ 110:simpleserial-ml-kem-512.c **** 
+  39              		.loc 1 110 5 view .LVU5
+ 112:simpleserial-ml-kem-512.c ****         return SS_ERR_LEN;
+  40              		.loc 1 112 5 view .LVU6
+ 112:simpleserial-ml-kem-512.c ****         return SS_ERR_LEN;
+  41              		.loc 1 112 8 is_stmt 0 view .LVU7
+  42 0000 012A     		cmp	r2, #1
+  43 0002 10D1     		bne	.L6
+ 116:simpleserial-ml-kem-512.c ****     gpio_set_pin_high(led);
+  44              		.loc 1 116 5 is_stmt 1 view .LVU8
+ 116:simpleserial-ml-kem-512.c ****     gpio_set_pin_high(led);
+  45              		.loc 1 116 9 is_stmt 0 view .LVU9
+  46 0004 1B78     		ldrb	r3, [r3]	@ zero_extendqisi2
+  47              	.LVL1:
+ 117:simpleserial-ml-kem-512.c ****     if (led == LED1) LED1State = 1;
+  48              		.loc 1 117 5 is_stmt 1 view .LVU10
+ 117:simpleserial-ml-kem-512.c ****     if (led == LED1) LED1State = 1;
+  49              		.loc 1 117 5 view .LVU11
+ 118:simpleserial-ml-kem-512.c ****     else if (led == LED2) LED2State = 1;
+  50              		.loc 1 118 5 view .LVU12
+ 118:simpleserial-ml-kem-512.c ****     else if (led == LED2) LED2State = 1;
+  51              		.loc 1 118 8 is_stmt 0 view .LVU13
+  52 0006 102B     		cmp	r3, #16
+  53 0008 03D1     		bne	.L3
+ 118:simpleserial-ml-kem-512.c ****     else if (led == LED2) LED2State = 1;
+  54              		.loc 1 118 22 is_stmt 1 discriminator 1 view .LVU14
+ 118:simpleserial-ml-kem-512.c ****     else if (led == LED2) LED2State = 1;
+  55              		.loc 1 118 32 is_stmt 0 discriminator 1 view .LVU15
+  56 000a 084B     		ldr	r3, .L7
+  57              	.LVL2:
+ 118:simpleserial-ml-kem-512.c ****     else if (led == LED2) LED2State = 1;
+  58              		.loc 1 118 32 discriminator 1 view .LVU16
+  59 000c 1A70     		strb	r2, [r3]
+  60              	.L4:
+ 121:simpleserial-ml-kem-512.c **** }
+  61              		.loc 1 121 12 view .LVU17
+  62 000e 0020     		movs	r0, #0
+  63              	.LVL3:
+ 121:simpleserial-ml-kem-512.c **** }
+  64              		.loc 1 121 12 view .LVU18
+  65 0010 7047     		bx	lr
+  66              	.LVL4:
+  67              	.L3:
+ 119:simpleserial-ml-kem-512.c ****     else if (led == LED3) LED3State = 1;
+  68              		.loc 1 119 10 is_stmt 1 view .LVU19
+ 119:simpleserial-ml-kem-512.c ****     else if (led == LED3) LED3State = 1;
+  69              		.loc 1 119 13 is_stmt 0 view .LVU20
+  70 0012 0F2B     		cmp	r3, #15
+  71 0014 02D1     		bne	.L5
+ 119:simpleserial-ml-kem-512.c ****     else if (led == LED3) LED3State = 1;
+  72              		.loc 1 119 27 is_stmt 1 discriminator 1 view .LVU21
+ 119:simpleserial-ml-kem-512.c ****     else if (led == LED3) LED3State = 1;
+  73              		.loc 1 119 37 is_stmt 0 discriminator 1 view .LVU22
+  74 0016 054B     		ldr	r3, .L7
+  75              	.LVL5:
+ 119:simpleserial-ml-kem-512.c ****     else if (led == LED3) LED3State = 1;
+  76              		.loc 1 119 37 discriminator 1 view .LVU23
+  77 0018 5A70     		strb	r2, [r3, #1]
+  78 001a F8E7     		b	.L4
+  79              	.LVL6:
+  80              	.L5:
+ 120:simpleserial-ml-kem-512.c ****     return 0;
+  81              		.loc 1 120 10 is_stmt 1 view .LVU24
+ 120:simpleserial-ml-kem-512.c ****     return 0;
+  82              		.loc 1 120 13 is_stmt 0 view .LVU25
+  83 001c 0E2B     		cmp	r3, #14
+  84 001e F6D1     		bne	.L4
+ 120:simpleserial-ml-kem-512.c ****     return 0;
+  85              		.loc 1 120 27 is_stmt 1 discriminator 1 view .LVU26
+ 120:simpleserial-ml-kem-512.c ****     return 0;
+  86              		.loc 1 120 37 is_stmt 0 discriminator 1 view .LVU27
+  87 0020 024B     		ldr	r3, .L7
+  88              	.LVL7:
+ 120:simpleserial-ml-kem-512.c ****     return 0;
+  89              		.loc 1 120 37 discriminator 1 view .LVU28
+  90 0022 9A70     		strb	r2, [r3, #2]
+  91 0024 F3E7     		b	.L4
+  92              	.LVL8:
+  93              	.L6:
+ 113:simpleserial-ml-kem-512.c ****     }
+  94              		.loc 1 113 16 view .LVU29
+  95 0026 0420     		movs	r0, #4
+  96              	.LVL9:
+ 113:simpleserial-ml-kem-512.c ****     }
+  97              		.loc 1 113 16 view .LVU30
+  98              	.LBE5:
+  99              	.LBE4:
+ 449:simpleserial-ml-kem-512.c **** }
+ 100              		.loc 1 449 1 view .LVU31
+ 101 0028 7047     		bx	lr
+ 102              	.L8:
+ 103 002a 00BF     		.align	2
+ 104              	.L7:
+ 105 002c 00000000 		.word	.LANCHOR0
+ 106              		.cfi_endproc
+ 107              	.LFE17:
+ 109              		.section	.text.led_off_cmd_v21,"ax",%progbits
+ 110              		.align	1
+ 111              		.syntax unified
+ 112              		.thumb
+ 113              		.thumb_func
+ 115              	led_off_cmd_v21:
+ 116              	.LVL10:
+ 117              	.LFB18:
+ 450:simpleserial-ml-kem-512.c **** 
+ 451:simpleserial-ml-kem-512.c **** static uint8_t led_off_cmd_v21(uint8_t cmd, uint8_t scmd, uint8_t len, uint8_t *buf)
+ 452:simpleserial-ml-kem-512.c **** {
+ 118              		.loc 1 452 1 is_stmt 1 view -0
+ 119              		.cfi_startproc
+ 120              		@ args = 0, pretend = 0, frame = 0
+ 121              		@ frame_needed = 0, uses_anonymous_args = 0
+ 122              		@ link register save eliminated.
+ 453:simpleserial-ml-kem-512.c ****     (void)cmd;
+ 123              		.loc 1 453 5 view .LVU33
+ 454:simpleserial-ml-kem-512.c ****     (void)scmd;
+ 124              		.loc 1 454 5 view .LVU34
+ 455:simpleserial-ml-kem-512.c ****     return led_off_cmd(buf, len);
+ 125              		.loc 1 455 5 view .LVU35
+ 126              	.LBB8:
+ 127              	.LBI8:
+ 124:simpleserial-ml-kem-512.c **** {
+ 128              		.loc 1 124 16 view .LVU36
+ 129              	.LBB9:
+ 126:simpleserial-ml-kem-512.c **** 
+ 130              		.loc 1 126 5 view .LVU37
+ 128:simpleserial-ml-kem-512.c ****         return SS_ERR_LEN;
+ 131              		.loc 1 128 5 view .LVU38
+ 128:simpleserial-ml-kem-512.c ****         return SS_ERR_LEN;
+ 132              		.loc 1 128 8 is_stmt 0 view .LVU39
+ 133 0000 012A     		cmp	r2, #1
+ 134 0002 12D1     		bne	.L14
+ 132:simpleserial-ml-kem-512.c ****     gpio_set_pin_low(led);
+ 135              		.loc 1 132 5 is_stmt 1 view .LVU40
+ 132:simpleserial-ml-kem-512.c ****     gpio_set_pin_low(led);
+ 136              		.loc 1 132 9 is_stmt 0 view .LVU41
+ 137 0004 1A78     		ldrb	r2, [r3]	@ zero_extendqisi2
+ 138              	.LVL11:
+ 133:simpleserial-ml-kem-512.c ****     if (led == LED1) LED1State = 0;
+ 139              		.loc 1 133 5 is_stmt 1 view .LVU42
+ 133:simpleserial-ml-kem-512.c ****     if (led == LED1) LED1State = 0;
+ 140              		.loc 1 133 5 view .LVU43
+ 134:simpleserial-ml-kem-512.c ****     else if (led == LED2) LED2State = 0;
+ 141              		.loc 1 134 5 view .LVU44
+ 134:simpleserial-ml-kem-512.c ****     else if (led == LED2) LED2State = 0;
+ 142              		.loc 1 134 8 is_stmt 0 view .LVU45
+ 143 0006 102A     		cmp	r2, #16
+ 144 0008 4FF00003 		mov	r3, #0
+ 145              	.LVL12:
+ 134:simpleserial-ml-kem-512.c ****     else if (led == LED2) LED2State = 0;
+ 146              		.loc 1 134 8 view .LVU46
+ 147 000c 03D1     		bne	.L11
+ 134:simpleserial-ml-kem-512.c ****     else if (led == LED2) LED2State = 0;
+ 148              		.loc 1 134 22 is_stmt 1 discriminator 1 view .LVU47
+ 134:simpleserial-ml-kem-512.c ****     else if (led == LED2) LED2State = 0;
+ 149              		.loc 1 134 32 is_stmt 0 discriminator 1 view .LVU48
+ 150 000e 084A     		ldr	r2, .L15
+ 151              	.LVL13:
+ 134:simpleserial-ml-kem-512.c ****     else if (led == LED2) LED2State = 0;
+ 152              		.loc 1 134 32 discriminator 1 view .LVU49
+ 153 0010 1370     		strb	r3, [r2]
+ 154              	.L12:
+ 137:simpleserial-ml-kem-512.c **** }
+ 155              		.loc 1 137 12 view .LVU50
+ 156 0012 0020     		movs	r0, #0
+ 157              	.LVL14:
+ 137:simpleserial-ml-kem-512.c **** }
+ 158              		.loc 1 137 12 view .LVU51
+ 159 0014 7047     		bx	lr
+ 160              	.LVL15:
+ 161              	.L11:
+ 135:simpleserial-ml-kem-512.c ****     else if (led == LED3) LED3State = 0;
+ 162              		.loc 1 135 10 is_stmt 1 view .LVU52
+ 135:simpleserial-ml-kem-512.c ****     else if (led == LED3) LED3State = 0;
+ 163              		.loc 1 135 13 is_stmt 0 view .LVU53
+ 164 0016 0F2A     		cmp	r2, #15
+ 165 0018 02D1     		bne	.L13
+ 135:simpleserial-ml-kem-512.c ****     else if (led == LED3) LED3State = 0;
+ 166              		.loc 1 135 27 is_stmt 1 discriminator 1 view .LVU54
+ 135:simpleserial-ml-kem-512.c ****     else if (led == LED3) LED3State = 0;
+ 167              		.loc 1 135 37 is_stmt 0 discriminator 1 view .LVU55
+ 168 001a 054A     		ldr	r2, .L15
+ 169              	.LVL16:
+ 135:simpleserial-ml-kem-512.c ****     else if (led == LED3) LED3State = 0;
+ 170              		.loc 1 135 37 discriminator 1 view .LVU56
+ 171 001c 5370     		strb	r3, [r2, #1]
+ 172 001e F8E7     		b	.L12
+ 173              	.LVL17:
+ 174              	.L13:
+ 136:simpleserial-ml-kem-512.c ****     return 0;
+ 175              		.loc 1 136 10 is_stmt 1 view .LVU57
+ 136:simpleserial-ml-kem-512.c ****     return 0;
+ 176              		.loc 1 136 13 is_stmt 0 view .LVU58
+ 177 0020 0E2A     		cmp	r2, #14
+ 178 0022 F6D1     		bne	.L12
+ 136:simpleserial-ml-kem-512.c ****     return 0;
+ 179              		.loc 1 136 27 is_stmt 1 discriminator 1 view .LVU59
+ 136:simpleserial-ml-kem-512.c ****     return 0;
+ 180              		.loc 1 136 37 is_stmt 0 discriminator 1 view .LVU60
+ 181 0024 024A     		ldr	r2, .L15
+ 182              	.LVL18:
+ 136:simpleserial-ml-kem-512.c ****     return 0;
+ 183              		.loc 1 136 37 discriminator 1 view .LVU61
+ 184 0026 9370     		strb	r3, [r2, #2]
+ 185 0028 F3E7     		b	.L12
+ 186              	.LVL19:
+ 187              	.L14:
+ 129:simpleserial-ml-kem-512.c ****     }
+ 188              		.loc 1 129 16 view .LVU62
+ 189 002a 0420     		movs	r0, #4
+ 190              	.LVL20:
+ 129:simpleserial-ml-kem-512.c ****     }
+ 191              		.loc 1 129 16 view .LVU63
+ 192              	.LBE9:
+ 193              	.LBE8:
+ 456:simpleserial-ml-kem-512.c **** }
+ 194              		.loc 1 456 1 view .LVU64
+ 195 002c 7047     		bx	lr
+ 196              	.L16:
+ 197 002e 00BF     		.align	2
+ 198              	.L15:
+ 199 0030 00000000 		.word	.LANCHOR0
+ 200              		.cfi_endproc
+ 201              	.LFE18:
+ 203              		.section	.text.led_toggle_v21,"ax",%progbits
+ 204              		.align	1
+ 205              		.syntax unified
+ 206              		.thumb
+ 207              		.thumb_func
+ 209              	led_toggle_v21:
+ 210              	.LVL21:
+ 211              	.LFB19:
+ 457:simpleserial-ml-kem-512.c **** 
+ 458:simpleserial-ml-kem-512.c **** static uint8_t led_toggle_v21(uint8_t cmd, uint8_t scmd, uint8_t len, uint8_t *buf)
+ 459:simpleserial-ml-kem-512.c **** {
+ 212              		.loc 1 459 1 is_stmt 1 view -0
+ 213              		.cfi_startproc
+ 214              		@ args = 0, pretend = 0, frame = 0
+ 215              		@ frame_needed = 0, uses_anonymous_args = 0
+ 216              		@ link register save eliminated.
+ 460:simpleserial-ml-kem-512.c ****     (void)cmd;
+ 217              		.loc 1 460 5 view .LVU66
+ 461:simpleserial-ml-kem-512.c ****     (void)scmd;
+ 218              		.loc 1 461 5 view .LVU67
+ 462:simpleserial-ml-kem-512.c ****     return led_toggle(buf, len);
+ 219              		.loc 1 462 5 view .LVU68
+ 220              	.LBB12:
+ 221              	.LBI12:
+ 140:simpleserial-ml-kem-512.c **** {
+ 222              		.loc 1 140 16 view .LVU69
+ 223              	.LBB13:
+ 142:simpleserial-ml-kem-512.c ****     uint8_t state = 0;
+ 224              		.loc 1 142 5 view .LVU70
+ 143:simpleserial-ml-kem-512.c **** 
+ 225              		.loc 1 143 5 view .LVU71
+ 145:simpleserial-ml-kem-512.c ****         return SS_ERR_LEN;
+ 226              		.loc 1 145 5 view .LVU72
+ 145:simpleserial-ml-kem-512.c ****         return SS_ERR_LEN;
+ 227              		.loc 1 145 8 is_stmt 0 view .LVU73
+ 228 0000 012A     		cmp	r2, #1
+ 229 0002 1AD1     		bne	.L28
+ 149:simpleserial-ml-kem-512.c ****     if (led == LED1) state = LED1State;
+ 230              		.loc 1 149 5 is_stmt 1 view .LVU74
+ 149:simpleserial-ml-kem-512.c ****     if (led == LED1) state = LED1State;
+ 231              		.loc 1 149 9 is_stmt 0 view .LVU75
+ 232 0004 1B78     		ldrb	r3, [r3]	@ zero_extendqisi2
+ 233              	.LVL22:
+ 150:simpleserial-ml-kem-512.c ****     else if (led == LED2) state = LED2State;
+ 234              		.loc 1 150 5 is_stmt 1 view .LVU76
+ 150:simpleserial-ml-kem-512.c ****     else if (led == LED2) state = LED2State;
+ 235              		.loc 1 150 8 is_stmt 0 view .LVU77
+ 236 0006 102B     		cmp	r3, #16
+ 237 0008 05D1     		bne	.L19
+ 150:simpleserial-ml-kem-512.c ****     else if (led == LED2) state = LED2State;
+ 238              		.loc 1 150 22 is_stmt 1 discriminator 1 view .LVU78
+ 150:simpleserial-ml-kem-512.c ****     else if (led == LED2) state = LED2State;
+ 239              		.loc 1 150 28 is_stmt 0 discriminator 1 view .LVU79
+ 240 000a 0D4B     		ldr	r3, .L33
+ 241              	.LVL23:
+ 150:simpleserial-ml-kem-512.c ****     else if (led == LED2) state = LED2State;
+ 242              		.loc 1 150 28 discriminator 1 view .LVU80
+ 243 000c 1978     		ldrb	r1, [r3]	@ zero_extendqisi2
+ 244              	.LVL24:
+ 154:simpleserial-ml-kem-512.c ****         gpio_set_pin_low(led);
+ 245              		.loc 1 154 5 is_stmt 1 view .LVU81
+ 154:simpleserial-ml-kem-512.c ****         gpio_set_pin_low(led);
+ 246              		.loc 1 154 8 is_stmt 0 view .LVU82
+ 247 000e 01B1     		cbz	r1, .L29
+ 155:simpleserial-ml-kem-512.c ****         if (led == LED1) LED1State = 0;
+ 248              		.loc 1 155 9 is_stmt 1 view .LVU83
+ 155:simpleserial-ml-kem-512.c ****         if (led == LED1) LED1State = 0;
+ 249              		.loc 1 155 9 view .LVU84
+ 156:simpleserial-ml-kem-512.c ****         else if (led == LED2) LED2State = 0;
+ 250              		.loc 1 156 9 view .LVU85
+ 156:simpleserial-ml-kem-512.c ****         else if (led == LED2) LED2State = 0;
+ 251              		.loc 1 156 26 discriminator 1 view .LVU86
+ 156:simpleserial-ml-kem-512.c ****         else if (led == LED2) LED2State = 0;
+ 252              		.loc 1 156 36 is_stmt 0 discriminator 1 view .LVU87
+ 253 0010 0022     		movs	r2, #0
+ 254              	.LVL25:
+ 255              	.L29:
+ 161:simpleserial-ml-kem-512.c ****         else if (led == LED2) LED2State = 1;
+ 256              		.loc 1 161 26 is_stmt 1 discriminator 1 view .LVU88
+ 161:simpleserial-ml-kem-512.c ****         else if (led == LED2) LED2State = 1;
+ 257              		.loc 1 161 36 is_stmt 0 discriminator 1 view .LVU89
+ 258 0012 1A70     		strb	r2, [r3]
+ 259 0014 06E0     		b	.L25
+ 260              	.LVL26:
+ 261              	.L19:
+ 151:simpleserial-ml-kem-512.c ****     else if (led == LED3) state = LED3State;
+ 262              		.loc 1 151 10 is_stmt 1 view .LVU90
+ 151:simpleserial-ml-kem-512.c ****     else if (led == LED3) state = LED3State;
+ 263              		.loc 1 151 13 is_stmt 0 view .LVU91
+ 264 0016 0F2B     		cmp	r3, #15
+ 265 0018 06D1     		bne	.L22
+ 151:simpleserial-ml-kem-512.c ****     else if (led == LED3) state = LED3State;
+ 266              		.loc 1 151 27 is_stmt 1 discriminator 1 view .LVU92
+ 151:simpleserial-ml-kem-512.c ****     else if (led == LED3) state = LED3State;
+ 267              		.loc 1 151 33 is_stmt 0 discriminator 1 view .LVU93
+ 268 001a 094B     		ldr	r3, .L33
+ 269              	.LVL27:
+ 151:simpleserial-ml-kem-512.c ****     else if (led == LED3) state = LED3State;
+ 270              		.loc 1 151 33 discriminator 1 view .LVU94
+ 271 001c 5978     		ldrb	r1, [r3, #1]	@ zero_extendqisi2
+ 272              	.LVL28:
+ 154:simpleserial-ml-kem-512.c ****         gpio_set_pin_low(led);
+ 273              		.loc 1 154 5 is_stmt 1 view .LVU95
+ 154:simpleserial-ml-kem-512.c ****         gpio_set_pin_low(led);
+ 274              		.loc 1 154 8 is_stmt 0 view .LVU96
+ 275 001e 01B1     		cbz	r1, .L32
+ 157:simpleserial-ml-kem-512.c ****         else if (led == LED3) LED3State = 0;
+ 276              		.loc 1 157 31 is_stmt 1 discriminator 1 view .LVU97
+ 157:simpleserial-ml-kem-512.c ****         else if (led == LED3) LED3State = 0;
+ 277              		.loc 1 157 41 is_stmt 0 discriminator 1 view .LVU98
+ 278 0020 0022     		movs	r2, #0
+ 279              	.LVL29:
+ 280              	.L32:
+ 157:simpleserial-ml-kem-512.c ****         else if (led == LED3) LED3State = 0;
+ 281              		.loc 1 157 41 discriminator 1 view .LVU99
+ 282 0022 5A70     		strb	r2, [r3, #1]
+ 283              	.LVL30:
+ 284              	.L25:
+ 166:simpleserial-ml-kem-512.c **** }
+ 285              		.loc 1 166 12 view .LVU100
+ 286 0024 0020     		movs	r0, #0
+ 287              	.LVL31:
+ 166:simpleserial-ml-kem-512.c **** }
+ 288              		.loc 1 166 12 view .LVU101
+ 289 0026 7047     		bx	lr
+ 290              	.LVL32:
+ 291              	.L22:
+ 152:simpleserial-ml-kem-512.c **** 
+ 292              		.loc 1 152 10 is_stmt 1 view .LVU102
+ 152:simpleserial-ml-kem-512.c **** 
+ 293              		.loc 1 152 13 is_stmt 0 view .LVU103
+ 294 0028 0E2B     		cmp	r3, #14
+ 295 002a FBD1     		bne	.L25
+ 152:simpleserial-ml-kem-512.c **** 
+ 296              		.loc 1 152 27 is_stmt 1 discriminator 1 view .LVU104
+ 152:simpleserial-ml-kem-512.c **** 
+ 297              		.loc 1 152 33 is_stmt 0 discriminator 1 view .LVU105
+ 298 002c 044B     		ldr	r3, .L33
+ 299              	.LVL33:
+ 152:simpleserial-ml-kem-512.c **** 
+ 300              		.loc 1 152 33 discriminator 1 view .LVU106
+ 301 002e 9978     		ldrb	r1, [r3, #2]	@ zero_extendqisi2
+ 302              	.LVL34:
+ 154:simpleserial-ml-kem-512.c ****         gpio_set_pin_low(led);
+ 303              		.loc 1 154 5 is_stmt 1 view .LVU107
+ 154:simpleserial-ml-kem-512.c ****         gpio_set_pin_low(led);
+ 304              		.loc 1 154 8 is_stmt 0 view .LVU108
+ 305 0030 09B9     		cbnz	r1, .L26
+ 306              	.LVL35:
+ 307              	.L31:
+ 160:simpleserial-ml-kem-512.c ****         if (led == LED1) LED1State = 1;
+ 308              		.loc 1 160 9 is_stmt 1 view .LVU109
+ 160:simpleserial-ml-kem-512.c ****         if (led == LED1) LED1State = 1;
+ 309              		.loc 1 160 9 view .LVU110
+ 161:simpleserial-ml-kem-512.c ****         else if (led == LED2) LED2State = 1;
+ 310              		.loc 1 161 9 view .LVU111
+ 162:simpleserial-ml-kem-512.c ****         else if (led == LED3) LED3State = 1;
+ 311              		.loc 1 162 14 view .LVU112
+ 163:simpleserial-ml-kem-512.c ****     }
+ 312              		.loc 1 163 31 discriminator 1 view .LVU113
+ 163:simpleserial-ml-kem-512.c ****     }
+ 313              		.loc 1 163 41 is_stmt 0 discriminator 1 view .LVU114
+ 314 0032 9A70     		strb	r2, [r3, #2]
+ 315 0034 F6E7     		b	.L25
+ 316              	.LVL36:
+ 317              	.L26:
+ 158:simpleserial-ml-kem-512.c ****     } else {
+ 318              		.loc 1 158 14 is_stmt 1 view .LVU115
+ 158:simpleserial-ml-kem-512.c ****     } else {
+ 319              		.loc 1 158 31 discriminator 1 view .LVU116
+ 158:simpleserial-ml-kem-512.c ****     } else {
+ 320              		.loc 1 158 41 is_stmt 0 discriminator 1 view .LVU117
+ 321 0036 0022     		movs	r2, #0
+ 322              	.LVL37:
+ 158:simpleserial-ml-kem-512.c ****     } else {
+ 323              		.loc 1 158 41 discriminator 1 view .LVU118
+ 324 0038 FBE7     		b	.L31
+ 325              	.LVL38:
+ 326              	.L28:
+ 146:simpleserial-ml-kem-512.c ****     }
+ 327              		.loc 1 146 16 view .LVU119
+ 328 003a 0420     		movs	r0, #4
+ 329              	.LVL39:
+ 146:simpleserial-ml-kem-512.c ****     }
+ 330              		.loc 1 146 16 view .LVU120
+ 331              	.LBE13:
+ 332              	.LBE12:
+ 463:simpleserial-ml-kem-512.c **** }
+ 333              		.loc 1 463 1 view .LVU121
+ 334 003c 7047     		bx	lr
+ 335              	.L34:
+ 336 003e 00BF     		.align	2
+ 337              	.L33:
+ 338 0040 00000000 		.word	.LANCHOR0
+ 339              		.cfi_endproc
+ 340              	.LFE19:
+ 342              		.section	.text.v21_rx_vector_chunk,"ax",%progbits
+ 343              		.align	1
+ 344              		.syntax unified
+ 345              		.thumb
+ 346              		.thumb_func
+ 348              	v21_rx_vector_chunk:
+ 349              	.LVL40:
+ 350              	.LFB8:
+ 332:simpleserial-ml-kem-512.c ****     size_t offset;
+ 351              		.loc 1 332 1 is_stmt 1 view -0
+ 352              		.cfi_startproc
+ 353              		@ args = 4, pretend = 0, frame = 0
+ 354              		@ frame_needed = 0, uses_anonymous_args = 0
+ 333:simpleserial-ml-kem-512.c ****     size_t remaining;
+ 355              		.loc 1 333 5 view .LVU123
+ 334:simpleserial-ml-kem-512.c **** 
+ 356              		.loc 1 334 5 view .LVU124
+ 336:simpleserial-ml-kem-512.c ****         return SS_ERR_LEN;
+ 357              		.loc 1 336 5 view .LVU125
+ 332:simpleserial-ml-kem-512.c ****     size_t offset;
+ 358              		.loc 1 332 1 is_stmt 0 view .LVU126
+ 359 0000 10B5     		push	{r4, lr}
+ 360              	.LCFI0:
+ 361              		.cfi_def_cfa_offset 8
+ 362              		.cfi_offset 4, -8
+ 363              		.cfi_offset 14, -4
+ 332:simpleserial-ml-kem-512.c ****     size_t offset;
+ 364              		.loc 1 332 1 view .LVU127
+ 365 0002 1446     		mov	r4, r2
+ 366 0004 1A46     		mov	r2, r3
+ 367              	.LVL41:
+ 336:simpleserial-ml-kem-512.c ****         return SS_ERR_LEN;
+ 368              		.loc 1 336 23 view .LVU128
+ 369 0006 0A4B     		ldr	r3, .L42
+ 370              	.LVL42:
+ 336:simpleserial-ml-kem-512.c ****         return SS_ERR_LEN;
+ 371              		.loc 1 336 23 view .LVU129
+ 372 0008 1B78     		ldrb	r3, [r3]	@ zero_extendqisi2
+ 336:simpleserial-ml-kem-512.c ****         return SS_ERR_LEN;
+ 373              		.loc 1 336 8 view .LVU130
+ 374 000a 73B1     		cbz	r3, .L41
+ 336:simpleserial-ml-kem-512.c ****         return SS_ERR_LEN;
+ 375              		.loc 1 336 30 discriminator 1 view .LVU131
+ 376 000c 6AB1     		cbz	r2, .L41
+ 336:simpleserial-ml-kem-512.c ****         return SS_ERR_LEN;
+ 377              		.loc 1 336 45 discriminator 2 view .LVU132
+ 378 000e 9342     		cmp	r3, r2
+ 379 0010 0BD3     		bcc	.L41
+ 340:simpleserial-ml-kem-512.c ****     if (offset >= dst_len) {
+ 380              		.loc 1 340 5 is_stmt 1 view .LVU133
+ 340:simpleserial-ml-kem-512.c ****     if (offset >= dst_len) {
+ 381              		.loc 1 340 12 is_stmt 0 view .LVU134
+ 382 0012 5C43     		muls	r4, r3, r4
+ 383              	.LVL43:
+ 341:simpleserial-ml-kem-512.c ****         return SS_ERR_LEN;
+ 384              		.loc 1 341 5 is_stmt 1 view .LVU135
+ 341:simpleserial-ml-kem-512.c ****         return SS_ERR_LEN;
+ 385              		.loc 1 341 8 is_stmt 0 view .LVU136
+ 386 0014 8C42     		cmp	r4, r1
+ 387 0016 08D2     		bcs	.L41
+ 345:simpleserial-ml-kem-512.c ****     if ((size_t)len > remaining) {
+ 388              		.loc 1 345 5 is_stmt 1 view .LVU137
+ 389              	.LVL44:
+ 346:simpleserial-ml-kem-512.c ****         return SS_ERR_LEN;
+ 390              		.loc 1 346 5 view .LVU138
+ 345:simpleserial-ml-kem-512.c ****     if ((size_t)len > remaining) {
+ 391              		.loc 1 345 15 is_stmt 0 view .LVU139
+ 392 0018 091B     		subs	r1, r1, r4
+ 393              	.LVL45:
+ 346:simpleserial-ml-kem-512.c ****         return SS_ERR_LEN;
+ 394              		.loc 1 346 8 view .LVU140
+ 395 001a 8A42     		cmp	r2, r1
+ 396 001c 05D8     		bhi	.L41
+ 350:simpleserial-ml-kem-512.c ****     return SS_ERR_OK;
+ 397              		.loc 1 350 5 is_stmt 1 view .LVU141
+ 398 001e 0299     		ldr	r1, [sp, #8]
+ 399              	.LVL46:
+ 350:simpleserial-ml-kem-512.c ****     return SS_ERR_OK;
+ 400              		.loc 1 350 5 is_stmt 0 view .LVU142
+ 401 0020 2044     		add	r0, r0, r4
+ 402              	.LVL47:
+ 350:simpleserial-ml-kem-512.c ****     return SS_ERR_OK;
+ 403              		.loc 1 350 5 view .LVU143
+ 404 0022 FFF7FEFF 		bl	memcpy
+ 405              	.LVL48:
+ 351:simpleserial-ml-kem-512.c **** }
+ 406              		.loc 1 351 5 is_stmt 1 view .LVU144
+ 351:simpleserial-ml-kem-512.c **** }
+ 407              		.loc 1 351 12 is_stmt 0 view .LVU145
+ 408 0026 0020     		movs	r0, #0
+ 409              	.LVL49:
+ 410              	.L36:
+ 352:simpleserial-ml-kem-512.c **** 
+ 411              		.loc 1 352 1 view .LVU146
+ 412 0028 10BD     		pop	{r4, pc}
+ 413              	.LVL50:
+ 414              	.L41:
+ 337:simpleserial-ml-kem-512.c ****     }
+ 415              		.loc 1 337 16 view .LVU147
+ 416 002a 0420     		movs	r0, #4
+ 417              	.LVL51:
+ 337:simpleserial-ml-kem-512.c ****     }
+ 418              		.loc 1 337 16 view .LVU148
+ 419 002c FCE7     		b	.L36
+ 420              	.L43:
+ 421 002e 00BF     		.align	2
+ 422              	.L42:
+ 423 0030 00000000 		.word	.LANCHOR1
+ 424              		.cfi_endproc
+ 425              	.LFE8:
+ 427              		.section	.text.v21_rx_ss_cmd,"ax",%progbits
+ 428              		.align	1
+ 429              		.syntax unified
+ 430              		.thumb
+ 431              		.thumb_func
+ 433              	v21_rx_ss_cmd:
+ 434              	.LVL52:
+ 435              	.LFB15:
+ 427:simpleserial-ml-kem-512.c ****     uint8_t err;
+ 436              		.loc 1 427 1 is_stmt 1 view -0
+ 437              		.cfi_startproc
+ 438              		@ args = 0, pretend = 0, frame = 0
+ 439              		@ frame_needed = 0, uses_anonymous_args = 0
+ 428:simpleserial-ml-kem-512.c ****     (void)cmd;
+ 440              		.loc 1 428 5 view .LVU150
+ 429:simpleserial-ml-kem-512.c ****     err = v21_rx_vector_chunk(ss, sizeof(ss), scmd, len, buf);
+ 441              		.loc 1 429 5 view .LVU151
+ 430:simpleserial-ml-kem-512.c ****     if (err == SS_ERR_OK) {
+ 442              		.loc 1 430 5 view .LVU152
+ 427:simpleserial-ml-kem-512.c ****     uint8_t err;
+ 443              		.loc 1 427 1 is_stmt 0 view .LVU153
+ 444 0000 07B5     		push	{r0, r1, r2, lr}
+ 445              	.LCFI1:
+ 446              		.cfi_def_cfa_offset 16
+ 447              		.cfi_offset 14, -4
+ 430:simpleserial-ml-kem-512.c ****     if (err == SS_ERR_OK) {
+ 448              		.loc 1 430 11 view .LVU154
+ 449 0002 0548     		ldr	r0, .L45
+ 450              	.LVL53:
+ 430:simpleserial-ml-kem-512.c ****     if (err == SS_ERR_OK) {
+ 451              		.loc 1 430 11 view .LVU155
+ 452 0004 0093     		str	r3, [sp]
+ 453 0006 1346     		mov	r3, r2
+ 454              	.LVL54:
+ 430:simpleserial-ml-kem-512.c ****     if (err == SS_ERR_OK) {
+ 455              		.loc 1 430 11 view .LVU156
+ 456 0008 0A46     		mov	r2, r1
+ 457              	.LVL55:
+ 430:simpleserial-ml-kem-512.c ****     if (err == SS_ERR_OK) {
+ 458              		.loc 1 430 11 view .LVU157
+ 459 000a 2021     		movs	r1, #32
+ 460              	.LVL56:
+ 430:simpleserial-ml-kem-512.c ****     if (err == SS_ERR_OK) {
+ 461              		.loc 1 430 11 view .LVU158
+ 462 000c FFF7FEFF 		bl	v21_rx_vector_chunk
+ 463              	.LVL57:
+ 431:simpleserial-ml-kem-512.c ****         ss_loaded = 1u;
+ 464              		.loc 1 431 5 is_stmt 1 view .LVU159
+ 432:simpleserial-ml-kem-512.c ****     }
+ 465              		.loc 1 432 9 view .LVU160
+ 434:simpleserial-ml-kem-512.c **** }
+ 466              		.loc 1 434 5 view .LVU161
+ 435:simpleserial-ml-kem-512.c **** 
+ 467              		.loc 1 435 1 is_stmt 0 view .LVU162
+ 468 0010 03B0     		add	sp, sp, #12
+ 469              	.LCFI2:
+ 470              		.cfi_def_cfa_offset 4
+ 471              		@ sp needed
+ 472 0012 5DF804FB 		ldr	pc, [sp], #4
+ 473              	.L46:
+ 474 0016 00BF     		.align	2
+ 475              	.L45:
+ 476 0018 03000000 		.word	.LANCHOR0+3
+ 477              		.cfi_endproc
+ 478              	.LFE15:
+ 480              		.section	.text.v21_rx_ct_cmd,"ax",%progbits
+ 481              		.align	1
+ 482              		.syntax unified
+ 483              		.thumb
+ 484              		.thumb_func
+ 486              	v21_rx_ct_cmd:
+ 487              	.LVL58:
+ 488              	.LFB13:
+ 414:simpleserial-ml-kem-512.c ****     (void)cmd;
+ 489              		.loc 1 414 1 is_stmt 1 view -0
+ 490              		.cfi_startproc
+ 491              		@ args = 0, pretend = 0, frame = 0
+ 492              		@ frame_needed = 0, uses_anonymous_args = 0
+ 415:simpleserial-ml-kem-512.c ****     return v21_rx_vector_chunk(ct, sizeof(ct), scmd, len, buf);
+ 493              		.loc 1 415 5 view .LVU164
+ 416:simpleserial-ml-kem-512.c **** }
+ 494              		.loc 1 416 5 view .LVU165
+ 414:simpleserial-ml-kem-512.c ****     (void)cmd;
+ 495              		.loc 1 414 1 is_stmt 0 view .LVU166
+ 496 0000 07B5     		push	{r0, r1, r2, lr}
+ 497              	.LCFI3:
+ 498              		.cfi_def_cfa_offset 16
+ 499              		.cfi_offset 14, -4
+ 416:simpleserial-ml-kem-512.c **** }
+ 500              		.loc 1 416 12 view .LVU167
+ 501 0002 0548     		ldr	r0, .L48
+ 502              	.LVL59:
+ 416:simpleserial-ml-kem-512.c **** }
+ 503              		.loc 1 416 12 view .LVU168
+ 504 0004 0093     		str	r3, [sp]
+ 505 0006 1346     		mov	r3, r2
+ 506              	.LVL60:
+ 416:simpleserial-ml-kem-512.c **** }
+ 507              		.loc 1 416 12 view .LVU169
+ 508 0008 0A46     		mov	r2, r1
+ 509              	.LVL61:
+ 416:simpleserial-ml-kem-512.c **** }
+ 510              		.loc 1 416 12 view .LVU170
+ 511 000a 4FF44071 		mov	r1, #768
+ 512              	.LVL62:
+ 416:simpleserial-ml-kem-512.c **** }
+ 513              		.loc 1 416 12 view .LVU171
+ 514 000e FFF7FEFF 		bl	v21_rx_vector_chunk
+ 515              	.LVL63:
+ 417:simpleserial-ml-kem-512.c **** 
+ 516              		.loc 1 417 1 view .LVU172
+ 517 0012 03B0     		add	sp, sp, #12
+ 518              	.LCFI4:
+ 519              		.cfi_def_cfa_offset 4
+ 520              		@ sp needed
+ 521 0014 5DF804FB 		ldr	pc, [sp], #4
+ 522              	.L49:
+ 523              		.align	2
+ 524              	.L48:
+ 525 0018 23000000 		.word	.LANCHOR0+35
+ 526              		.cfi_endproc
+ 527              	.LFE13:
+ 529              		.section	.text.ml_kem_512_rx_chunk,"ax",%progbits
+ 530              		.align	1
+ 531              		.syntax unified
+ 532              		.thumb
+ 533              		.thumb_func
+ 535              	ml_kem_512_rx_chunk:
+ 536              	.LVL64:
+ 537              	.LFB23:
+ 464:simpleserial-ml-kem-512.c **** 
+ 465:simpleserial-ml-kem-512.c **** static uint8_t ml_kem_512_do_decap(uint8_t cmd, uint8_t scmd, uint8_t len, uint8_t *buf)
+ 466:simpleserial-ml-kem-512.c **** {
+ 467:simpleserial-ml-kem-512.c ****     uint8_t err;
+ 468:simpleserial-ml-kem-512.c ****     (void)cmd; (void)scmd; (void)buf;
+ 469:simpleserial-ml-kem-512.c ****     if (len != 0) return SS_ERR_LEN;
+ 470:simpleserial-ml-kem-512.c ****     /* No bitmask check: the rx commands (0x05/0x07/0x09) use v21_rx_vector_chunk
+ 471:simpleserial-ml-kem-512.c ****      * which does not update chunk_loaded bitmasks. If vectors are unloaded the
+ 472:simpleserial-ml-kem-512.c ****      * verify at the end will return 0x01 (mismatch), which is the correct result. */
+ 473:simpleserial-ml-kem-512.c ****     err = ml_kem_512_decap(NULL, 0);
+ 474:simpleserial-ml-kem-512.c ****     if (err != SS_ERR_OK) return err;
+ 475:simpleserial-ml-kem-512.c ****     return PQCLEAN_MLKEM512_CLEAN_verify(ss, ss_result, KYBER_SSBYTES);
+ 476:simpleserial-ml-kem-512.c **** }
+ 477:simpleserial-ml-kem-512.c **** 
+ 478:simpleserial-ml-kem-512.c **** static uint8_t ml_kem_512_cmov_sk_probe(uint8_t cmd, uint8_t scmd, uint8_t len, uint8_t *buf)
+ 479:simpleserial-ml-kem-512.c **** {
+ 480:simpleserial-ml-kem-512.c ****     uint8_t repeat;
+ 481:simpleserial-ml-kem-512.c **** 
+ 482:simpleserial-ml-kem-512.c ****     (void)cmd;
+ 483:simpleserial-ml-kem-512.c ****     (void)scmd;
+ 484:simpleserial-ml-kem-512.c ****     (void)buf;
+ 485:simpleserial-ml-kem-512.c **** 
+ 486:simpleserial-ml-kem-512.c ****     if (len != 0u) {
+ 487:simpleserial-ml-kem-512.c ****         return SS_ERR_LEN;
+ 488:simpleserial-ml-kem-512.c ****     }
+ 489:simpleserial-ml-kem-512.c **** 
+ 490:simpleserial-ml-kem-512.c ****     /*
+ 491:simpleserial-ml-kem-512.c ****      * Dedicated leakage probe: copy the complete secret key with cmov under a
+ 492:simpleserial-ml-kem-512.c ****      * single trigger so the capture covers the whole operation, not only a
+ 493:simpleserial-ml-kem-512.c ****      * narrow window around the no-fail decapsulation path.
+ 494:simpleserial-ml-kem-512.c ****      */
+ 495:simpleserial-ml-kem-512.c ****     trigger_high();
+ 496:simpleserial-ml-kem-512.c ****     for (repeat = 0; repeat < 4u; repeat++) {
+ 497:simpleserial-ml-kem-512.c ****         memset(cmov_probe_buf, 0, sizeof(cmov_probe_buf));
+ 498:simpleserial-ml-kem-512.c ****         PQCLEAN_MLKEM512_CLEAN_cmov(cmov_probe_buf, sk, sizeof(sk), 1u);
+ 499:simpleserial-ml-kem-512.c ****     }
+ 500:simpleserial-ml-kem-512.c ****     trigger_low();
+ 501:simpleserial-ml-kem-512.c **** 
+ 502:simpleserial-ml-kem-512.c ****     return SS_ERR_OK;
+ 503:simpleserial-ml-kem-512.c **** }
+ 504:simpleserial-ml-kem-512.c **** 
+ 505:simpleserial-ml-kem-512.c **** uint8_t ml_kem_512(uint8_t cmd, uint8_t scmd, uint8_t len, uint8_t *buf)
+ 506:simpleserial-ml-kem-512.c **** {
+ 507:simpleserial-ml-kem-512.c ****     uint8_t err;
+ 508:simpleserial-ml-kem-512.c **** 
+ 509:simpleserial-ml-kem-512.c ****     (void)cmd;
+ 510:simpleserial-ml-kem-512.c **** 
+ 511:simpleserial-ml-kem-512.c ****     err = v21_handle_vector_write(scmd, len, buf);
+ 512:simpleserial-ml-kem-512.c ****     if (err != SS_ERR_CMD) {
+ 513:simpleserial-ml-kem-512.c ****         return err;
+ 514:simpleserial-ml-kem-512.c ****     }
+ 515:simpleserial-ml-kem-512.c **** 
+ 516:simpleserial-ml-kem-512.c ****     return SS_ERR_CMD;
+ 517:simpleserial-ml-kem-512.c **** }
+ 518:simpleserial-ml-kem-512.c **** 
+ 519:simpleserial-ml-kem-512.c **** static uint8_t ml_kem_512_rx_chunk(uint8_t cmd, uint8_t scmd, uint8_t len, uint8_t *buf)
+ 520:simpleserial-ml-kem-512.c **** {
+ 538              		.loc 1 520 1 is_stmt 1 view -0
+ 539              		.cfi_startproc
+ 540              		@ args = 0, pretend = 0, frame = 0
+ 541              		@ frame_needed = 0, uses_anonymous_args = 0
+ 521:simpleserial-ml-kem-512.c ****     (void)cmd;
+ 542              		.loc 1 521 5 view .LVU174
+ 522:simpleserial-ml-kem-512.c ****     return v21_rx_vector_chunk(sk, sizeof(sk), scmd, len, buf);
+ 543              		.loc 1 522 5 view .LVU175
+ 520:simpleserial-ml-kem-512.c ****     (void)cmd;
+ 544              		.loc 1 520 1 is_stmt 0 view .LVU176
+ 545 0000 07B5     		push	{r0, r1, r2, lr}
+ 546              	.LCFI5:
+ 547              		.cfi_def_cfa_offset 16
+ 548              		.cfi_offset 14, -4
+ 549              		.loc 1 522 12 view .LVU177
+ 550 0002 0548     		ldr	r0, .L51
+ 551              	.LVL65:
+ 552              		.loc 1 522 12 view .LVU178
+ 553 0004 0093     		str	r3, [sp]
+ 554 0006 1346     		mov	r3, r2
+ 555              	.LVL66:
+ 556              		.loc 1 522 12 view .LVU179
+ 557 0008 0A46     		mov	r2, r1
+ 558              	.LVL67:
+ 559              		.loc 1 522 12 view .LVU180
+ 560 000a 4FF4CC61 		mov	r1, #1632
+ 561              	.LVL68:
+ 562              		.loc 1 522 12 view .LVU181
+ 563 000e FFF7FEFF 		bl	v21_rx_vector_chunk
+ 564              	.LVL69:
+ 523:simpleserial-ml-kem-512.c **** }
+ 565              		.loc 1 523 1 view .LVU182
+ 566 0012 03B0     		add	sp, sp, #12
+ 567              	.LCFI6:
+ 568              		.cfi_def_cfa_offset 4
+ 569              		@ sp needed
+ 570 0014 5DF804FB 		ldr	pc, [sp], #4
+ 571              	.L52:
+ 572              		.align	2
+ 573              	.L51:
+ 574 0018 23030000 		.word	.LANCHOR0+803
+ 575              		.cfi_endproc
+ 576              	.LFE23:
+ 578              		.section	.text.v21_sync_pk_into_sk,"ax",%progbits
+ 579              		.align	1
+ 580              		.syntax unified
+ 581              		.thumb
+ 582              		.thumb_func
+ 584              	v21_sync_pk_into_sk:
+ 585              	.LFB5:
+ 228:simpleserial-ml-kem-512.c ****     memcpy(sk + KYBER_INDCPA_SECRETKEYBYTES, pk, KYBER_PUBLICKEYBYTES);
+ 586              		.loc 1 228 1 is_stmt 1 view -0
+ 587              		.cfi_startproc
+ 588              		@ args = 0, pretend = 0, frame = 0
+ 589              		@ frame_needed = 0, uses_anonymous_args = 0
+ 229:simpleserial-ml-kem-512.c ****     hash_h(sk + KYBER_SECRETKEYBYTES - 2 * KYBER_SYMBYTES, pk, KYBER_PUBLICKEYBYTES);
+ 590              		.loc 1 229 5 view .LVU184
+ 228:simpleserial-ml-kem-512.c ****     memcpy(sk + KYBER_INDCPA_SECRETKEYBYTES, pk, KYBER_PUBLICKEYBYTES);
+ 591              		.loc 1 228 1 is_stmt 0 view .LVU185
+ 592 0000 10B5     		push	{r4, lr}
+ 593              	.LCFI7:
+ 594              		.cfi_def_cfa_offset 8
+ 595              		.cfi_offset 4, -8
+ 596              		.cfi_offset 14, -4
+ 229:simpleserial-ml-kem-512.c ****     hash_h(sk + KYBER_SECRETKEYBYTES - 2 * KYBER_SYMBYTES, pk, KYBER_PUBLICKEYBYTES);
+ 597              		.loc 1 229 5 view .LVU186
+ 598 0002 094C     		ldr	r4, .L54
+ 599 0004 4FF44872 		mov	r2, #800
+ 600 0008 04F68311 		addw	r1, r4, #2435
+ 601 000c 04F22360 		addw	r0, r4, #1571
+ 602 0010 FFF7FEFF 		bl	memcpy
+ 603              	.LVL70:
+ 230:simpleserial-ml-kem-512.c **** }
+ 604              		.loc 1 230 5 is_stmt 1 view .LVU187
+ 605 0014 04F68311 		addw	r1, r4, #2435
+ 606 0018 04F64310 		addw	r0, r4, #2371
+ 607 001c 4FF44872 		mov	r2, #800
+ 231:simpleserial-ml-kem-512.c **** 
+ 608              		.loc 1 231 1 is_stmt 0 view .LVU188
+ 609 0020 BDE81040 		pop	{r4, lr}
+ 610              	.LCFI8:
+ 611              		.cfi_restore 14
+ 612              		.cfi_restore 4
+ 613              		.cfi_def_cfa_offset 0
+ 230:simpleserial-ml-kem-512.c **** }
+ 614              		.loc 1 230 5 view .LVU189
+ 615 0024 FFF7FEBF 		b	sha3_256
+ 616              	.LVL71:
+ 617              	.L55:
+ 618              		.align	2
+ 619              	.L54:
+ 620 0028 00000000 		.word	.LANCHOR0
+ 621              		.cfi_endproc
+ 622              	.LFE5:
+ 624              		.section	.text.v21_rx_pk_cmd,"ax",%progbits
+ 625              		.align	1
+ 626              		.syntax unified
+ 627              		.thumb
+ 628              		.thumb_func
+ 630              	v21_rx_pk_cmd:
+ 631              	.LVL72:
+ 632              	.LFB11:
+ 396:simpleserial-ml-kem-512.c ****     uint8_t err;
+ 633              		.loc 1 396 1 is_stmt 1 view -0
+ 634              		.cfi_startproc
+ 635              		@ args = 0, pretend = 0, frame = 0
+ 636              		@ frame_needed = 0, uses_anonymous_args = 0
+ 397:simpleserial-ml-kem-512.c ****     (void)cmd;
+ 637              		.loc 1 397 5 view .LVU191
+ 398:simpleserial-ml-kem-512.c ****     err = v21_rx_vector_chunk(pk, sizeof(pk), scmd, len, buf);
+ 638              		.loc 1 398 5 view .LVU192
+ 399:simpleserial-ml-kem-512.c ****     if (err == SS_ERR_OK) {
+ 639              		.loc 1 399 5 view .LVU193
+ 396:simpleserial-ml-kem-512.c ****     uint8_t err;
+ 640              		.loc 1 396 1 is_stmt 0 view .LVU194
+ 641 0000 13B5     		push	{r0, r1, r4, lr}
+ 642              	.LCFI9:
+ 643              		.cfi_def_cfa_offset 16
+ 644              		.cfi_offset 4, -8
+ 645              		.cfi_offset 14, -4
+ 399:simpleserial-ml-kem-512.c ****     if (err == SS_ERR_OK) {
+ 646              		.loc 1 399 11 view .LVU195
+ 647 0002 0748     		ldr	r0, .L58
+ 648              	.LVL73:
+ 399:simpleserial-ml-kem-512.c ****     if (err == SS_ERR_OK) {
+ 649              		.loc 1 399 11 view .LVU196
+ 650 0004 0093     		str	r3, [sp]
+ 651 0006 1346     		mov	r3, r2
+ 652              	.LVL74:
+ 399:simpleserial-ml-kem-512.c ****     if (err == SS_ERR_OK) {
+ 653              		.loc 1 399 11 view .LVU197
+ 654 0008 0A46     		mov	r2, r1
+ 655              	.LVL75:
+ 399:simpleserial-ml-kem-512.c ****     if (err == SS_ERR_OK) {
+ 656              		.loc 1 399 11 view .LVU198
+ 657 000a 4FF44871 		mov	r1, #800
+ 658              	.LVL76:
+ 399:simpleserial-ml-kem-512.c ****     if (err == SS_ERR_OK) {
+ 659              		.loc 1 399 11 view .LVU199
+ 660 000e FFF7FEFF 		bl	v21_rx_vector_chunk
+ 661              	.LVL77:
+ 400:simpleserial-ml-kem-512.c ****         v21_sync_pk_into_sk();
+ 662              		.loc 1 400 5 is_stmt 1 view .LVU200
+ 400:simpleserial-ml-kem-512.c ****         v21_sync_pk_into_sk();
+ 663              		.loc 1 400 8 is_stmt 0 view .LVU201
+ 664 0012 0446     		mov	r4, r0
+ 665 0014 08B9     		cbnz	r0, .L57
+ 401:simpleserial-ml-kem-512.c ****     }
+ 666              		.loc 1 401 9 is_stmt 1 view .LVU202
+ 667 0016 FFF7FEFF 		bl	v21_sync_pk_into_sk
+ 668              	.LVL78:
+ 669              	.L57:
+ 403:simpleserial-ml-kem-512.c **** }
+ 670              		.loc 1 403 5 view .LVU203
+ 404:simpleserial-ml-kem-512.c **** 
+ 671              		.loc 1 404 1 is_stmt 0 view .LVU204
+ 672 001a 2046     		mov	r0, r4
+ 673 001c 02B0     		add	sp, sp, #8
+ 674              	.LCFI10:
+ 675              		.cfi_def_cfa_offset 8
+ 676              		@ sp needed
+ 677 001e 10BD     		pop	{r4, pc}
+ 678              	.LVL79:
+ 679              	.L59:
+ 404:simpleserial-ml-kem-512.c **** 
+ 680              		.loc 1 404 1 view .LVU205
+ 681              		.align	2
+ 682              	.L58:
+ 683 0020 83090000 		.word	.LANCHOR0+2435
+ 684              		.cfi_endproc
+ 685              	.LFE11:
+ 687              		.section	.text.v21_tx_vector_chunk,"ax",%progbits
+ 688              		.align	1
+ 689              		.syntax unified
+ 690              		.thumb
+ 691              		.thumb_func
+ 693              	v21_tx_vector_chunk:
+ 694              	.LVL80:
+ 695              	.LFB9:
+ 356:simpleserial-ml-kem-512.c ****     size_t offset;
+ 696              		.loc 1 356 1 is_stmt 1 view -0
+ 697              		.cfi_startproc
+ 698              		@ args = 4, pretend = 0, frame = 0
+ 699              		@ frame_needed = 0, uses_anonymous_args = 0
+ 357:simpleserial-ml-kem-512.c ****     size_t remaining;
+ 700              		.loc 1 357 5 view .LVU207
+ 358:simpleserial-ml-kem-512.c ****     uint8_t out_len;
+ 701              		.loc 1 358 5 view .LVU208
+ 359:simpleserial-ml-kem-512.c **** 
+ 702              		.loc 1 359 5 view .LVU209
+ 361:simpleserial-ml-kem-512.c ****         return SS_ERR_LEN;
+ 703              		.loc 1 361 5 view .LVU210
+ 356:simpleserial-ml-kem-512.c ****     size_t offset;
+ 704              		.loc 1 356 1 is_stmt 0 view .LVU211
+ 705 0000 38B5     		push	{r3, r4, r5, lr}
+ 706              	.LCFI11:
+ 707              		.cfi_def_cfa_offset 16
+ 708              		.cfi_offset 3, -16
+ 709              		.cfi_offset 4, -12
+ 710              		.cfi_offset 5, -8
+ 711              		.cfi_offset 14, -4
+ 356:simpleserial-ml-kem-512.c ****     size_t offset;
+ 712              		.loc 1 356 1 view .LVU212
+ 713 0002 0D46     		mov	r5, r1
+ 361:simpleserial-ml-kem-512.c ****         return SS_ERR_LEN;
+ 714              		.loc 1 361 23 view .LVU213
+ 715 0004 0949     		ldr	r1, .L66
+ 716              	.LVL81:
+ 356:simpleserial-ml-kem-512.c ****     size_t offset;
+ 717              		.loc 1 356 1 view .LVU214
+ 718 0006 9DF81040 		ldrb	r4, [sp, #16]	@ zero_extendqisi2
+ 361:simpleserial-ml-kem-512.c ****         return SS_ERR_LEN;
+ 719              		.loc 1 361 23 view .LVU215
+ 720 000a 0978     		ldrb	r1, [r1]	@ zero_extendqisi2
+ 361:simpleserial-ml-kem-512.c ****         return SS_ERR_LEN;
+ 721              		.loc 1 361 8 view .LVU216
+ 722 000c 61B1     		cbz	r1, .L65
+ 361:simpleserial-ml-kem-512.c ****         return SS_ERR_LEN;
+ 723              		.loc 1 361 30 discriminator 1 view .LVU217
+ 724 000e 5CB9     		cbnz	r4, .L65
+ 365:simpleserial-ml-kem-512.c ****     if (offset >= src_len) {
+ 725              		.loc 1 365 5 is_stmt 1 view .LVU218
+ 365:simpleserial-ml-kem-512.c ****     if (offset >= src_len) {
+ 726              		.loc 1 365 12 is_stmt 0 view .LVU219
+ 727 0010 4B43     		muls	r3, r1, r3
+ 728              	.LVL82:
+ 366:simpleserial-ml-kem-512.c ****         return SS_ERR_LEN;
+ 729              		.loc 1 366 5 is_stmt 1 view .LVU220
+ 366:simpleserial-ml-kem-512.c ****         return SS_ERR_LEN;
+ 730              		.loc 1 366 8 is_stmt 0 view .LVU221
+ 731 0012 9342     		cmp	r3, r2
+ 732 0014 08D2     		bcs	.L65
+ 370:simpleserial-ml-kem-512.c ****     out_len = (remaining > (size_t)v21_chunk_sz) ? v21_chunk_sz : (uint8_t)remaining;
+ 733              		.loc 1 370 5 is_stmt 1 view .LVU222
+ 370:simpleserial-ml-kem-512.c ****     out_len = (remaining > (size_t)v21_chunk_sz) ? v21_chunk_sz : (uint8_t)remaining;
+ 734              		.loc 1 370 15 is_stmt 0 view .LVU223
+ 735 0016 D21A     		subs	r2, r2, r3
+ 736              	.LVL83:
+ 371:simpleserial-ml-kem-512.c ****     simpleserial_put(tag, out_len, src + offset);
+ 737              		.loc 1 371 5 is_stmt 1 view .LVU224
+ 371:simpleserial-ml-kem-512.c ****     simpleserial_put(tag, out_len, src + offset);
+ 738              		.loc 1 371 13 is_stmt 0 view .LVU225
+ 739 0018 9142     		cmp	r1, r2
+ 371:simpleserial-ml-kem-512.c ****     simpleserial_put(tag, out_len, src + offset);
+ 740              		.loc 1 371 13 discriminator 1 view .LVU226
+ 741 001a 28BF     		it	cs
+ 742 001c D1B2     		uxtbcs	r1, r2
+ 743              	.LVL84:
+ 372:simpleserial-ml-kem-512.c ****     return SS_ERR_OK;
+ 744              		.loc 1 372 5 is_stmt 1 view .LVU227
+ 745 001e EA18     		adds	r2, r5, r3
+ 746              	.LVL85:
+ 372:simpleserial-ml-kem-512.c ****     return SS_ERR_OK;
+ 747              		.loc 1 372 5 is_stmt 0 view .LVU228
+ 748 0020 FFF7FEFF 		bl	simpleserial_put
+ 749              	.LVL86:
+ 373:simpleserial-ml-kem-512.c **** }
+ 750              		.loc 1 373 5 is_stmt 1 view .LVU229
+ 751              	.L61:
+ 374:simpleserial-ml-kem-512.c **** 
+ 752              		.loc 1 374 1 is_stmt 0 view .LVU230
+ 753 0024 2046     		mov	r0, r4
+ 754 0026 38BD     		pop	{r3, r4, r5, pc}
+ 755              	.LVL87:
+ 756              	.L65:
+ 362:simpleserial-ml-kem-512.c ****     }
+ 757              		.loc 1 362 16 view .LVU231
+ 758 0028 0424     		movs	r4, #4
+ 759 002a FBE7     		b	.L61
+ 760              	.L67:
+ 761              		.align	2
+ 762              	.L66:
+ 763 002c 00000000 		.word	.LANCHOR1
+ 764              		.cfi_endproc
+ 765              	.LFE9:
+ 767              		.section	.text.v21_tx_ss_cmd,"ax",%progbits
+ 768              		.align	1
+ 769              		.syntax unified
+ 770              		.thumb
+ 771              		.thumb_func
+ 773              	v21_tx_ss_cmd:
+ 774              	.LVL88:
+ 775              	.LFB16:
+ 438:simpleserial-ml-kem-512.c ****     (void)cmd;
+ 776              		.loc 1 438 1 is_stmt 1 view -0
+ 777              		.cfi_startproc
+ 778              		@ args = 0, pretend = 0, frame = 0
+ 779              		@ frame_needed = 0, uses_anonymous_args = 0
+ 439:simpleserial-ml-kem-512.c ****     (void)buf;
+ 780              		.loc 1 439 5 view .LVU233
+ 440:simpleserial-ml-kem-512.c ****     return v21_tx_vector_chunk('s', ss, sizeof(ss), scmd, len);
+ 781              		.loc 1 440 5 view .LVU234
+ 441:simpleserial-ml-kem-512.c **** }
+ 782              		.loc 1 441 5 view .LVU235
+ 438:simpleserial-ml-kem-512.c ****     (void)cmd;
+ 783              		.loc 1 438 1 is_stmt 0 view .LVU236
+ 784 0000 07B5     		push	{r0, r1, r2, lr}
+ 785              	.LCFI12:
+ 786              		.cfi_def_cfa_offset 16
+ 787              		.cfi_offset 14, -4
+ 438:simpleserial-ml-kem-512.c ****     (void)cmd;
+ 788              		.loc 1 438 1 view .LVU237
+ 789 0002 0B46     		mov	r3, r1
+ 790              	.LVL89:
+ 441:simpleserial-ml-kem-512.c **** }
+ 791              		.loc 1 441 12 view .LVU238
+ 792 0004 0092     		str	r2, [sp]
+ 793 0006 0449     		ldr	r1, .L69
+ 794              	.LVL90:
+ 441:simpleserial-ml-kem-512.c **** }
+ 795              		.loc 1 441 12 view .LVU239
+ 796 0008 2022     		movs	r2, #32
+ 797              	.LVL91:
+ 441:simpleserial-ml-kem-512.c **** }
+ 798              		.loc 1 441 12 view .LVU240
+ 799 000a 7320     		movs	r0, #115
+ 800              	.LVL92:
+ 441:simpleserial-ml-kem-512.c **** }
+ 801              		.loc 1 441 12 view .LVU241
+ 802 000c FFF7FEFF 		bl	v21_tx_vector_chunk
+ 803              	.LVL93:
+ 442:simpleserial-ml-kem-512.c **** 
+ 804              		.loc 1 442 1 view .LVU242
+ 805 0010 03B0     		add	sp, sp, #12
+ 806              	.LCFI13:
+ 807              		.cfi_def_cfa_offset 4
+ 808              		@ sp needed
+ 809 0012 5DF804FB 		ldr	pc, [sp], #4
+ 810              	.L70:
+ 811 0016 00BF     		.align	2
+ 812              	.L69:
+ 813 0018 03000000 		.word	.LANCHOR0+3
+ 814              		.cfi_endproc
+ 815              	.LFE16:
+ 817              		.section	.text.v21_tx_ct_cmd,"ax",%progbits
+ 818              		.align	1
+ 819              		.syntax unified
+ 820              		.thumb
+ 821              		.thumb_func
+ 823              	v21_tx_ct_cmd:
+ 824              	.LVL94:
+ 825              	.LFB14:
+ 420:simpleserial-ml-kem-512.c ****     (void)cmd;
+ 826              		.loc 1 420 1 is_stmt 1 view -0
+ 827              		.cfi_startproc
+ 828              		@ args = 0, pretend = 0, frame = 0
+ 829              		@ frame_needed = 0, uses_anonymous_args = 0
+ 421:simpleserial-ml-kem-512.c ****     (void)buf;
+ 830              		.loc 1 421 5 view .LVU244
+ 422:simpleserial-ml-kem-512.c ****     return v21_tx_vector_chunk('c', ct, sizeof(ct), scmd, len);
+ 831              		.loc 1 422 5 view .LVU245
+ 423:simpleserial-ml-kem-512.c **** }
+ 832              		.loc 1 423 5 view .LVU246
+ 420:simpleserial-ml-kem-512.c ****     (void)cmd;
+ 833              		.loc 1 420 1 is_stmt 0 view .LVU247
+ 834 0000 07B5     		push	{r0, r1, r2, lr}
+ 835              	.LCFI14:
+ 836              		.cfi_def_cfa_offset 16
+ 837              		.cfi_offset 14, -4
+ 420:simpleserial-ml-kem-512.c ****     (void)cmd;
+ 838              		.loc 1 420 1 view .LVU248
+ 839 0002 0B46     		mov	r3, r1
+ 840              	.LVL95:
+ 423:simpleserial-ml-kem-512.c **** }
+ 841              		.loc 1 423 12 view .LVU249
+ 842 0004 0092     		str	r2, [sp]
+ 843 0006 0449     		ldr	r1, .L72
+ 844              	.LVL96:
+ 423:simpleserial-ml-kem-512.c **** }
+ 845              		.loc 1 423 12 view .LVU250
+ 846 0008 4FF44072 		mov	r2, #768
+ 847              	.LVL97:
+ 423:simpleserial-ml-kem-512.c **** }
+ 848              		.loc 1 423 12 view .LVU251
+ 849 000c 6320     		movs	r0, #99
+ 850              	.LVL98:
+ 423:simpleserial-ml-kem-512.c **** }
+ 851              		.loc 1 423 12 view .LVU252
+ 852 000e FFF7FEFF 		bl	v21_tx_vector_chunk
+ 853              	.LVL99:
+ 424:simpleserial-ml-kem-512.c **** 
+ 854              		.loc 1 424 1 view .LVU253
+ 855 0012 03B0     		add	sp, sp, #12
+ 856              	.LCFI15:
+ 857              		.cfi_def_cfa_offset 4
+ 858              		@ sp needed
+ 859 0014 5DF804FB 		ldr	pc, [sp], #4
+ 860              	.L73:
+ 861              		.align	2
+ 862              	.L72:
+ 863 0018 23000000 		.word	.LANCHOR0+35
+ 864              		.cfi_endproc
+ 865              	.LFE14:
+ 867              		.section	.text.v21_tx_pk_cmd,"ax",%progbits
+ 868              		.align	1
+ 869              		.syntax unified
+ 870              		.thumb
+ 871              		.thumb_func
+ 873              	v21_tx_pk_cmd:
+ 874              	.LVL100:
+ 875              	.LFB12:
+ 407:simpleserial-ml-kem-512.c ****     (void)cmd;
+ 876              		.loc 1 407 1 is_stmt 1 view -0
+ 877              		.cfi_startproc
+ 878              		@ args = 0, pretend = 0, frame = 0
+ 879              		@ frame_needed = 0, uses_anonymous_args = 0
+ 408:simpleserial-ml-kem-512.c ****     (void)buf;
+ 880              		.loc 1 408 5 view .LVU255
+ 409:simpleserial-ml-kem-512.c ****     return v21_tx_vector_chunk('p', pk, sizeof(pk), scmd, len);
+ 881              		.loc 1 409 5 view .LVU256
+ 410:simpleserial-ml-kem-512.c **** }
+ 882              		.loc 1 410 5 view .LVU257
+ 407:simpleserial-ml-kem-512.c ****     (void)cmd;
+ 883              		.loc 1 407 1 is_stmt 0 view .LVU258
+ 884 0000 07B5     		push	{r0, r1, r2, lr}
+ 885              	.LCFI16:
+ 886              		.cfi_def_cfa_offset 16
+ 887              		.cfi_offset 14, -4
+ 407:simpleserial-ml-kem-512.c ****     (void)cmd;
+ 888              		.loc 1 407 1 view .LVU259
+ 889 0002 0B46     		mov	r3, r1
+ 890              	.LVL101:
+ 410:simpleserial-ml-kem-512.c **** }
+ 891              		.loc 1 410 12 view .LVU260
+ 892 0004 0092     		str	r2, [sp]
+ 893 0006 0449     		ldr	r1, .L75
+ 894              	.LVL102:
+ 410:simpleserial-ml-kem-512.c **** }
+ 895              		.loc 1 410 12 view .LVU261
+ 896 0008 4FF44872 		mov	r2, #800
+ 897              	.LVL103:
+ 410:simpleserial-ml-kem-512.c **** }
+ 898              		.loc 1 410 12 view .LVU262
+ 899 000c 7020     		movs	r0, #112
+ 900              	.LVL104:
+ 410:simpleserial-ml-kem-512.c **** }
+ 901              		.loc 1 410 12 view .LVU263
+ 902 000e FFF7FEFF 		bl	v21_tx_vector_chunk
+ 903              	.LVL105:
+ 411:simpleserial-ml-kem-512.c **** 
+ 904              		.loc 1 411 1 view .LVU264
+ 905 0012 03B0     		add	sp, sp, #12
+ 906              	.LCFI17:
+ 907              		.cfi_def_cfa_offset 4
+ 908              		@ sp needed
+ 909 0014 5DF804FB 		ldr	pc, [sp], #4
+ 910              	.L76:
+ 911              		.align	2
+ 912              	.L75:
+ 913 0018 83090000 		.word	.LANCHOR0+2435
+ 914              		.cfi_endproc
+ 915              	.LFE12:
+ 917              		.section	.text.ml_kem_512_tx_chunk,"ax",%progbits
+ 918              		.align	1
+ 919              		.syntax unified
+ 920              		.thumb
+ 921              		.thumb_func
+ 923              	ml_kem_512_tx_chunk:
+ 924              	.LVL106:
+ 925              	.LFB24:
+ 524:simpleserial-ml-kem-512.c **** 
+ 525:simpleserial-ml-kem-512.c **** static uint8_t ml_kem_512_tx_chunk(uint8_t cmd, uint8_t scmd, uint8_t len, uint8_t *buf)
+ 526:simpleserial-ml-kem-512.c **** {
+ 926              		.loc 1 526 1 is_stmt 1 view -0
+ 927              		.cfi_startproc
+ 928              		@ args = 0, pretend = 0, frame = 0
+ 929              		@ frame_needed = 0, uses_anonymous_args = 0
+ 527:simpleserial-ml-kem-512.c ****     (void)cmd;
+ 930              		.loc 1 527 5 view .LVU266
+ 528:simpleserial-ml-kem-512.c ****     (void)buf;
+ 931              		.loc 1 528 5 view .LVU267
+ 529:simpleserial-ml-kem-512.c ****     return v21_tx_vector_chunk('k', sk, sizeof(sk), scmd, len);
+ 932              		.loc 1 529 5 view .LVU268
+ 526:simpleserial-ml-kem-512.c ****     (void)cmd;
+ 933              		.loc 1 526 1 is_stmt 0 view .LVU269
+ 934 0000 07B5     		push	{r0, r1, r2, lr}
+ 935              	.LCFI18:
+ 936              		.cfi_def_cfa_offset 16
+ 937              		.cfi_offset 14, -4
+ 526:simpleserial-ml-kem-512.c ****     (void)cmd;
+ 938              		.loc 1 526 1 view .LVU270
+ 939 0002 0B46     		mov	r3, r1
+ 940              	.LVL107:
+ 941              		.loc 1 529 12 view .LVU271
+ 942 0004 0092     		str	r2, [sp]
+ 943 0006 0449     		ldr	r1, .L78
+ 944              	.LVL108:
+ 945              		.loc 1 529 12 view .LVU272
+ 946 0008 4FF4CC62 		mov	r2, #1632
+ 947              	.LVL109:
+ 948              		.loc 1 529 12 view .LVU273
+ 949 000c 6B20     		movs	r0, #107
+ 950              	.LVL110:
+ 951              		.loc 1 529 12 view .LVU274
+ 952 000e FFF7FEFF 		bl	v21_tx_vector_chunk
+ 953              	.LVL111:
+ 530:simpleserial-ml-kem-512.c **** }
+ 954              		.loc 1 530 1 view .LVU275
+ 955 0012 03B0     		add	sp, sp, #12
+ 956              	.LCFI19:
+ 957              		.cfi_def_cfa_offset 4
+ 958              		@ sp needed
+ 959 0014 5DF804FB 		ldr	pc, [sp], #4
+ 960              	.L79:
+ 961              		.align	2
+ 962              	.L78:
+ 963 0018 23030000 		.word	.LANCHOR0+803
+ 964              		.cfi_endproc
+ 965              	.LFE24:
+ 967              		.section	.text.v21_set_chunk_size,"ax",%progbits
+ 968              		.align	1
+ 969              		.syntax unified
+ 970              		.thumb
+ 971              		.thumb_func
+ 973              	v21_set_chunk_size:
+ 974              	.LVL112:
+ 975              	.LFB10:
+ 377:simpleserial-ml-kem-512.c ****     uint16_t new_size;
+ 976              		.loc 1 377 1 is_stmt 1 view -0
+ 977              		.cfi_startproc
+ 978              		@ args = 0, pretend = 0, frame = 0
+ 979              		@ frame_needed = 0, uses_anonymous_args = 0
+ 980              		@ link register save eliminated.
+ 378:simpleserial-ml-kem-512.c **** 
+ 981              		.loc 1 378 5 view .LVU277
+ 380:simpleserial-ml-kem-512.c ****     (void)scmd;
+ 982              		.loc 1 380 5 view .LVU278
+ 381:simpleserial-ml-kem-512.c ****     if (len != 2u) {
+ 983              		.loc 1 381 5 view .LVU279
+ 382:simpleserial-ml-kem-512.c ****         return SS_ERR_LEN;
+ 984              		.loc 1 382 5 view .LVU280
+ 382:simpleserial-ml-kem-512.c ****         return SS_ERR_LEN;
+ 985              		.loc 1 382 8 is_stmt 0 view .LVU281
+ 986 0000 022A     		cmp	r2, #2
+ 987 0002 07D1     		bne	.L83
+ 988              	.LVL113:
+ 989              	.LBB16:
+ 990              	.LBI16:
+ 376:simpleserial-ml-kem-512.c **** {
+ 991              		.loc 1 376 16 is_stmt 1 view .LVU282
+ 992              	.LBB17:
+ 386:simpleserial-ml-kem-512.c ****     if ((new_size < 1u) || (new_size > MLKEM_SS_V21_CHUNK_MAX)) {
+ 993              		.loc 1 386 5 view .LVU283
+ 994 0004 1B88     		ldrh	r3, [r3]	@ unaligned
+ 995              	.LVL114:
+ 387:simpleserial-ml-kem-512.c ****         return SS_ERR_LEN;
+ 996              		.loc 1 387 5 view .LVU284
+ 387:simpleserial-ml-kem-512.c ****         return SS_ERR_LEN;
+ 997              		.loc 1 387 8 is_stmt 0 view .LVU285
+ 998 0006 5A1E     		subs	r2, r3, #1
+ 999              	.LVL115:
+ 387:simpleserial-ml-kem-512.c ****         return SS_ERR_LEN;
+ 1000              		.loc 1 387 8 view .LVU286
+ 1001 0008 F72A     		cmp	r2, #247
+ 1002 000a 03D8     		bhi	.L83
+ 391:simpleserial-ml-kem-512.c ****     return SS_ERR_OK;
+ 1003              		.loc 1 391 5 is_stmt 1 view .LVU287
+ 391:simpleserial-ml-kem-512.c ****     return SS_ERR_OK;
+ 1004              		.loc 1 391 18 is_stmt 0 view .LVU288
+ 1005 000c 024A     		ldr	r2, .L84
+ 392:simpleserial-ml-kem-512.c **** }
+ 1006              		.loc 1 392 12 view .LVU289
+ 1007 000e 0020     		movs	r0, #0
+ 1008              	.LVL116:
+ 391:simpleserial-ml-kem-512.c ****     return SS_ERR_OK;
+ 1009              		.loc 1 391 20 view .LVU290
+ 1010 0010 1370     		strb	r3, [r2]
+ 392:simpleserial-ml-kem-512.c **** }
+ 1011              		.loc 1 392 5 is_stmt 1 view .LVU291
+ 392:simpleserial-ml-kem-512.c **** }
+ 1012              		.loc 1 392 12 is_stmt 0 view .LVU292
+ 1013 0012 7047     		bx	lr
+ 1014              	.LVL117:
+ 1015              	.L83:
+ 392:simpleserial-ml-kem-512.c **** }
+ 1016              		.loc 1 392 12 view .LVU293
+ 1017              	.LBE17:
+ 1018              	.LBE16:
+ 383:simpleserial-ml-kem-512.c ****     }
+ 1019              		.loc 1 383 16 view .LVU294
+ 1020 0014 0420     		movs	r0, #4
+ 1021              	.LVL118:
+ 393:simpleserial-ml-kem-512.c **** 
+ 1022              		.loc 1 393 1 view .LVU295
+ 1023 0016 7047     		bx	lr
+ 1024              	.L85:
+ 1025              		.align	2
+ 1026              	.L84:
+ 1027 0018 00000000 		.word	.LANCHOR1
+ 1028              		.cfi_endproc
+ 1029              	.LFE10:
+ 1031              		.section	.text.ml_kem_512_cmov_sk_probe,"ax",%progbits
+ 1032              		.align	1
+ 1033              		.syntax unified
+ 1034              		.thumb
+ 1035              		.thumb_func
+ 1037              	ml_kem_512_cmov_sk_probe:
+ 1038              	.LVL119:
+ 1039              	.LFB21:
+ 479:simpleserial-ml-kem-512.c ****     uint8_t repeat;
+ 1040              		.loc 1 479 1 is_stmt 1 view -0
+ 1041              		.cfi_startproc
+ 1042              		@ args = 0, pretend = 0, frame = 0
+ 1043              		@ frame_needed = 0, uses_anonymous_args = 0
+ 480:simpleserial-ml-kem-512.c **** 
+ 1044              		.loc 1 480 5 view .LVU297
+ 482:simpleserial-ml-kem-512.c ****     (void)scmd;
+ 1045              		.loc 1 482 5 view .LVU298
+ 483:simpleserial-ml-kem-512.c ****     (void)buf;
+ 1046              		.loc 1 483 5 view .LVU299
+ 484:simpleserial-ml-kem-512.c **** 
+ 1047              		.loc 1 484 5 view .LVU300
+ 486:simpleserial-ml-kem-512.c ****         return SS_ERR_LEN;
+ 1048              		.loc 1 486 5 view .LVU301
+ 479:simpleserial-ml-kem-512.c ****     uint8_t repeat;
+ 1049              		.loc 1 479 1 is_stmt 0 view .LVU302
+ 1050 0000 10B5     		push	{r4, lr}
+ 1051              	.LCFI20:
+ 1052              		.cfi_def_cfa_offset 8
+ 1053              		.cfi_offset 4, -8
+ 1054              		.cfi_offset 14, -4
+ 486:simpleserial-ml-kem-512.c ****         return SS_ERR_LEN;
+ 1055              		.loc 1 486 8 view .LVU303
+ 1056 0002 C2B9     		cbnz	r2, .L89
+ 1057              	.LBB20:
+ 1058              	.LBI20:
+ 478:simpleserial-ml-kem-512.c **** {
+ 1059              		.loc 1 478 16 is_stmt 1 view .LVU304
+ 1060              	.LVL120:
+ 1061              	.LBB21:
+ 495:simpleserial-ml-kem-512.c ****     for (repeat = 0; repeat < 4u; repeat++) {
+ 1062              		.loc 1 495 5 view .LVU305
+ 1063 0004 FFF7FEFF 		bl	trigger_high
+ 1064              	.LVL121:
+ 496:simpleserial-ml-kem-512.c ****         memset(cmov_probe_buf, 0, sizeof(cmov_probe_buf));
+ 1065              		.loc 1 496 5 view .LVU306
+ 496:simpleserial-ml-kem-512.c ****         memset(cmov_probe_buf, 0, sizeof(cmov_probe_buf));
+ 1066              		.loc 1 496 29 discriminator 1 view .LVU307
+ 495:simpleserial-ml-kem-512.c ****     for (repeat = 0; repeat < 4u; repeat++) {
+ 1067              		.loc 1 495 5 is_stmt 0 view .LVU308
+ 1068 0008 0424     		movs	r4, #4
+ 1069              	.LVL122:
+ 1070              	.L88:
+ 497:simpleserial-ml-kem-512.c ****         PQCLEAN_MLKEM512_CLEAN_cmov(cmov_probe_buf, sk, sizeof(sk), 1u);
+ 1071              		.loc 1 497 9 is_stmt 1 view .LVU309
+ 1072 000a 4FF4CC62 		mov	r2, #1632
+ 1073 000e 0021     		movs	r1, #0
+ 1074 0010 0A48     		ldr	r0, .L91
+ 1075 0012 FFF7FEFF 		bl	memset
+ 1076              	.LVL123:
+ 498:simpleserial-ml-kem-512.c ****     }
+ 1077              		.loc 1 498 9 view .LVU310
+ 1078 0016 0A49     		ldr	r1, .L91+4
+ 1079 0018 0123     		movs	r3, #1
+ 1080 001a 4FF4CC62 		mov	r2, #1632
+ 1081 001e 01F51860 		add	r0, r1, #2432
+ 496:simpleserial-ml-kem-512.c ****         memset(cmov_probe_buf, 0, sizeof(cmov_probe_buf));
+ 1082              		.loc 1 496 29 is_stmt 0 discriminator 1 view .LVU311
+ 1083 0022 013C     		subs	r4, r4, #1
+ 1084              	.LVL124:
+ 498:simpleserial-ml-kem-512.c ****     }
+ 1085              		.loc 1 498 9 view .LVU312
+ 1086 0024 FFF7FEFF 		bl	PQCLEAN_MLKEM512_CLEAN_cmov
+ 1087              	.LVL125:
+ 496:simpleserial-ml-kem-512.c ****         memset(cmov_probe_buf, 0, sizeof(cmov_probe_buf));
+ 1088              		.loc 1 496 41 is_stmt 1 discriminator 3 view .LVU313
+ 496:simpleserial-ml-kem-512.c ****         memset(cmov_probe_buf, 0, sizeof(cmov_probe_buf));
+ 1089              		.loc 1 496 29 discriminator 1 view .LVU314
+ 1090 0028 14F0FF04 		ands	r4, r4, #255
+ 1091 002c EDD1     		bne	.L88
+ 500:simpleserial-ml-kem-512.c **** 
+ 1092              		.loc 1 500 5 view .LVU315
+ 1093 002e FFF7FEFF 		bl	trigger_low
+ 1094              	.LVL126:
+ 502:simpleserial-ml-kem-512.c **** }
+ 1095              		.loc 1 502 5 view .LVU316
+ 1096              	.L87:
+ 502:simpleserial-ml-kem-512.c **** }
+ 1097              		.loc 1 502 5 is_stmt 0 view .LVU317
+ 1098              	.LBE21:
+ 1099              	.LBE20:
+ 503:simpleserial-ml-kem-512.c **** 
+ 1100              		.loc 1 503 1 view .LVU318
+ 1101 0032 2046     		mov	r0, r4
+ 1102 0034 10BD     		pop	{r4, pc}
+ 1103              	.LVL127:
+ 1104              	.L89:
+ 487:simpleserial-ml-kem-512.c ****     }
+ 1105              		.loc 1 487 16 view .LVU319
+ 1106 0036 0424     		movs	r4, #4
+ 1107 0038 FBE7     		b	.L87
+ 1108              	.L92:
+ 1109 003a 00BF     		.align	2
+ 1110              	.L91:
+ 1111 003c A30C0000 		.word	.LANCHOR0+3235
+ 1112 0040 23030000 		.word	.LANCHOR0+803
+ 1113              		.cfi_endproc
+ 1114              	.LFE21:
+ 1116              		.section	.text.ml_kem_512,"ax",%progbits
+ 1117              		.align	1
+ 1118              		.global	ml_kem_512
+ 1119              		.syntax unified
+ 1120              		.thumb
+ 1121              		.thumb_func
+ 1123              	ml_kem_512:
+ 1124              	.LVL128:
+ 1125              	.LFB22:
+ 506:simpleserial-ml-kem-512.c ****     uint8_t err;
+ 1126              		.loc 1 506 1 is_stmt 1 view -0
+ 1127              		.cfi_startproc
+ 1128              		@ args = 0, pretend = 0, frame = 0
+ 1129              		@ frame_needed = 0, uses_anonymous_args = 0
+ 507:simpleserial-ml-kem-512.c **** 
+ 1130              		.loc 1 507 5 view .LVU321
+ 509:simpleserial-ml-kem-512.c **** 
+ 1131              		.loc 1 509 5 view .LVU322
+ 511:simpleserial-ml-kem-512.c ****     if (err != SS_ERR_CMD) {
+ 1132              		.loc 1 511 5 view .LVU323
+ 1133              	.LBB36:
+ 1134              	.LBI36:
+ 233:simpleserial-ml-kem-512.c **** {
+ 1135              		.loc 1 233 16 view .LVU324
+ 1136              	.LBB37:
+ 235:simpleserial-ml-kem-512.c ****     uint8_t err;
+ 1137              		.loc 1 235 5 view .LVU325
+ 236:simpleserial-ml-kem-512.c **** 
+ 1138              		.loc 1 236 5 view .LVU326
+ 238:simpleserial-ml-kem-512.c ****         (scmd < (MLKEM_SS_V21_SCMD_SK_BASE + MLKEM_SS_V21_SK_CHUNKS))) {
+ 1139              		.loc 1 238 5 view .LVU327
+ 238:simpleserial-ml-kem-512.c ****         (scmd < (MLKEM_SS_V21_SCMD_SK_BASE + MLKEM_SS_V21_SK_CHUNKS))) {
+ 1140              		.loc 1 238 8 is_stmt 0 view .LVU328
+ 1141 0000 0729     		cmp	r1, #7
+ 1142              	.LBE37:
+ 1143              	.LBE36:
+ 506:simpleserial-ml-kem-512.c ****     uint8_t err;
+ 1144              		.loc 1 506 1 view .LVU329
+ 1145 0002 2DE9F843 		push	{r3, r4, r5, r6, r7, r8, r9, lr}
+ 1146              	.LCFI21:
+ 1147              		.cfi_def_cfa_offset 32
+ 1148              		.cfi_offset 3, -32
+ 1149              		.cfi_offset 4, -28
+ 1150              		.cfi_offset 5, -24
+ 1151              		.cfi_offset 6, -20
+ 1152              		.cfi_offset 7, -16
+ 1153              		.cfi_offset 8, -12
+ 1154              		.cfi_offset 9, -8
+ 1155              		.cfi_offset 14, -4
+ 506:simpleserial-ml-kem-512.c ****     uint8_t err;
+ 1156              		.loc 1 506 1 view .LVU330
+ 1157 0006 0E46     		mov	r6, r1
+ 1158 0008 1546     		mov	r5, r2
+ 1159 000a 1C46     		mov	r4, r3
+ 1160              	.LBB52:
+ 1161              	.LBB50:
+ 238:simpleserial-ml-kem-512.c ****         (scmd < (MLKEM_SS_V21_SCMD_SK_BASE + MLKEM_SS_V21_SK_CHUNKS))) {
+ 1162              		.loc 1 238 8 view .LVU331
+ 1163 000c 12D8     		bhi	.L94
+ 240:simpleserial-ml-kem-512.c ****         err = v21_copy_chunk(sk, sizeof(sk), MLKEM_SS_V21_CHUNK_SK, chunk_index,
+ 1164              		.loc 1 240 9 is_stmt 1 view .LVU332
+ 1165              	.LVL129:
+ 241:simpleserial-ml-kem-512.c ****                              MLKEM_SS_V21_SK_CHUNKS, len, buf);
+ 1166              		.loc 1 241 9 view .LVU333
+ 1167              	.LBB38:
+ 1168              	.LBI38:
+ 208:simpleserial-ml-kem-512.c ****                               uint8_t chunk_index, uint8_t total_chunks,
+ 1169              		.loc 1 208 16 view .LVU334
+ 1170              	.LBB39:
+ 212:simpleserial-ml-kem-512.c **** 
+ 1171              		.loc 1 212 5 view .LVU335
+ 214:simpleserial-ml-kem-512.c ****         return SS_ERR_LEN;
+ 1172              		.loc 1 214 5 view .LVU336
+ 214:simpleserial-ml-kem-512.c ****         return SS_ERR_LEN;
+ 1173              		.loc 1 214 39 is_stmt 0 discriminator 1 view .LVU337
+ 1174 000e CC2A     		cmp	r2, #204
+ 1175 0010 5CD1     		bne	.L104
+ 1176              	.LVL130:
+ 1177              	.LBB40:
+ 1178              	.LBI40:
+ 208:simpleserial-ml-kem-512.c ****                               uint8_t chunk_index, uint8_t total_chunks,
+ 1179              		.loc 1 208 16 is_stmt 1 view .LVU338
+ 1180              	.LBB41:
+ 218:simpleserial-ml-kem-512.c ****     if ((offset + chunk_len) > dst_len) {
+ 1181              		.loc 1 218 5 view .LVU339
+ 219:simpleserial-ml-kem-512.c ****         return SS_ERR_LEN;
+ 1182              		.loc 1 219 5 view .LVU340
+ 223:simpleserial-ml-kem-512.c ****     return SS_ERR_OK;
+ 1183              		.loc 1 223 5 view .LVU341
+ 1184 0012 2F48     		ldr	r0, .L106
+ 1185              	.LVL131:
+ 223:simpleserial-ml-kem-512.c ****     return SS_ERR_OK;
+ 1186              		.loc 1 223 5 is_stmt 0 view .LVU342
+ 1187 0014 1946     		mov	r1, r3
+ 1188              	.LVL132:
+ 223:simpleserial-ml-kem-512.c ****     return SS_ERR_OK;
+ 1189              		.loc 1 223 5 view .LVU343
+ 1190 0016 02FB0600 		mla	r0, r2, r6, r0
+ 1191 001a FFF7FEFF 		bl	memcpy
+ 1192              	.LVL133:
+ 224:simpleserial-ml-kem-512.c **** }
+ 1193              		.loc 1 224 5 is_stmt 1 view .LVU344
+ 224:simpleserial-ml-kem-512.c **** }
+ 1194              		.loc 1 224 5 is_stmt 0 view .LVU345
+ 1195              	.LBE41:
+ 1196              	.LBE40:
+ 1197              	.LBE39:
+ 1198              	.LBE38:
+ 243:simpleserial-ml-kem-512.c ****             sk_chunks_loaded |= (uint8_t)(1u << chunk_index);
+ 1199              		.loc 1 243 9 is_stmt 1 view .LVU346
+ 244:simpleserial-ml-kem-512.c ****         }
+ 1200              		.loc 1 244 13 view .LVU347
+ 244:simpleserial-ml-kem-512.c ****         }
+ 1201              		.loc 1 244 30 is_stmt 0 view .LVU348
+ 1202 001e 2D4A     		ldr	r2, .L106+4
+ 244:simpleserial-ml-kem-512.c ****         }
+ 1203              		.loc 1 244 46 view .LVU349
+ 1204 0020 0123     		movs	r3, #1
+ 244:simpleserial-ml-kem-512.c ****         }
+ 1205              		.loc 1 244 30 view .LVU350
+ 1206 0022 92F80B12 		ldrb	r1, [r2, #523]	@ zero_extendqisi2
+ 244:simpleserial-ml-kem-512.c ****         }
+ 1207              		.loc 1 244 46 view .LVU351
+ 1208 0026 B340     		lsls	r3, r3, r6
+ 244:simpleserial-ml-kem-512.c ****         }
+ 1209              		.loc 1 244 30 view .LVU352
+ 1210 0028 0B43     		orrs	r3, r3, r1
+ 1211 002a 82F80B32 		strb	r3, [r2, #523]
+ 1212              	.LVL134:
+ 1213              	.L97:
+ 246:simpleserial-ml-kem-512.c ****     }
+ 1214              		.loc 1 246 16 view .LVU353
+ 1215 002e 0020     		movs	r0, #0
+ 1216              	.L95:
+ 1217              	.LVL135:
+ 246:simpleserial-ml-kem-512.c ****     }
+ 1218              		.loc 1 246 16 view .LVU354
+ 1219              	.LBE50:
+ 1220              	.LBE52:
+ 512:simpleserial-ml-kem-512.c ****         return err;
+ 1221              		.loc 1 512 5 is_stmt 1 view .LVU355
+ 517:simpleserial-ml-kem-512.c **** 
+ 1222              		.loc 1 517 1 is_stmt 0 view .LVU356
+ 1223 0030 BDE8F883 		pop	{r3, r4, r5, r6, r7, r8, r9, pc}
+ 1224              	.LVL136:
+ 1225              	.L94:
+ 1226              	.LBB53:
+ 1227              	.LBB51:
+ 249:simpleserial-ml-kem-512.c ****         (scmd < (MLKEM_SS_V21_SCMD_PK_BASE + MLKEM_SS_V21_PK_CHUNKS))) {
+ 1228              		.loc 1 249 5 is_stmt 1 view .LVU357
+ 249:simpleserial-ml-kem-512.c ****         (scmd < (MLKEM_SS_V21_SCMD_PK_BASE + MLKEM_SS_V21_PK_CHUNKS))) {
+ 1229              		.loc 1 249 45 is_stmt 0 view .LVU358
+ 1230 0034 A1F11007 		sub	r7, r1, #16
+ 1231 0038 FFB2     		uxtb	r7, r7
+ 249:simpleserial-ml-kem-512.c ****         (scmd < (MLKEM_SS_V21_SCMD_PK_BASE + MLKEM_SS_V21_PK_CHUNKS))) {
+ 1232              		.loc 1 249 8 view .LVU359
+ 1233 003a 032F     		cmp	r7, #3
+ 1234 003c 20D8     		bhi	.L96
+ 251:simpleserial-ml-kem-512.c ****         err = v21_copy_chunk(pk, sizeof(pk), MLKEM_SS_V21_CHUNK_PK, chunk_index,
+ 1235              		.loc 1 251 9 is_stmt 1 view .LVU360
+ 1236              	.LVL137:
+ 252:simpleserial-ml-kem-512.c ****                              MLKEM_SS_V21_PK_CHUNKS, len, buf);
+ 1237              		.loc 1 252 9 view .LVU361
+ 1238              	.LBB42:
+ 1239              	.LBI42:
+ 208:simpleserial-ml-kem-512.c ****                               uint8_t chunk_index, uint8_t total_chunks,
+ 1240              		.loc 1 208 16 view .LVU362
+ 1241              	.LBB43:
+ 212:simpleserial-ml-kem-512.c **** 
+ 1242              		.loc 1 212 5 view .LVU363
+ 214:simpleserial-ml-kem-512.c ****         return SS_ERR_LEN;
+ 1243              		.loc 1 214 5 view .LVU364
+ 214:simpleserial-ml-kem-512.c ****         return SS_ERR_LEN;
+ 1244              		.loc 1 214 39 is_stmt 0 discriminator 1 view .LVU365
+ 1245 003e C82A     		cmp	r2, #200
+ 1246 0040 44D1     		bne	.L104
+ 1247              	.LVL138:
+ 1248              	.LBB44:
+ 1249              	.LBI44:
+ 208:simpleserial-ml-kem-512.c ****                               uint8_t chunk_index, uint8_t total_chunks,
+ 1250              		.loc 1 208 16 is_stmt 1 view .LVU366
+ 1251              	.LBB45:
+ 218:simpleserial-ml-kem-512.c ****     if ((offset + chunk_len) > dst_len) {
+ 1252              		.loc 1 218 5 view .LVU367
+ 223:simpleserial-ml-kem-512.c ****     return SS_ERR_OK;
+ 1253              		.loc 1 223 16 is_stmt 0 view .LVU368
+ 1254 0042 DFF89480 		ldr	r8, .L106+8
+ 218:simpleserial-ml-kem-512.c ****     if ((offset + chunk_len) > dst_len) {
+ 1255              		.loc 1 218 12 view .LVU369
+ 1256 0046 02FB07F9 		mul	r9, r2, r7
+ 1257              	.LVL139:
+ 219:simpleserial-ml-kem-512.c ****         return SS_ERR_LEN;
+ 1258              		.loc 1 219 5 is_stmt 1 view .LVU370
+ 223:simpleserial-ml-kem-512.c ****     return SS_ERR_OK;
+ 1259              		.loc 1 223 5 view .LVU371
+ 1260 004a 1946     		mov	r1, r3
+ 1261              	.LVL140:
+ 223:simpleserial-ml-kem-512.c ****     return SS_ERR_OK;
+ 1262              		.loc 1 223 5 is_stmt 0 view .LVU372
+ 1263 004c 08EB0900 		add	r0, r8, r9
+ 1264              	.LVL141:
+ 223:simpleserial-ml-kem-512.c ****     return SS_ERR_OK;
+ 1265              		.loc 1 223 5 view .LVU373
+ 1266 0050 FFF7FEFF 		bl	memcpy
+ 1267              	.LVL142:
+ 224:simpleserial-ml-kem-512.c **** }
+ 1268              		.loc 1 224 5 is_stmt 1 view .LVU374
+ 224:simpleserial-ml-kem-512.c **** }
+ 1269              		.loc 1 224 5 is_stmt 0 view .LVU375
+ 1270              	.LBE45:
+ 1271              	.LBE44:
+ 1272              	.LBE43:
+ 1273              	.LBE42:
+ 254:simpleserial-ml-kem-512.c ****             pk_chunks_loaded |= (uint8_t)(1u << chunk_index);
+ 1274              		.loc 1 254 9 is_stmt 1 view .LVU376
+ 255:simpleserial-ml-kem-512.c ****             memcpy(sk + KYBER_INDCPA_SECRETKEYBYTES + ((size_t)chunk_index * MLKEM_SS_V21_CHUNK_PK)
+ 1275              		.loc 1 255 13 view .LVU377
+ 255:simpleserial-ml-kem-512.c ****             memcpy(sk + KYBER_INDCPA_SECRETKEYBYTES + ((size_t)chunk_index * MLKEM_SS_V21_CHUNK_PK)
+ 1276              		.loc 1 255 30 is_stmt 0 view .LVU378
+ 1277 0054 1F4B     		ldr	r3, .L106+4
+ 255:simpleserial-ml-kem-512.c ****             memcpy(sk + KYBER_INDCPA_SECRETKEYBYTES + ((size_t)chunk_index * MLKEM_SS_V21_CHUNK_PK)
+ 1278              		.loc 1 255 46 view .LVU379
+ 1279 0056 0126     		movs	r6, #1
+ 1280              	.LVL143:
+ 255:simpleserial-ml-kem-512.c ****             memcpy(sk + KYBER_INDCPA_SECRETKEYBYTES + ((size_t)chunk_index * MLKEM_SS_V21_CHUNK_PK)
+ 1281              		.loc 1 255 30 view .LVU380
+ 1282 0058 93F80C22 		ldrb	r2, [r3, #524]	@ zero_extendqisi2
+ 255:simpleserial-ml-kem-512.c ****             memcpy(sk + KYBER_INDCPA_SECRETKEYBYTES + ((size_t)chunk_index * MLKEM_SS_V21_CHUNK_PK)
+ 1283              		.loc 1 255 46 view .LVU381
+ 1284 005c BE40     		lsls	r6, r6, r7
+ 255:simpleserial-ml-kem-512.c ****             memcpy(sk + KYBER_INDCPA_SECRETKEYBYTES + ((size_t)chunk_index * MLKEM_SS_V21_CHUNK_PK)
+ 1285              		.loc 1 255 30 view .LVU382
+ 1286 005e 1643     		orrs	r6, r6, r2
+ 256:simpleserial-ml-kem-512.c ****                    buf,
+ 1287              		.loc 1 256 53 view .LVU383
+ 1288 0060 08EB0900 		add	r0, r8, r9
+ 255:simpleserial-ml-kem-512.c ****             memcpy(sk + KYBER_INDCPA_SECRETKEYBYTES + ((size_t)chunk_index * MLKEM_SS_V21_CHUNK_PK)
+ 1289              		.loc 1 255 30 view .LVU384
+ 1290 0064 F6B2     		uxtb	r6, r6
+ 256:simpleserial-ml-kem-512.c ****                    buf,
+ 1291              		.loc 1 256 13 view .LVU385
+ 1292 0066 2A46     		mov	r2, r5
+ 1293 0068 2146     		mov	r1, r4
+ 1294 006a A0F55870 		sub	r0, r0, #864
+ 255:simpleserial-ml-kem-512.c ****             memcpy(sk + KYBER_INDCPA_SECRETKEYBYTES + ((size_t)chunk_index * MLKEM_SS_V21_CHUNK_PK)
+ 1295              		.loc 1 255 30 view .LVU386
+ 1296 006e 83F80C62 		strb	r6, [r3, #524]
+ 256:simpleserial-ml-kem-512.c ****                    buf,
+ 1297              		.loc 1 256 13 is_stmt 1 view .LVU387
+ 1298 0072 FFF7FEFF 		bl	memcpy
+ 1299              	.LVL144:
+ 259:simpleserial-ml-kem-512.c ****                 v21_sync_pk_into_sk();
+ 1300              		.loc 1 259 13 view .LVU388
+ 259:simpleserial-ml-kem-512.c ****                 v21_sync_pk_into_sk();
+ 1301              		.loc 1 259 16 is_stmt 0 view .LVU389
+ 1302 0076 0F2E     		cmp	r6, #15
+ 1303 0078 D9D1     		bne	.L97
+ 260:simpleserial-ml-kem-512.c ****             }
+ 1304              		.loc 1 260 17 is_stmt 1 view .LVU390
+ 1305 007a FFF7FEFF 		bl	v21_sync_pk_into_sk
+ 1306              	.LVL145:
+ 1307 007e D6E7     		b	.L97
+ 1308              	.LVL146:
+ 1309              	.L96:
+ 266:simpleserial-ml-kem-512.c ****         (scmd < (MLKEM_SS_V21_SCMD_CT_BASE + MLKEM_SS_V21_CT_CHUNKS))) {
+ 1310              		.loc 1 266 5 view .LVU391
+ 266:simpleserial-ml-kem-512.c ****         (scmd < (MLKEM_SS_V21_SCMD_CT_BASE + MLKEM_SS_V21_CT_CHUNKS))) {
+ 1311              		.loc 1 266 45 is_stmt 0 view .LVU392
+ 1312 0080 A1F12007 		sub	r7, r1, #32
+ 1313 0084 FFB2     		uxtb	r7, r7
+ 266:simpleserial-ml-kem-512.c ****         (scmd < (MLKEM_SS_V21_SCMD_CT_BASE + MLKEM_SS_V21_CT_CHUNKS))) {
+ 1314              		.loc 1 266 8 view .LVU393
+ 1315 0086 032F     		cmp	r7, #3
+ 1316 0088 10D8     		bhi	.L98
+ 268:simpleserial-ml-kem-512.c ****         err = v21_copy_chunk(ct, sizeof(ct), MLKEM_SS_V21_CHUNK_CT, chunk_index,
+ 1317              		.loc 1 268 9 is_stmt 1 view .LVU394
+ 1318              	.LVL147:
+ 269:simpleserial-ml-kem-512.c ****                              MLKEM_SS_V21_CT_CHUNKS, len, buf);
+ 1319              		.loc 1 269 9 view .LVU395
+ 1320              	.LBB46:
+ 1321              	.LBI46:
+ 208:simpleserial-ml-kem-512.c ****                               uint8_t chunk_index, uint8_t total_chunks,
+ 1322              		.loc 1 208 16 view .LVU396
+ 1323              	.LBB47:
+ 212:simpleserial-ml-kem-512.c **** 
+ 1324              		.loc 1 212 5 view .LVU397
+ 214:simpleserial-ml-kem-512.c ****         return SS_ERR_LEN;
+ 1325              		.loc 1 214 5 view .LVU398
+ 214:simpleserial-ml-kem-512.c ****         return SS_ERR_LEN;
+ 1326              		.loc 1 214 39 is_stmt 0 discriminator 1 view .LVU399
+ 1327 008a C02A     		cmp	r2, #192
+ 1328 008c 1ED1     		bne	.L104
+ 1329              	.LVL148:
+ 1330              	.LBB48:
+ 1331              	.LBI48:
+ 208:simpleserial-ml-kem-512.c ****                               uint8_t chunk_index, uint8_t total_chunks,
+ 1332              		.loc 1 208 16 is_stmt 1 view .LVU400
+ 1333              	.LBB49:
+ 218:simpleserial-ml-kem-512.c ****     if ((offset + chunk_len) > dst_len) {
+ 1334              		.loc 1 218 5 view .LVU401
+ 219:simpleserial-ml-kem-512.c ****         return SS_ERR_LEN;
+ 1335              		.loc 1 219 5 view .LVU402
+ 223:simpleserial-ml-kem-512.c ****     return SS_ERR_OK;
+ 1336              		.loc 1 223 5 view .LVU403
+ 1337 008e 1348     		ldr	r0, .L106+12
+ 1338              	.LVL149:
+ 223:simpleserial-ml-kem-512.c ****     return SS_ERR_OK;
+ 1339              		.loc 1 223 5 is_stmt 0 view .LVU404
+ 1340 0090 1946     		mov	r1, r3
+ 1341              	.LVL150:
+ 223:simpleserial-ml-kem-512.c ****     return SS_ERR_OK;
+ 1342              		.loc 1 223 5 view .LVU405
+ 1343 0092 02FB0700 		mla	r0, r2, r7, r0
+ 1344 0096 FFF7FEFF 		bl	memcpy
+ 1345              	.LVL151:
+ 224:simpleserial-ml-kem-512.c **** }
+ 1346              		.loc 1 224 5 is_stmt 1 view .LVU406
+ 224:simpleserial-ml-kem-512.c **** }
+ 1347              		.loc 1 224 5 is_stmt 0 view .LVU407
+ 1348              	.LBE49:
+ 1349              	.LBE48:
+ 1350              	.LBE47:
+ 1351              	.LBE46:
+ 271:simpleserial-ml-kem-512.c ****             ct_chunks_loaded |= (uint8_t)(1u << chunk_index);
+ 1352              		.loc 1 271 9 is_stmt 1 view .LVU408
+ 272:simpleserial-ml-kem-512.c ****         }
+ 1353              		.loc 1 272 13 view .LVU409
+ 272:simpleserial-ml-kem-512.c ****         }
+ 1354              		.loc 1 272 30 is_stmt 0 view .LVU410
+ 1355 009a 0E4A     		ldr	r2, .L106+4
+ 272:simpleserial-ml-kem-512.c ****         }
+ 1356              		.loc 1 272 46 view .LVU411
+ 1357 009c 0123     		movs	r3, #1
+ 272:simpleserial-ml-kem-512.c ****         }
+ 1358              		.loc 1 272 30 view .LVU412
+ 1359 009e 92F80D12 		ldrb	r1, [r2, #525]	@ zero_extendqisi2
+ 272:simpleserial-ml-kem-512.c ****         }
+ 1360              		.loc 1 272 46 view .LVU413
+ 1361 00a2 BB40     		lsls	r3, r3, r7
+ 272:simpleserial-ml-kem-512.c ****         }
+ 1362              		.loc 1 272 30 view .LVU414
+ 1363 00a4 0B43     		orrs	r3, r3, r1
+ 1364 00a6 82F80D32 		strb	r3, [r2, #525]
+ 1365 00aa C0E7     		b	.L97
+ 1366              	.LVL152:
+ 1367              	.L98:
+ 277:simpleserial-ml-kem-512.c ****         if (len != KYBER_SSBYTES) {
+ 1368              		.loc 1 277 5 is_stmt 1 view .LVU415
+ 277:simpleserial-ml-kem-512.c ****         if (len != KYBER_SSBYTES) {
+ 1369              		.loc 1 277 8 is_stmt 0 view .LVU416
+ 1370 00ac 3029     		cmp	r1, #48
+ 1371 00ae 0BD1     		bne	.L103
+ 278:simpleserial-ml-kem-512.c ****             return SS_ERR_LEN;
+ 1372              		.loc 1 278 9 is_stmt 1 view .LVU417
+ 278:simpleserial-ml-kem-512.c ****             return SS_ERR_LEN;
+ 1373              		.loc 1 278 12 is_stmt 0 view .LVU418
+ 1374 00b0 202A     		cmp	r2, #32
+ 1375 00b2 0BD1     		bne	.L104
+ 281:simpleserial-ml-kem-512.c ****         ss_loaded = 1;
+ 1376              		.loc 1 281 9 is_stmt 1 view .LVU419
+ 1377 00b4 0A4B     		ldr	r3, .L106+16
+ 1378              	.LVL153:
+ 281:simpleserial-ml-kem-512.c ****         ss_loaded = 1;
+ 1379              		.loc 1 281 9 is_stmt 0 view .LVU420
+ 1380 00b6 04F12002 		add	r2, r4, #32
+ 1381              	.LVL154:
+ 1382              	.L99:
+ 281:simpleserial-ml-kem-512.c ****         ss_loaded = 1;
+ 1383              		.loc 1 281 9 view .LVU421
+ 1384 00ba 54F8041B 		ldr	r1, [r4], #4	@ unaligned
+ 1385 00be 43F8041B 		str	r1, [r3], #4	@ unaligned
+ 1386 00c2 9442     		cmp	r4, r2
+ 1387 00c4 F9D1     		bne	.L99
+ 1388 00c6 B2E7     		b	.L97
+ 1389              	.LVL155:
+ 1390              	.L103:
+ 286:simpleserial-ml-kem-512.c **** }
+ 1391              		.loc 1 286 12 view .LVU422
+ 1392 00c8 0120     		movs	r0, #1
+ 1393              	.LVL156:
+ 286:simpleserial-ml-kem-512.c **** }
+ 1394              		.loc 1 286 12 view .LVU423
+ 1395 00ca B1E7     		b	.L95
+ 1396              	.LVL157:
+ 1397              	.L104:
+ 246:simpleserial-ml-kem-512.c ****     }
+ 1398              		.loc 1 246 16 view .LVU424
+ 1399 00cc 0420     		movs	r0, #4
+ 1400              	.LVL158:
+ 246:simpleserial-ml-kem-512.c ****     }
+ 1401              		.loc 1 246 16 view .LVU425
+ 1402 00ce AFE7     		b	.L95
+ 1403              	.L107:
+ 1404              		.align	2
+ 1405              	.L106:
+ 1406 00d0 23030000 		.word	.LANCHOR0+803
+ 1407 00d4 F8100000 		.word	.LANCHOR2
+ 1408 00d8 83090000 		.word	.LANCHOR0+2435
+ 1409 00dc 23000000 		.word	.LANCHOR0+35
+ 1410 00e0 03000000 		.word	.LANCHOR0+3
+ 1411              	.LBE51:
+ 1412              	.LBE53:
+ 1413              		.cfi_endproc
+ 1414              	.LFE22:
+ 1416              		.section	.text.ml_kem_512_decap,"ax",%progbits
+ 1417              		.align	1
+ 1418              		.global	ml_kem_512_decap
+ 1419              		.syntax unified
+ 1420              		.thumb
+ 1421              		.thumb_func
+ 1423              	ml_kem_512_decap:
+ 1424              	.LVL159:
+ 1425              	.LFB3:
+ 171:simpleserial-ml-kem-512.c ****     int fail;  /* Global fail variable for cmov comparison */
+ 1426              		.loc 1 171 1 is_stmt 1 view -0
+ 1427              		.cfi_startproc
+ 1428              		@ args = 0, pretend = 0, frame = 0
+ 1429              		@ frame_needed = 0, uses_anonymous_args = 0
+ 172:simpleserial-ml-kem-512.c ****     (void)k;
+ 1430              		.loc 1 172 5 view .LVU427
+ 173:simpleserial-ml-kem-512.c ****     (void)len;
+ 1431              		.loc 1 173 5 view .LVU428
+ 174:simpleserial-ml-kem-512.c **** 
+ 1432              		.loc 1 174 5 view .LVU429
+ 177:simpleserial-ml-kem-512.c ****     
+ 1433              		.loc 1 177 5 view .LVU430
+ 1434 0000 1D4A     		ldr	r2, .L113
+ 1435 0002 1E48     		ldr	r0, .L113+4
+ 1436              	.LVL160:
+ 177:simpleserial-ml-kem-512.c ****     
+ 1437              		.loc 1 177 5 is_stmt 0 view .LVU431
+ 1438 0004 A2F54071 		sub	r1, r2, #768
+ 1439              	.LVL161:
+ 171:simpleserial-ml-kem-512.c ****     int fail;  /* Global fail variable for cmov comparison */
+ 1440              		.loc 1 171 1 view .LVU432
+ 1441 0008 10B5     		push	{r4, lr}
+ 1442              	.LCFI22:
+ 1443              		.cfi_def_cfa_offset 8
+ 1444              		.cfi_offset 4, -8
+ 1445              		.cfi_offset 14, -4
+ 177:simpleserial-ml-kem-512.c ****     
+ 1446              		.loc 1 177 5 view .LVU433
+ 1447 000a FFF7FEFF 		bl	PQCLEAN_MLKEM512_CLEAN_indcpa_dec
+ 1448              	.LVL162:
+ 180:simpleserial-ml-kem-512.c ****     memcpy(decap_buf + KYBER_SYMBYTES, sk + KYBER_SECRETKEYBYTES - 2 * KYBER_SYMBYTES, KYBER_SYMBYT
+ 1449              		.loc 1 180 5 is_stmt 1 view .LVU434
+ 1450 000e 1B4B     		ldr	r3, .L113+4
+ 1451 0010 03F12002 		add	r2, r3, #32
+ 1452 0014 1146     		mov	r1, r2
+ 1453              	.L109:
+ 1454 0016 53F8040B 		ldr	r0, [r3], #4	@ unaligned
+ 1455 001a 42F8040B 		str	r0, [r2], #4	@ unaligned
+ 1456 001e 8B42     		cmp	r3, r1
+ 1457 0020 F9D1     		bne	.L109
+ 181:simpleserial-ml-kem-512.c ****     
+ 1458              		.loc 1 181 5 view .LVU435
+ 1459 0022 174B     		ldr	r3, .L113+8
+ 1460 0024 174A     		ldr	r2, .L113+12
+ 1461 0026 03F12001 		add	r1, r3, #32
+ 1462              	.L110:
+ 1463 002a 53F8040B 		ldr	r0, [r3], #4	@ unaligned
+ 1464 002e 42F8040B 		str	r0, [r2], #4	@ unaligned
+ 1465 0032 8B42     		cmp	r3, r1
+ 1466 0034 F9D1     		bne	.L110
+ 184:simpleserial-ml-kem-512.c **** 
+ 1467              		.loc 1 184 5 view .LVU436
+ 1468 0036 1449     		ldr	r1, .L113+16
+ 1469 0038 4022     		movs	r2, #64
+ 1470 003a 8818     		adds	r0, r1, r2
+ 1471 003c FFF7FEFF 		bl	sha3_512
+ 1472              	.LVL163:
+ 190:simpleserial-ml-kem-512.c **** 
+ 1473              		.loc 1 190 5 view .LVU437
+ 190:simpleserial-ml-kem-512.c **** 
+ 1474              		.loc 1 190 12 is_stmt 0 view .LVU438
+ 1475 0040 1249     		ldr	r1, .L113+20
+ 1476 0042 4FF44072 		mov	r2, #768
+ 1477 0046 0846     		mov	r0, r1
+ 1478 0048 FFF7FEFF 		bl	PQCLEAN_MLKEM512_CLEAN_verify
+ 1479              	.LVL164:
+ 193:simpleserial-ml-kem-512.c **** 
+ 1480              		.loc 1 193 5 view .LVU439
+ 1481 004c 0F4A     		ldr	r2, .L113+20
+ 190:simpleserial-ml-kem-512.c **** 
+ 1482              		.loc 1 190 12 view .LVU440
+ 1483 004e 0446     		mov	r4, r0
+ 1484              	.LVL165:
+ 193:simpleserial-ml-kem-512.c **** 
+ 1485              		.loc 1 193 5 is_stmt 1 view .LVU441
+ 1486 0050 02F51461 		add	r1, r2, #2368
+ 1487 0054 0E48     		ldr	r0, .L113+24
+ 1488              	.LVL166:
+ 193:simpleserial-ml-kem-512.c **** 
+ 1489              		.loc 1 193 5 is_stmt 0 view .LVU442
+ 1490 0056 FFF7FEFF 		bl	PQCLEAN_MLKEM512_CLEAN_kyber_shake256_rkprf
+ 1491              	.LVL167:
+ 196:simpleserial-ml-kem-512.c ****     PQCLEAN_MLKEM512_CLEAN_cmov(ss_result, decap_kr, KYBER_SYMBYTES, (uint8_t)(1 - fail));
+ 1492              		.loc 1 196 5 is_stmt 1 view .LVU443
+ 1493 005a FFF7FEFF 		bl	trigger_high
+ 1494              	.LVL168:
+ 197:simpleserial-ml-kem-512.c ****     trigger_low();
+ 1495              		.loc 1 197 5 view .LVU444
+ 1496 005e 0D49     		ldr	r1, .L113+28
+ 1497 0060 C4F10103 		rsb	r3, r4, #1
+ 1498 0064 01F14000 		add	r0, r1, #64
+ 1499 0068 DBB2     		uxtb	r3, r3
+ 1500 006a 2022     		movs	r2, #32
+ 1501 006c FFF7FEFF 		bl	PQCLEAN_MLKEM512_CLEAN_cmov
+ 1502              	.LVL169:
+ 198:simpleserial-ml-kem-512.c **** 
+ 1503              		.loc 1 198 5 view .LVU445
+ 1504 0070 FFF7FEFF 		bl	trigger_low
+ 1505              	.LVL170:
+ 204:simpleserial-ml-kem-512.c **** }
+ 1506              		.loc 1 204 2 view .LVU446
+ 205:simpleserial-ml-kem-512.c **** 
+ 1507              		.loc 1 205 1 is_stmt 0 view .LVU447
+ 1508 0074 0020     		movs	r0, #0
+ 1509 0076 10BD     		pop	{r4, pc}
+ 1510              	.LVL171:
+ 1511              	.L114:
+ 205:simpleserial-ml-kem-512.c **** 
+ 1512              		.loc 1 205 1 view .LVU448
+ 1513              		.align	2
+ 1514              	.L113:
+ 1515 0078 23030000 		.word	.LANCHOR0+803
+ 1516 007c 06130000 		.word	.LANCHOR2+526
+ 1517 0080 43090000 		.word	.LANCHOR0+2371
+ 1518 0084 46130000 		.word	.LANCHOR2+590
+ 1519 0088 26130000 		.word	.LANCHOR2+558
+ 1520 008c 23000000 		.word	.LANCHOR0+35
+ 1521 0090 A6130000 		.word	.LANCHOR2+686
+ 1522 0094 66130000 		.word	.LANCHOR2+622
+ 1523              		.cfi_endproc
+ 1524              	.LFE3:
+ 1526              		.section	.text.ml_kem_512_do_decap,"ax",%progbits
+ 1527              		.align	1
+ 1528              		.syntax unified
+ 1529              		.thumb
+ 1530              		.thumb_func
+ 1532              	ml_kem_512_do_decap:
+ 1533              	.LVL172:
+ 1534              	.LFB20:
+ 466:simpleserial-ml-kem-512.c ****     uint8_t err;
+ 1535              		.loc 1 466 1 is_stmt 1 view -0
+ 1536              		.cfi_startproc
+ 1537              		@ args = 0, pretend = 0, frame = 0
+ 1538              		@ frame_needed = 0, uses_anonymous_args = 0
+ 467:simpleserial-ml-kem-512.c ****     (void)cmd; (void)scmd; (void)buf;
+ 1539              		.loc 1 467 5 view .LVU450
+ 468:simpleserial-ml-kem-512.c ****     if (len != 0) return SS_ERR_LEN;
+ 1540              		.loc 1 468 5 view .LVU451
+ 468:simpleserial-ml-kem-512.c ****     if (len != 0) return SS_ERR_LEN;
+ 1541              		.loc 1 468 16 view .LVU452
+ 468:simpleserial-ml-kem-512.c ****     if (len != 0) return SS_ERR_LEN;
+ 1542              		.loc 1 468 28 view .LVU453
+ 469:simpleserial-ml-kem-512.c ****     /* No bitmask check: the rx commands (0x05/0x07/0x09) use v21_rx_vector_chunk
+ 1543              		.loc 1 469 5 view .LVU454
+ 466:simpleserial-ml-kem-512.c ****     uint8_t err;
+ 1544              		.loc 1 466 1 is_stmt 0 view .LVU455
+ 1545 0000 08B5     		push	{r3, lr}
+ 1546              	.LCFI23:
+ 1547              		.cfi_def_cfa_offset 8
+ 1548              		.cfi_offset 3, -8
+ 1549              		.cfi_offset 14, -4
+ 469:simpleserial-ml-kem-512.c ****     /* No bitmask check: the rx commands (0x05/0x07/0x09) use v21_rx_vector_chunk
+ 1550              		.loc 1 469 8 view .LVU456
+ 1551 0002 1146     		mov	r1, r2
+ 1552              	.LVL173:
+ 469:simpleserial-ml-kem-512.c ****     /* No bitmask check: the rx commands (0x05/0x07/0x09) use v21_rx_vector_chunk
+ 1553              		.loc 1 469 8 view .LVU457
+ 1554 0004 4AB9     		cbnz	r2, .L117
+ 1555              	.LBB56:
+ 1556              	.LBI56:
+ 465:simpleserial-ml-kem-512.c **** {
+ 1557              		.loc 1 465 16 is_stmt 1 view .LVU458
+ 1558              	.LVL174:
+ 1559              	.LBB57:
+ 473:simpleserial-ml-kem-512.c ****     if (err != SS_ERR_OK) return err;
+ 1560              		.loc 1 473 5 view .LVU459
+ 473:simpleserial-ml-kem-512.c ****     if (err != SS_ERR_OK) return err;
+ 1561              		.loc 1 473 11 is_stmt 0 view .LVU460
+ 1562 0006 1046     		mov	r0, r2
+ 1563              	.LVL175:
+ 473:simpleserial-ml-kem-512.c ****     if (err != SS_ERR_OK) return err;
+ 1564              		.loc 1 473 11 view .LVU461
+ 1565 0008 FFF7FEFF 		bl	ml_kem_512_decap
+ 1566              	.LVL176:
+ 474:simpleserial-ml-kem-512.c ****     return PQCLEAN_MLKEM512_CLEAN_verify(ss, ss_result, KYBER_SSBYTES);
+ 1567              		.loc 1 474 5 is_stmt 1 view .LVU462
+ 475:simpleserial-ml-kem-512.c **** }
+ 1568              		.loc 1 475 5 view .LVU463
+ 475:simpleserial-ml-kem-512.c **** }
+ 1569              		.loc 1 475 12 is_stmt 0 view .LVU464
+ 1570 000c 0449     		ldr	r1, .L118
+ 1571 000e 0548     		ldr	r0, .L118+4
+ 1572 0010 2022     		movs	r2, #32
+ 1573 0012 FFF7FEFF 		bl	PQCLEAN_MLKEM512_CLEAN_verify
+ 1574              	.LVL177:
+ 475:simpleserial-ml-kem-512.c **** }
+ 1575              		.loc 1 475 12 discriminator 1 view .LVU465
+ 1576 0016 C0B2     		uxtb	r0, r0
+ 1577              	.LVL178:
+ 1578              	.L116:
+ 475:simpleserial-ml-kem-512.c **** }
+ 1579              		.loc 1 475 12 discriminator 1 view .LVU466
+ 1580              	.LBE57:
+ 1581              	.LBE56:
+ 476:simpleserial-ml-kem-512.c **** 
+ 1582              		.loc 1 476 1 view .LVU467
+ 1583 0018 08BD     		pop	{r3, pc}
+ 1584              	.LVL179:
+ 1585              	.L117:
+ 469:simpleserial-ml-kem-512.c ****     /* No bitmask check: the rx commands (0x05/0x07/0x09) use v21_rx_vector_chunk
+ 1586              		.loc 1 469 26 discriminator 1 view .LVU468
+ 1587 001a 0420     		movs	r0, #4
+ 1588              	.LVL180:
+ 469:simpleserial-ml-kem-512.c ****     /* No bitmask check: the rx commands (0x05/0x07/0x09) use v21_rx_vector_chunk
+ 1589              		.loc 1 469 26 discriminator 1 view .LVU469
+ 1590 001c FCE7     		b	.L116
+ 1591              	.L119:
+ 1592 001e 00BF     		.align	2
+ 1593              	.L118:
+ 1594 0020 A6130000 		.word	.LANCHOR2+686
+ 1595 0024 03000000 		.word	.LANCHOR0+3
+ 1596              		.cfi_endproc
+ 1597              	.LFE20:
+ 1599              		.section	.text.startup.main,"ax",%progbits
+ 1600              		.align	1
+ 1601              		.global	main
+ 1602              		.syntax unified
+ 1603              		.thumb
+ 1604              		.thumb_func
+ 1606              	main:
+ 1607              	.LFB25:
+ 531:simpleserial-ml-kem-512.c **** #endif
+ 532:simpleserial-ml-kem-512.c **** 
+ 533:simpleserial-ml-kem-512.c **** int main(void)
+ 534:simpleserial-ml-kem-512.c **** {
+ 1608              		.loc 1 534 1 is_stmt 1 view -0
+ 1609              		.cfi_startproc
+ 1610              		@ Volatile: function does not return.
+ 1611              		@ args = 0, pretend = 0, frame = 0
+ 1612              		@ frame_needed = 0, uses_anonymous_args = 0
+ 535:simpleserial-ml-kem-512.c ****     platform_init();
+ 1613              		.loc 1 535 5 view .LVU471
+ 534:simpleserial-ml-kem-512.c ****     platform_init();
+ 1614              		.loc 1 534 1 is_stmt 0 view .LVU472
+ 1615 0000 08B5     		push	{r3, lr}
+ 1616              	.LCFI24:
+ 1617              		.cfi_def_cfa_offset 8
+ 1618              		.cfi_offset 3, -8
+ 1619              		.cfi_offset 14, -4
+ 1620              		.loc 1 535 5 view .LVU473
+ 1621 0002 FFF7FEFF 		bl	platform_init
+ 1622              	.LVL181:
+ 536:simpleserial-ml-kem-512.c **** #if defined(__SAM4LS4C__) || defined(__SAM4LS4B__) || defined(__SAM4S__)
+ 537:simpleserial-ml-kem-512.c ****     gpio_configure_pin(LED1, PIO_OUTPUT_0 | PIO_DEFAULT);
+ 538:simpleserial-ml-kem-512.c ****     gpio_configure_pin(LED2, PIO_OUTPUT_0 | PIO_DEFAULT);
+ 539:simpleserial-ml-kem-512.c ****     gpio_configure_pin(LED3, PIO_OUTPUT_0 | PIO_DEFAULT);
+ 540:simpleserial-ml-kem-512.c **** #endif
+ 541:simpleserial-ml-kem-512.c ****     init_uart();
+ 1623              		.loc 1 541 5 is_stmt 1 view .LVU474
+ 1624 0006 FFF7FEFF 		bl	init_uart
+ 1625              	.LVL182:
+ 542:simpleserial-ml-kem-512.c ****     trigger_setup();
+ 1626              		.loc 1 542 5 view .LVU475
+ 1627 000a FFF7FEFF 		bl	trigger_setup
+ 1628              	.LVL183:
+ 543:simpleserial-ml-kem-512.c **** 
+ 544:simpleserial-ml-kem-512.c **** 	simpleserial_init();
+ 1629              		.loc 1 544 2 view .LVU476
+ 1630 000e FFF7FEFF 		bl	simpleserial_init
+ 1631              	.LVL184:
+ 545:simpleserial-ml-kem-512.c **** 
+ 546:simpleserial-ml-kem-512.c ****     #if SS_VER == SS_VER_2_1
+ 547:simpleserial-ml-kem-512.c ****     simpleserial_addcmd(MLKEM_SS_V21_CMD, MLKEM_SS_V21_CHUNK_SK, ml_kem_512);
+ 1632              		.loc 1 547 5 view .LVU477
+ 1633 0012 274A     		ldr	r2, .L122
+ 1634 0014 CC21     		movs	r1, #204
+ 1635 0016 0120     		movs	r0, #1
+ 1636 0018 FFF7FEFF 		bl	simpleserial_addcmd
+ 1637              	.LVL185:
+ 548:simpleserial-ml-kem-512.c ****     simpleserial_addcmd(MLKEM_SS_V21_CMD_RX, MLKEM_SS_V21_CHUNK_MAX, ml_kem_512_rx_chunk);
+ 1638              		.loc 1 548 5 view .LVU478
+ 1639 001c 254A     		ldr	r2, .L122+4
+ 1640 001e F821     		movs	r1, #248
+ 1641 0020 0220     		movs	r0, #2
+ 1642 0022 FFF7FEFF 		bl	simpleserial_addcmd
+ 1643              	.LVL186:
+ 549:simpleserial-ml-kem-512.c ****     simpleserial_addcmd(MLKEM_SS_V21_CMD_TX, 0, ml_kem_512_tx_chunk);
+ 1644              		.loc 1 549 5 view .LVU479
+ 1645 0026 244A     		ldr	r2, .L122+8
+ 1646 0028 0021     		movs	r1, #0
+ 1647 002a 0320     		movs	r0, #3
+ 1648 002c FFF7FEFF 		bl	simpleserial_addcmd
+ 1649              	.LVL187:
+ 550:simpleserial-ml-kem-512.c ****     simpleserial_addcmd(MLKEM_SS_V21_CMD_SET_CHUNK, 2, v21_set_chunk_size);
+ 1650              		.loc 1 550 5 view .LVU480
+ 1651 0030 224A     		ldr	r2, .L122+12
+ 1652 0032 0221     		movs	r1, #2
+ 1653 0034 0420     		movs	r0, #4
+ 1654 0036 FFF7FEFF 		bl	simpleserial_addcmd
+ 1655              	.LVL188:
+ 551:simpleserial-ml-kem-512.c ****     simpleserial_addcmd(MLKEM_SS_V21_CMD_RX_PK, MLKEM_SS_V21_CHUNK_MAX, v21_rx_pk_cmd);
+ 1656              		.loc 1 551 5 view .LVU481
+ 1657 003a 214A     		ldr	r2, .L122+16
+ 1658 003c F821     		movs	r1, #248
+ 1659 003e 0520     		movs	r0, #5
+ 1660 0040 FFF7FEFF 		bl	simpleserial_addcmd
+ 1661              	.LVL189:
+ 552:simpleserial-ml-kem-512.c ****     simpleserial_addcmd(MLKEM_SS_V21_CMD_TX_PK, 0, v21_tx_pk_cmd);
+ 1662              		.loc 1 552 5 view .LVU482
+ 1663 0044 1F4A     		ldr	r2, .L122+20
+ 1664 0046 0021     		movs	r1, #0
+ 1665 0048 0620     		movs	r0, #6
+ 1666 004a FFF7FEFF 		bl	simpleserial_addcmd
+ 1667              	.LVL190:
+ 553:simpleserial-ml-kem-512.c ****     simpleserial_addcmd(MLKEM_SS_V21_CMD_RX_CT, MLKEM_SS_V21_CHUNK_MAX, v21_rx_ct_cmd);
+ 1668              		.loc 1 553 5 view .LVU483
+ 1669 004e 1E4A     		ldr	r2, .L122+24
+ 1670 0050 F821     		movs	r1, #248
+ 1671 0052 0720     		movs	r0, #7
+ 1672 0054 FFF7FEFF 		bl	simpleserial_addcmd
+ 1673              	.LVL191:
+ 554:simpleserial-ml-kem-512.c ****     simpleserial_addcmd(MLKEM_SS_V21_CMD_TX_CT, 0, v21_tx_ct_cmd);
+ 1674              		.loc 1 554 5 view .LVU484
+ 1675 0058 1C4A     		ldr	r2, .L122+28
+ 1676 005a 0021     		movs	r1, #0
+ 1677 005c 0820     		movs	r0, #8
+ 1678 005e FFF7FEFF 		bl	simpleserial_addcmd
+ 1679              	.LVL192:
+ 555:simpleserial-ml-kem-512.c ****     simpleserial_addcmd(MLKEM_SS_V21_CMD_RX_SS, MLKEM_SS_V21_CHUNK_MAX, v21_rx_ss_cmd);
+ 1680              		.loc 1 555 5 view .LVU485
+ 1681 0062 1B4A     		ldr	r2, .L122+32
+ 1682 0064 F821     		movs	r1, #248
+ 1683 0066 0920     		movs	r0, #9
+ 1684 0068 FFF7FEFF 		bl	simpleserial_addcmd
+ 1685              	.LVL193:
+ 556:simpleserial-ml-kem-512.c ****     simpleserial_addcmd(MLKEM_SS_V21_CMD_TX_SS, 0, v21_tx_ss_cmd);
+ 1686              		.loc 1 556 5 view .LVU486
+ 1687 006c 194A     		ldr	r2, .L122+36
+ 1688 006e 0021     		movs	r1, #0
+ 1689 0070 0A20     		movs	r0, #10
+ 1690 0072 FFF7FEFF 		bl	simpleserial_addcmd
+ 1691              	.LVL194:
+ 557:simpleserial-ml-kem-512.c ****     simpleserial_addcmd(MLKEM_SS_V21_CMD_DECAP, 0, ml_kem_512_do_decap);
+ 1692              		.loc 1 557 5 view .LVU487
+ 1693 0076 184A     		ldr	r2, .L122+40
+ 1694 0078 0021     		movs	r1, #0
+ 1695 007a 0B20     		movs	r0, #11
+ 1696 007c FFF7FEFF 		bl	simpleserial_addcmd
+ 1697              	.LVL195:
+ 558:simpleserial-ml-kem-512.c ****     simpleserial_addcmd(MLKEM_SS_V21_CMD_CMOV_SK, 0, ml_kem_512_cmov_sk_probe);
+ 1698              		.loc 1 558 5 view .LVU488
+ 1699 0080 164A     		ldr	r2, .L122+44
+ 1700 0082 0021     		movs	r1, #0
+ 1701 0084 0C20     		movs	r0, #12
+ 1702 0086 FFF7FEFF 		bl	simpleserial_addcmd
+ 1703              	.LVL196:
+ 559:simpleserial-ml-kem-512.c ****     simpleserial_addcmd('h', 1, led_on_cmd_v21);
+ 1704              		.loc 1 559 5 view .LVU489
+ 1705 008a 154A     		ldr	r2, .L122+48
+ 1706 008c 0121     		movs	r1, #1
+ 1707 008e 6820     		movs	r0, #104
+ 1708 0090 FFF7FEFF 		bl	simpleserial_addcmd
+ 1709              	.LVL197:
+ 560:simpleserial-ml-kem-512.c ****     simpleserial_addcmd('l', 1, led_off_cmd_v21);
+ 1710              		.loc 1 560 5 view .LVU490
+ 1711 0094 134A     		ldr	r2, .L122+52
+ 1712 0096 0121     		movs	r1, #1
+ 1713 0098 6C20     		movs	r0, #108
+ 1714 009a FFF7FEFF 		bl	simpleserial_addcmd
+ 1715              	.LVL198:
+ 561:simpleserial-ml-kem-512.c ****     simpleserial_addcmd('t', 1, led_toggle_v21);
+ 1716              		.loc 1 561 5 view .LVU491
+ 1717 009e 124A     		ldr	r2, .L122+56
+ 1718 00a0 0121     		movs	r1, #1
+ 1719 00a2 7420     		movs	r0, #116
+ 1720 00a4 FFF7FEFF 		bl	simpleserial_addcmd
+ 1721              	.LVL199:
+ 1722              	.L121:
+ 562:simpleserial-ml-kem-512.c ****     #else
+ 563:simpleserial-ml-kem-512.c ****     simpleserial_addcmd('k', 16, get_key);
+ 564:simpleserial-ml-kem-512.c ****     simpleserial_addcmd('h', 1, led_on_cmd);
+ 565:simpleserial-ml-kem-512.c ****     simpleserial_addcmd('l', 1, led_off_cmd);
+ 566:simpleserial-ml-kem-512.c ****     simpleserial_addcmd('t', 1, led_toggle);
+ 567:simpleserial-ml-kem-512.c ****     #endif
+ 568:simpleserial-ml-kem-512.c **** 
+ 569:simpleserial-ml-kem-512.c ****     while(1)
+ 1723              		.loc 1 569 5 view .LVU492
+ 570:simpleserial-ml-kem-512.c ****         simpleserial_get();
+ 1724              		.loc 1 570 9 discriminator 1 view .LVU493
+ 1725 00a8 FFF7FEFF 		bl	simpleserial_get
+ 1726              	.LVL200:
+ 569:simpleserial-ml-kem-512.c ****         simpleserial_get();
+ 1727              		.loc 1 569 10 view .LVU494
+ 1728 00ac FCE7     		b	.L121
+ 1729              	.L123:
+ 1730 00ae 00BF     		.align	2
+ 1731              	.L122:
+ 1732 00b0 00000000 		.word	ml_kem_512
+ 1733 00b4 00000000 		.word	ml_kem_512_rx_chunk
+ 1734 00b8 00000000 		.word	ml_kem_512_tx_chunk
+ 1735 00bc 00000000 		.word	v21_set_chunk_size
+ 1736 00c0 00000000 		.word	v21_rx_pk_cmd
+ 1737 00c4 00000000 		.word	v21_tx_pk_cmd
+ 1738 00c8 00000000 		.word	v21_rx_ct_cmd
+ 1739 00cc 00000000 		.word	v21_tx_ct_cmd
+ 1740 00d0 00000000 		.word	v21_rx_ss_cmd
+ 1741 00d4 00000000 		.word	v21_tx_ss_cmd
+ 1742 00d8 00000000 		.word	ml_kem_512_do_decap
+ 1743 00dc 00000000 		.word	ml_kem_512_cmov_sk_probe
+ 1744 00e0 00000000 		.word	led_on_cmd_v21
+ 1745 00e4 00000000 		.word	led_off_cmd_v21
+ 1746 00e8 00000000 		.word	led_toggle_v21
+ 1747              		.cfi_endproc
+ 1748              	.LFE25:
+ 1750              		.global	ss2
+ 1751              		.global	ss
+ 1752              		.global	ct
+ 1753              		.global	sk
+ 1754              		.global	pk
+ 1755              		.data
+ 1756              		.set	.LANCHOR1,. + 0
+ 1759              	v21_chunk_sz:
+ 1760 0000 CC       		.byte	-52
+ 1761              		.bss
+ 1762              		.set	.LANCHOR0,. + 0
+ 1763              		.set	.LANCHOR2,. + 4344
+ 1766              	LED1State:
+ 1767 0000 00       		.space	1
+ 1770              	LED2State:
+ 1771 0001 00       		.space	1
+ 1774              	LED3State:
+ 1775 0002 00       		.space	1
+ 1778              	ss:
+ 1779 0003 00000000 		.space	32
+ 1779      00000000 
+ 1779      00000000 
+ 1779      00000000 
+ 1779      00000000 
+ 1782              	ct:
+ 1783 0023 00000000 		.space	768
+ 1783      00000000 
+ 1783      00000000 
+ 1783      00000000 
+ 1783      00000000 
+ 1786              	sk:
+ 1787 0323 00000000 		.space	1632
+ 1787      00000000 
+ 1787      00000000 
+ 1787      00000000 
+ 1787      00000000 
+ 1790              	pk:
+ 1791 0983 00000000 		.space	800
+ 1791      00000000 
+ 1791      00000000 
+ 1791      00000000 
+ 1791      00000000 
+ 1794              	cmov_probe_buf:
+ 1795 0ca3 00000000 		.space	1632
+ 1795      00000000 
+ 1795      00000000 
+ 1795      00000000 
+ 1795      00000000 
+ 1798              	sk_chunks_loaded:
+ 1799 1303 00       		.space	1
+ 1802              	pk_chunks_loaded:
+ 1803 1304 00       		.space	1
+ 1806              	ct_chunks_loaded:
+ 1807 1305 00       		.space	1
+ 1810              	decap_decrypted_buf:
+ 1811 1306 00000000 		.space	32
+ 1811      00000000 
+ 1811      00000000 
+ 1811      00000000 
+ 1811      00000000 
+ 1814              	decap_buf:
+ 1815 1326 00000000 		.space	64
+ 1815      00000000 
+ 1815      00000000 
+ 1815      00000000 
+ 1815      00000000 
+ 1818              	decap_kr:
+ 1819 1366 00000000 		.space	64
+ 1819      00000000 
+ 1819      00000000 
+ 1819      00000000 
+ 1819      00000000 
+ 1822              	ss_result:
+ 1823 13a6 00000000 		.space	32
+ 1823      00000000 
+ 1823      00000000 
+ 1823      00000000 
+ 1823      00000000 
+ 1826              	ss2:
+ 1827 13c6 00000000 		.space	32
+ 1827      00000000 
+ 1827      00000000 
+ 1827      00000000 
+ 1827      00000000 
+ 1828              		.text
+ 1829              	.Letext0:
+ 1830              		.file 2 "/usr/lib/gcc/arm-none-eabi/14.2.1/include/stdint.h"
+ 1831              		.file 3 "/usr/lib/gcc/arm-none-eabi/14.2.1/include/stddef.h"
+ 1832              		.file 4 "/usr/include/newlib/string.h"
+ 1833              		.file 5 ".././simpleserial/simpleserial.h"
+ 1834              		.file 6 ".././hal/stm32f3/stm32f3_hal.h"
+ 1835              		.file 7 ".././hal/hal.h"
+ 1836              		.file 8 "fips202.h"
+ 1837              		.file 9 "verify.h"
+ 1838              		.file 10 "symmetric.h"
+ 1839              		.file 11 "indcpa.h"
+ 1840              		.file 12 "<built-in>"
+DEFINED SYMBOLS
+                            *ABS*:00000000 simpleserial-ml-kem-512.c
+     /tmp/cc2pSRIE.s:19     .text.led_on_cmd_v21:00000000 $t
+     /tmp/cc2pSRIE.s:24     .text.led_on_cmd_v21:00000000 led_on_cmd_v21
+     /tmp/cc2pSRIE.s:105    .text.led_on_cmd_v21:0000002c $d
+     /tmp/cc2pSRIE.s:110    .text.led_off_cmd_v21:00000000 $t
+     /tmp/cc2pSRIE.s:115    .text.led_off_cmd_v21:00000000 led_off_cmd_v21
+     /tmp/cc2pSRIE.s:199    .text.led_off_cmd_v21:00000030 $d
+     /tmp/cc2pSRIE.s:204    .text.led_toggle_v21:00000000 $t
+     /tmp/cc2pSRIE.s:209    .text.led_toggle_v21:00000000 led_toggle_v21
+     /tmp/cc2pSRIE.s:338    .text.led_toggle_v21:00000040 $d
+     /tmp/cc2pSRIE.s:343    .text.v21_rx_vector_chunk:00000000 $t
+     /tmp/cc2pSRIE.s:348    .text.v21_rx_vector_chunk:00000000 v21_rx_vector_chunk
+     /tmp/cc2pSRIE.s:423    .text.v21_rx_vector_chunk:00000030 $d
+     /tmp/cc2pSRIE.s:428    .text.v21_rx_ss_cmd:00000000 $t
+     /tmp/cc2pSRIE.s:433    .text.v21_rx_ss_cmd:00000000 v21_rx_ss_cmd
+     /tmp/cc2pSRIE.s:476    .text.v21_rx_ss_cmd:00000018 $d
+     /tmp/cc2pSRIE.s:481    .text.v21_rx_ct_cmd:00000000 $t
+     /tmp/cc2pSRIE.s:486    .text.v21_rx_ct_cmd:00000000 v21_rx_ct_cmd
+     /tmp/cc2pSRIE.s:525    .text.v21_rx_ct_cmd:00000018 $d
+     /tmp/cc2pSRIE.s:530    .text.ml_kem_512_rx_chunk:00000000 $t
+     /tmp/cc2pSRIE.s:535    .text.ml_kem_512_rx_chunk:00000000 ml_kem_512_rx_chunk
+     /tmp/cc2pSRIE.s:574    .text.ml_kem_512_rx_chunk:00000018 $d
+     /tmp/cc2pSRIE.s:579    .text.v21_sync_pk_into_sk:00000000 $t
+     /tmp/cc2pSRIE.s:584    .text.v21_sync_pk_into_sk:00000000 v21_sync_pk_into_sk
+     /tmp/cc2pSRIE.s:620    .text.v21_sync_pk_into_sk:00000028 $d
+     /tmp/cc2pSRIE.s:625    .text.v21_rx_pk_cmd:00000000 $t
+     /tmp/cc2pSRIE.s:630    .text.v21_rx_pk_cmd:00000000 v21_rx_pk_cmd
+     /tmp/cc2pSRIE.s:683    .text.v21_rx_pk_cmd:00000020 $d
+     /tmp/cc2pSRIE.s:688    .text.v21_tx_vector_chunk:00000000 $t
+     /tmp/cc2pSRIE.s:693    .text.v21_tx_vector_chunk:00000000 v21_tx_vector_chunk
+     /tmp/cc2pSRIE.s:763    .text.v21_tx_vector_chunk:0000002c $d
+     /tmp/cc2pSRIE.s:768    .text.v21_tx_ss_cmd:00000000 $t
+     /tmp/cc2pSRIE.s:773    .text.v21_tx_ss_cmd:00000000 v21_tx_ss_cmd
+     /tmp/cc2pSRIE.s:813    .text.v21_tx_ss_cmd:00000018 $d
+     /tmp/cc2pSRIE.s:818    .text.v21_tx_ct_cmd:00000000 $t
+     /tmp/cc2pSRIE.s:823    .text.v21_tx_ct_cmd:00000000 v21_tx_ct_cmd
+     /tmp/cc2pSRIE.s:863    .text.v21_tx_ct_cmd:00000018 $d
+     /tmp/cc2pSRIE.s:868    .text.v21_tx_pk_cmd:00000000 $t
+     /tmp/cc2pSRIE.s:873    .text.v21_tx_pk_cmd:00000000 v21_tx_pk_cmd
+     /tmp/cc2pSRIE.s:913    .text.v21_tx_pk_cmd:00000018 $d
+     /tmp/cc2pSRIE.s:918    .text.ml_kem_512_tx_chunk:00000000 $t
+     /tmp/cc2pSRIE.s:923    .text.ml_kem_512_tx_chunk:00000000 ml_kem_512_tx_chunk
+     /tmp/cc2pSRIE.s:963    .text.ml_kem_512_tx_chunk:00000018 $d
+     /tmp/cc2pSRIE.s:968    .text.v21_set_chunk_size:00000000 $t
+     /tmp/cc2pSRIE.s:973    .text.v21_set_chunk_size:00000000 v21_set_chunk_size
+     /tmp/cc2pSRIE.s:1027   .text.v21_set_chunk_size:00000018 $d
+     /tmp/cc2pSRIE.s:1032   .text.ml_kem_512_cmov_sk_probe:00000000 $t
+     /tmp/cc2pSRIE.s:1037   .text.ml_kem_512_cmov_sk_probe:00000000 ml_kem_512_cmov_sk_probe
+     /tmp/cc2pSRIE.s:1111   .text.ml_kem_512_cmov_sk_probe:0000003c $d
+     /tmp/cc2pSRIE.s:1117   .text.ml_kem_512:00000000 $t
+     /tmp/cc2pSRIE.s:1123   .text.ml_kem_512:00000000 ml_kem_512
+     /tmp/cc2pSRIE.s:1406   .text.ml_kem_512:000000d0 $d
+     /tmp/cc2pSRIE.s:1417   .text.ml_kem_512_decap:00000000 $t
+     /tmp/cc2pSRIE.s:1423   .text.ml_kem_512_decap:00000000 ml_kem_512_decap
+     /tmp/cc2pSRIE.s:1515   .text.ml_kem_512_decap:00000078 $d
+     /tmp/cc2pSRIE.s:1527   .text.ml_kem_512_do_decap:00000000 $t
+     /tmp/cc2pSRIE.s:1532   .text.ml_kem_512_do_decap:00000000 ml_kem_512_do_decap
+     /tmp/cc2pSRIE.s:1594   .text.ml_kem_512_do_decap:00000020 $d
+     /tmp/cc2pSRIE.s:1600   .text.startup.main:00000000 $t
+     /tmp/cc2pSRIE.s:1606   .text.startup.main:00000000 main
+     /tmp/cc2pSRIE.s:1732   .text.startup.main:000000b0 $d
+     /tmp/cc2pSRIE.s:1826   .bss:000013c6 ss2
+     /tmp/cc2pSRIE.s:1778   .bss:00000003 ss
+     /tmp/cc2pSRIE.s:1782   .bss:00000023 ct
+     /tmp/cc2pSRIE.s:1786   .bss:00000323 sk
+     /tmp/cc2pSRIE.s:1790   .bss:00000983 pk
+     /tmp/cc2pSRIE.s:1759   .data:00000000 v21_chunk_sz
+     /tmp/cc2pSRIE.s:1766   .bss:00000000 LED1State
+     /tmp/cc2pSRIE.s:1767   .bss:00000000 $d
+     /tmp/cc2pSRIE.s:1770   .bss:00000001 LED2State
+     /tmp/cc2pSRIE.s:1774   .bss:00000002 LED3State
+     /tmp/cc2pSRIE.s:1794   .bss:00000ca3 cmov_probe_buf
+     /tmp/cc2pSRIE.s:1798   .bss:00001303 sk_chunks_loaded
+     /tmp/cc2pSRIE.s:1802   .bss:00001304 pk_chunks_loaded
+     /tmp/cc2pSRIE.s:1806   .bss:00001305 ct_chunks_loaded
+     /tmp/cc2pSRIE.s:1810   .bss:00001306 decap_decrypted_buf
+     /tmp/cc2pSRIE.s:1814   .bss:00001326 decap_buf
+     /tmp/cc2pSRIE.s:1818   .bss:00001366 decap_kr
+     /tmp/cc2pSRIE.s:1822   .bss:000013a6 ss_result
+
+UNDEFINED SYMBOLS
+memcpy
+sha3_256
+simpleserial_put
+trigger_high
+memset
+PQCLEAN_MLKEM512_CLEAN_cmov
+trigger_low
+PQCLEAN_MLKEM512_CLEAN_indcpa_dec
+sha3_512
+PQCLEAN_MLKEM512_CLEAN_verify
+PQCLEAN_MLKEM512_CLEAN_kyber_shake256_rkprf
+platform_init
+init_uart
+trigger_setup
+simpleserial_init
+simpleserial_addcmd
+simpleserial_get

@@ -20,10 +20,15 @@
 #include "simpleserial.h"
 #include <stdint.h>
 #include <stdlib.h>
-
-/* SAM4S GPIO includes for LED control */
+/* GPIO: SAM (ASF) vs otros (STM32, AVR, etc.) */
+#if defined(__SAM4LS4C__) || defined(__SAM4LS4B__) || defined(__SAM4S__) || defined(__SAM4S2B__)
 #include "pio.h"
 #include "gpio.h"
+#else
+/* Stubs para plataformas sin ASF (STM32, AVR, etc.) */
+#define gpio_set_pin_high(pin) do { (void)(pin); } while(0)
+#define gpio_set_pin_low(pin)  do { (void)(pin); } while(0)
+#endif
 
 /* ML-KEM-512 includes */
 #include "indcpa.h"
@@ -35,11 +40,6 @@
 #include <stddef.h>
 #include <stdint.h>
 #include <string.h>
-
-//uint8_t pk[PQCLEAN_MLKEM512_CLEAN_CRYPTO_PUBLICKEYBYTES];
-//uint8_t sk[PQCLEAN_MLKEM512_CLEAN_CRYPTO_SECRETKEYBYTES];
-//uint8_t ct[PQCLEAN_MLKEM512_CLEAN_CRYPTO_CIPHERTEXTBYTES];
-//uint8_t ss[PQCLEAN_MLKEM512_CLEAN_CRYPTO_BYTES];
 
 uint8_t pk[KYBER_PUBLICKEYBYTES] = {0};
 
@@ -55,6 +55,7 @@ static uint8_t ss_result[KYBER_SSBYTES];
 static uint8_t decap_buf[2 * KYBER_SYMBYTES];
 static uint8_t decap_kr[2 * KYBER_SYMBYTES];
 static uint8_t decap_decrypted_buf[KYBER_SYMBYTES];
+static uint8_t cmov_probe_buf[KYBER_SECRETKEYBYTES];
 
 #if SS_VER == SS_VER_2_1
 #define MLKEM_SS_V21_CMD         0x01
@@ -67,10 +68,12 @@ static uint8_t decap_decrypted_buf[KYBER_SYMBYTES];
 #define MLKEM_SS_V21_CMD_TX_CT   0x08
 #define MLKEM_SS_V21_CMD_RX_SS   0x09
 #define MLKEM_SS_V21_CMD_TX_SS   0x0A
+#define MLKEM_SS_V21_CMD_DECAP   0x0B
+#define MLKEM_SS_V21_CMD_CMOV_SK 0x0C
 #define MLKEM_SS_V21_CHUNK_SK    204u
 #define MLKEM_SS_V21_CHUNK_PK    200u
 #define MLKEM_SS_V21_CHUNK_CT    192u
-#define MLKEM_SS_V21_CHUNK_MAX   249u
+#define MLKEM_SS_V21_CHUNK_MAX   248u
 #define MLKEM_SS_V21_SK_CHUNKS   8u
 #define MLKEM_SS_V21_PK_CHUNKS   4u
 #define MLKEM_SS_V21_CT_CHUNKS   4u
@@ -93,109 +96,75 @@ static uint8_t ss_loaded = 0;
 static uint8_t v21_chunk_sz = MLKEM_SS_V21_CHUNK_SK;
 #endif
 
-/*Led functions*/
-/* LED Control Functions for CW313/SAM4S (CWHUSKY)
-   Pins: 14, 15, 16 correspond to LED3, LED2, LED1 on the board */
-/* Using direct pin numbers instead of PIO_PA*_IDX to avoid header issues */
-#define LED1    16  /* Pin 16 on port A */
-#define LED2    15  /* Pin 15 on port A */
-#define LED3    14  /* Pin 14 on port A */
+/* LED GPIO utilities kept as generic board controls (not tied to ML-KEM flow). */
+#define LED1    16
+#define LED2    15
+#define LED3    14
 
-/* LED State variables to track on/off status */
-static volatile uint8_t LED1State = 0;  /* 0 = off, 1 = on */
+static volatile uint8_t LED1State = 0;
 static volatile uint8_t LED2State = 0;
 static volatile uint8_t LED3State = 0;
 
-/* function to delay almost a second */
-static void delay_seconds(uint32_t seconds)
+static uint8_t led_on_cmd(uint8_t* m, uint8_t len)
 {
-    const uint32_t loops_per_sec = 7000000u;
-    for (uint32_t s = 0; s < seconds; s++) {
-        for (volatile uint32_t i = 0; i < loops_per_sec; i++) {
-            __asm__ volatile ("nop");
-        }
+    int led;
+
+    if (len != 1u) {
+        return SS_ERR_LEN;
     }
+
+    led = m[0];
+    gpio_set_pin_high(led);
+    if (led == LED1) LED1State = 1;
+    else if (led == LED2) LED2State = 1;
+    else if (led == LED3) LED3State = 1;
+    return 0;
 }
 
-uint8_t led_toggle(uint8_t* m, uint8_t len){
-    int led = m[0];  // Get LED number from input byte (14=LED3, 15=LED2, 16=LED1)
-    uint8_t current_state = 0;
-    
-    // Get current state
-    if(led == LED1) current_state = LED1State;
-    else if(led == LED2) current_state = LED2State;
-    else if(led == LED3) current_state = LED3State;
-    
-    // Toggle: if on, turn off; if off, turn on
-    if(current_state == 1){
+static uint8_t led_off_cmd(uint8_t* m, uint8_t len)
+{
+    int led;
+
+    if (len != 1u) {
+        return SS_ERR_LEN;
+    }
+
+    led = m[0];
+    gpio_set_pin_low(led);
+    if (led == LED1) LED1State = 0;
+    else if (led == LED2) LED2State = 0;
+    else if (led == LED3) LED3State = 0;
+    return 0;
+}
+
+static uint8_t led_toggle(uint8_t* m, uint8_t len)
+{
+    int led;
+    uint8_t state = 0;
+
+    if (len != 1u) {
+        return SS_ERR_LEN;
+    }
+
+    led = m[0];
+    if (led == LED1) state = LED1State;
+    else if (led == LED2) state = LED2State;
+    else if (led == LED3) state = LED3State;
+
+    if (state) {
         gpio_set_pin_low(led);
-        if(led == LED1) LED1State = 0;
-        else if(led == LED2) LED2State = 0;
-        else if(led == LED3) LED3State = 0;
+        if (led == LED1) LED1State = 0;
+        else if (led == LED2) LED2State = 0;
+        else if (led == LED3) LED3State = 0;
     } else {
         gpio_set_pin_high(led);
-        if(led == LED1) LED1State = 1;
-        else if(led == LED2) LED2State = 1;
-        else if(led == LED3) LED3State = 1;
+        if (led == LED1) LED1State = 1;
+        else if (led == LED2) LED2State = 1;
+        else if (led == LED3) LED3State = 1;
     }
-    
+
     return 0;
 }
-
-// Serial command callbacks for LED control
-uint8_t led_on_cmd(uint8_t* m, uint8_t len){
-    int led = m[0];  // Get LED number from input byte
-    gpio_set_pin_high(led);
-    if(led == LED1) LED1State = 1;
-    else if(led == LED2) LED2State = 1;
-    else if(led == LED3) LED3State = 1;
-    return 0;
-}
-
-uint8_t led_off_cmd(uint8_t* m, uint8_t len){
-    int led = m[0];  // Get LED number from input byte
-    gpio_set_pin_low(led);
-    if(led == LED1) LED1State = 0;
-    else if(led == LED2) LED2State = 0;
-    else if(led == LED3) LED3State = 0;
-    return 0;
-}
-
-// Helper functions for direct LED control in code (not via serial)
-void led_on(int led) {
-    gpio_set_pin_high(led);
-    if(led == LED1) LED1State = 1;
-    else if(led == LED2) LED2State = 1;
-    else if(led == LED3) LED3State = 1;
-}
-
-void led_off(int led) {
-    gpio_set_pin_low(led);
-    if(led == LED1) LED1State = 0;
-    else if(led == LED2) LED2State = 0;
-    else if(led == LED3) LED3State = 0;
-}
-
-static void set_led_pattern(uint8_t led1_on, uint8_t led2_on, uint8_t led3_on)
-{
-    if (led1_on) led_on(LED1);
-    else led_off(LED1);
-
-    if (led2_on) led_on(LED2);
-    else led_off(LED2);
-
-    if (led3_on) led_on(LED3);
-    else led_off(LED3);
-}
-
-// Get LED state - returns 1 if LED is on, 0 if off
-uint8_t get_led_state(int led) {
-    if(led == LED1) return LED1State;
-    else if(led == LED2) return LED2State;
-    else if(led == LED3) return LED3State;
-    return 0;
-}
-/*Led functions done*/
 
 /* ML-KEM-512 Decapsulation: Complete with indcpa_dec, hash_g, verify, cmov */
 uint8_t ml_kem_512_decap(uint8_t* k, uint8_t len)
@@ -203,10 +172,7 @@ uint8_t ml_kem_512_decap(uint8_t* k, uint8_t len)
     int fail;  /* Global fail variable for cmov comparison */
     (void)k;
     (void)len;
-    
-    set_led_pattern(1, 0, 0);  /* Stage 1: entering indcpa_dec */
-    
-    
+
     /* Decrypt ciphertext using secret key */
     PQCLEAN_MLKEM512_CLEAN_indcpa_dec(decap_decrypted_buf, ct, sk);
     
@@ -216,32 +182,25 @@ uint8_t ml_kem_512_decap(uint8_t* k, uint8_t len)
     
     /* Compute hash_g(kr, buf, 2 * KYBER_SYMBYTES) */
     hash_g(decap_kr, decap_buf, 2 * KYBER_SYMBYTES);
-    
-    set_led_pattern(0, 1, 0);  /* Stage 2: hash_g done */
-    
+
     /* coins are in kr+KYBER_SYMBYTES */
     //PQCLEAN_MLKEM512_CLEAN_indcpa_enc(cmp, decrypted_buf, pk, kr + KYBER_SYMBYTES);
-    
+
     /* Verify: compare input ct with re-encrypted cmp */
-    set_led_pattern(1, 1, 0);  /* Stage 3: entering verify */
     fail = PQCLEAN_MLKEM512_CLEAN_verify(ct, ct, KYBER_CIPHERTEXTBYTES);
-    
+
     /* Compute rejection key for invalid ciphertexts */
-    set_led_pattern(0, 1, 1);  /* Stage 4: entering rkprf */
     rkprf(ss_result, sk + KYBER_SECRETKEYBYTES - KYBER_SYMBYTES, ct);
 
-    set_led_pattern(1, 0, 1);  /* Stage 5: entering cmov */
-    
     /* CONDITIONAL MOVE: Copy true key if fail==0 (valid), else keep rejection key */
     trigger_high();
     PQCLEAN_MLKEM512_CLEAN_cmov(ss_result, decap_kr, KYBER_SYMBYTES, (uint8_t)(1 - fail));
     trigger_low();
 
-    set_led_pattern(0, 0, 1);  /* Stage 6: decap finished */
-    
     /* Send shared secret back */
+    /* (gpio_set_pin_high(LED1) removido: trigger_high/low ya marcan la ventana) */
     //simpleserial_put('r', PQCLEAN_MLKEM512_CLEAN_CRYPTO_BYTES, ss);
-    
+
 	return 0x00;
 }
 
@@ -486,9 +445,6 @@ static uint8_t led_on_cmd_v21(uint8_t cmd, uint8_t scmd, uint8_t len, uint8_t *b
 {
     (void)cmd;
     (void)scmd;
-    if (len != 1) {
-        return SS_ERR_LEN;
-    }
     return led_on_cmd(buf, len);
 }
 
@@ -496,9 +452,6 @@ static uint8_t led_off_cmd_v21(uint8_t cmd, uint8_t scmd, uint8_t len, uint8_t *
 {
     (void)cmd;
     (void)scmd;
-    if (len != 1) {
-        return SS_ERR_LEN;
-    }
     return led_off_cmd(buf, len);
 }
 
@@ -506,10 +459,47 @@ static uint8_t led_toggle_v21(uint8_t cmd, uint8_t scmd, uint8_t len, uint8_t *b
 {
     (void)cmd;
     (void)scmd;
-    if (len != 1) {
+    return led_toggle(buf, len);
+}
+
+static uint8_t ml_kem_512_do_decap(uint8_t cmd, uint8_t scmd, uint8_t len, uint8_t *buf)
+{
+    uint8_t err;
+    (void)cmd; (void)scmd; (void)buf;
+    if (len != 0) return SS_ERR_LEN;
+    /* No bitmask check: the rx commands (0x05/0x07/0x09) use v21_rx_vector_chunk
+     * which does not update chunk_loaded bitmasks. If vectors are unloaded the
+     * verify at the end will return 0x01 (mismatch), which is the correct result. */
+    err = ml_kem_512_decap(NULL, 0);
+    if (err != SS_ERR_OK) return err;
+    return PQCLEAN_MLKEM512_CLEAN_verify(ss, ss_result, KYBER_SSBYTES);
+}
+
+static uint8_t ml_kem_512_cmov_sk_probe(uint8_t cmd, uint8_t scmd, uint8_t len, uint8_t *buf)
+{
+    uint8_t repeat;
+
+    (void)cmd;
+    (void)scmd;
+    (void)buf;
+
+    if (len != 0u) {
         return SS_ERR_LEN;
     }
-    return led_toggle(buf, len);
+
+    /*
+     * Dedicated leakage probe: copy the complete secret key with cmov under a
+     * single trigger so the capture covers the whole operation, not only a
+     * narrow window around the no-fail decapsulation path.
+     */
+    trigger_high();
+    for (repeat = 0; repeat < 4u; repeat++) {
+        memset(cmov_probe_buf, 0, sizeof(cmov_probe_buf));
+        PQCLEAN_MLKEM512_CLEAN_cmov(cmov_probe_buf, sk, sizeof(sk), 1u);
+    }
+    trigger_low();
+
+    return SS_ERR_OK;
 }
 
 uint8_t ml_kem_512(uint8_t cmd, uint8_t scmd, uint8_t len, uint8_t *buf)
@@ -523,84 +513,39 @@ uint8_t ml_kem_512(uint8_t cmd, uint8_t scmd, uint8_t len, uint8_t *buf)
         return err;
     }
 
-    if (scmd == MLKEM_SS_V21_SCMD_DECAP) {
-        if (len != 0) {
-            return SS_ERR_LEN;
-        }
-        if ((sk_chunks_loaded != MLKEM_SS_V21_SK_MASK) ||
-            (pk_chunks_loaded != MLKEM_SS_V21_PK_MASK) ||
-            (ct_chunks_loaded != MLKEM_SS_V21_CT_MASK) ||
-            (ss_loaded == 0)) {
-            return SS_ERR_LEN;
-        }
-        err = ml_kem_512_decap(NULL, 0);
-        if (err != SS_ERR_OK) {
-            return err;
-        }
-        return PQCLEAN_MLKEM512_CLEAN_verify(ss, ss_result, KYBER_SSBYTES);
-    }
-
     return SS_ERR_CMD;
 }
 
 static uint8_t ml_kem_512_rx_chunk(uint8_t cmd, uint8_t scmd, uint8_t len, uint8_t *buf)
 {
     (void)cmd;
-    return v21_handle_vector_write(scmd, len, buf);
+    return v21_rx_vector_chunk(sk, sizeof(sk), scmd, len, buf);
 }
 
 static uint8_t ml_kem_512_tx_chunk(uint8_t cmd, uint8_t scmd, uint8_t len, uint8_t *buf)
 {
-    const uint8_t *src;
-    uint8_t out_len;
-    uint8_t err;
-
     (void)cmd;
     (void)buf;
-
-    if (len != 0) {
-        return SS_ERR_LEN;
-    }
-
-    err = v21_readback_bounds(scmd, &src, &out_len);
-    if (err != SS_ERR_OK) {
-        return err;
-    }
-
-    simpleserial_put('k', out_len, src);
-    return SS_ERR_OK;
+    return v21_tx_vector_chunk('k', sk, sizeof(sk), scmd, len);
 }
 #endif
 
 int main(void)
 {
-    /* Setup the LEDs */
+    platform_init();
+#if defined(__SAM4LS4C__) || defined(__SAM4LS4B__) || defined(__SAM4S__) || defined(__SAM4S2B__)
     gpio_configure_pin(LED1, PIO_OUTPUT_0 | PIO_DEFAULT);
     gpio_configure_pin(LED2, PIO_OUTPUT_0 | PIO_DEFAULT);
     gpio_configure_pin(LED3, PIO_OUTPUT_0 | PIO_DEFAULT);
-
-    platform_init();
+#endif
     init_uart();
     trigger_setup();
 
 	simpleserial_init();
 
-    /* Indicate startup */
-    gpio_set_pin_high(LED1);
-    gpio_set_pin_high(LED2);
-    gpio_set_pin_high(LED3);
-
-    delay_seconds(1);        //Wait for a second to make sure the user can see the LEDs turn on
-
-    /*now turn off the leds */
-    /*tur off the leds with the funcion led_off */
-    led_off(LED1); //Turn on LED1 using led_on function
-    led_off(LED2); //Turn on LED2 using led_on function
-    led_off(LED3); //Turn on LED3 using led_on function
-
     #if SS_VER == SS_VER_2_1
     simpleserial_addcmd(MLKEM_SS_V21_CMD, MLKEM_SS_V21_CHUNK_SK, ml_kem_512);
-    simpleserial_addcmd(MLKEM_SS_V21_CMD_RX, MLKEM_SS_V21_CHUNK_SK, ml_kem_512_rx_chunk);
+    simpleserial_addcmd(MLKEM_SS_V21_CMD_RX, MLKEM_SS_V21_CHUNK_MAX, ml_kem_512_rx_chunk);
     simpleserial_addcmd(MLKEM_SS_V21_CMD_TX, 0, ml_kem_512_tx_chunk);
     simpleserial_addcmd(MLKEM_SS_V21_CMD_SET_CHUNK, 2, v21_set_chunk_size);
     simpleserial_addcmd(MLKEM_SS_V21_CMD_RX_PK, MLKEM_SS_V21_CHUNK_MAX, v21_rx_pk_cmd);
@@ -609,6 +554,8 @@ int main(void)
     simpleserial_addcmd(MLKEM_SS_V21_CMD_TX_CT, 0, v21_tx_ct_cmd);
     simpleserial_addcmd(MLKEM_SS_V21_CMD_RX_SS, MLKEM_SS_V21_CHUNK_MAX, v21_rx_ss_cmd);
     simpleserial_addcmd(MLKEM_SS_V21_CMD_TX_SS, 0, v21_tx_ss_cmd);
+    simpleserial_addcmd(MLKEM_SS_V21_CMD_DECAP, 0, ml_kem_512_do_decap);
+    simpleserial_addcmd(MLKEM_SS_V21_CMD_CMOV_SK, 0, ml_kem_512_cmov_sk_probe);
     simpleserial_addcmd('h', 1, led_on_cmd_v21);
     simpleserial_addcmd('l', 1, led_off_cmd_v21);
     simpleserial_addcmd('t', 1, led_toggle_v21);
@@ -618,6 +565,10 @@ int main(void)
     simpleserial_addcmd('l', 1, led_off_cmd);
     simpleserial_addcmd('t', 1, led_toggle);
     #endif
+
+    gpio_set_pin_low(LED2);
+    gpio_set_pin_low(LED1);
+    gpio_set_pin_low(LED3);
 
     while(1)
         simpleserial_get();

@@ -1,0 +1,322 @@
+   1              		.cpu cortex-m4
+   2              		.arch armv7e-m
+   3              		.fpu softvfp
+   4              		.eabi_attribute 20, 1
+   5              		.eabi_attribute 21, 1
+   6              		.eabi_attribute 23, 3
+   7              		.eabi_attribute 24, 1
+   8              		.eabi_attribute 25, 1
+   9              		.eabi_attribute 26, 1
+  10              		.eabi_attribute 30, 4
+  11              		.eabi_attribute 34, 1
+  12              		.eabi_attribute 18, 4
+  13              		.file	"symmetric-shake.c"
+  14              		.text
+  15              	.Ltext0:
+  16              		.cfi_sections	.debug_frame
+  17              		.file 1 "symmetric-shake.c"
+  18              		.section	.text.PQCLEAN_MLKEM512_CLEAN_kyber_shake128_absorb,"ax",%progbits
+  19              		.align	1
+  20              		.global	PQCLEAN_MLKEM512_CLEAN_kyber_shake128_absorb
+  21              		.syntax unified
+  22              		.thumb
+  23              		.thumb_func
+  25              	PQCLEAN_MLKEM512_CLEAN_kyber_shake128_absorb:
+  26              	.LVL0:
+  27              	.LFB0:
+   1:symmetric-shake.c **** #include "fips202.h"
+   2:symmetric-shake.c **** #include "params.h"
+   3:symmetric-shake.c **** #include "symmetric.h"
+   4:symmetric-shake.c **** #include <stddef.h>
+   5:symmetric-shake.c **** #include <stdint.h>
+   6:symmetric-shake.c **** #include <string.h>
+   7:symmetric-shake.c **** 
+   8:symmetric-shake.c **** /*************************************************
+   9:symmetric-shake.c **** * Name:        PQCLEAN_MLKEM512_CLEAN_kyber_shake128_absorb
+  10:symmetric-shake.c **** *
+  11:symmetric-shake.c **** * Description: Absorb step of the SHAKE128 specialized for the Kyber context.
+  12:symmetric-shake.c **** *
+  13:symmetric-shake.c **** * Arguments:   - xof_state *state: pointer to (uninitialized) output Keccak state
+  14:symmetric-shake.c **** *              - const uint8_t *seed: pointer to KYBER_SYMBYTES input to be absorbed into state
+  15:symmetric-shake.c **** *              - uint8_t i: additional byte of input
+  16:symmetric-shake.c **** *              - uint8_t j: additional byte of input
+  17:symmetric-shake.c **** **************************************************/
+  18:symmetric-shake.c **** void PQCLEAN_MLKEM512_CLEAN_kyber_shake128_absorb(xof_state *state,
+  19:symmetric-shake.c ****         const uint8_t seed[KYBER_SYMBYTES],
+  20:symmetric-shake.c ****         uint8_t x,
+  21:symmetric-shake.c ****         uint8_t y) {
+  28              		.loc 1 21 20 view -0
+  29              		.cfi_startproc
+  30              		@ args = 0, pretend = 0, frame = 40
+  31              		@ frame_needed = 0, uses_anonymous_args = 0
+  22:symmetric-shake.c ****     uint8_t extseed[KYBER_SYMBYTES + 2];
+  32              		.loc 1 22 5 view .LVU1
+  23:symmetric-shake.c **** 
+  24:symmetric-shake.c ****     memcpy(extseed, seed, KYBER_SYMBYTES);
+  33              		.loc 1 24 5 view .LVU2
+  21:symmetric-shake.c ****     uint8_t extseed[KYBER_SYMBYTES + 2];
+  34              		.loc 1 21 20 is_stmt 0 view .LVU3
+  35 0000 F0B5     		push	{r4, r5, r6, r7, lr}
+  36              	.LCFI0:
+  37              		.cfi_def_cfa_offset 20
+  38              		.cfi_offset 4, -20
+  39              		.cfi_offset 5, -16
+  40              		.cfi_offset 6, -12
+  41              		.cfi_offset 7, -8
+  42              		.cfi_offset 14, -4
+  43 0002 8BB0     		sub	sp, sp, #44
+  44              	.LCFI1:
+  45              		.cfi_def_cfa_offset 64
+  21:symmetric-shake.c ****     uint8_t extseed[KYBER_SYMBYTES + 2];
+  46              		.loc 1 21 20 view .LVU4
+  47 0004 0646     		mov	r6, r0
+  48              		.loc 1 24 5 view .LVU5
+  49 0006 0C46     		mov	r4, r1
+  50 0008 01AF     		add	r7, sp, #4
+  51 000a 01F1200C 		add	ip, r1, #32
+  52              	.LVL1:
+  53              	.L2:
+  54              		.loc 1 24 5 view .LVU6
+  55 000e 2068     		ldr	r0, [r4]	@ unaligned
+  56 0010 6168     		ldr	r1, [r4, #4]	@ unaligned
+  57 0012 3D46     		mov	r5, r7
+  58 0014 03C5     		stmia	r5!, {r0, r1}
+  59 0016 0834     		adds	r4, r4, #8
+  60 0018 6445     		cmp	r4, ip
+  61 001a 2F46     		mov	r7, r5
+  62 001c F7D1     		bne	.L2
+  25:symmetric-shake.c ****     extseed[KYBER_SYMBYTES + 0] = x;
+  63              		.loc 1 25 5 is_stmt 1 view .LVU7
+  64              		.loc 1 25 33 is_stmt 0 view .LVU8
+  65 001e 8DF82420 		strb	r2, [sp, #36]
+  26:symmetric-shake.c ****     extseed[KYBER_SYMBYTES + 1] = y;
+  66              		.loc 1 26 5 is_stmt 1 view .LVU9
+  27:symmetric-shake.c **** 
+  28:symmetric-shake.c ****     shake128_absorb(state, extseed, sizeof(extseed));
+  67              		.loc 1 28 5 is_stmt 0 view .LVU10
+  68 0022 01A9     		add	r1, sp, #4
+  69 0024 2222     		movs	r2, #34
+  70              	.LVL2:
+  71              		.loc 1 28 5 view .LVU11
+  72 0026 3046     		mov	r0, r6
+  26:symmetric-shake.c ****     extseed[KYBER_SYMBYTES + 1] = y;
+  73              		.loc 1 26 33 view .LVU12
+  74 0028 8DF82530 		strb	r3, [sp, #37]
+  75              		.loc 1 28 5 is_stmt 1 view .LVU13
+  76 002c FFF7FEFF 		bl	shake128_absorb
+  77              	.LVL3:
+  29:symmetric-shake.c **** }
+  78              		.loc 1 29 1 is_stmt 0 view .LVU14
+  79 0030 0BB0     		add	sp, sp, #44
+  80              	.LCFI2:
+  81              		.cfi_def_cfa_offset 20
+  82              		@ sp needed
+  83 0032 F0BD     		pop	{r4, r5, r6, r7, pc}
+  84              		.loc 1 29 1 view .LVU15
+  85              		.cfi_endproc
+  86              	.LFE0:
+  88              		.section	.text.PQCLEAN_MLKEM512_CLEAN_kyber_shake256_prf,"ax",%progbits
+  89              		.align	1
+  90              		.global	PQCLEAN_MLKEM512_CLEAN_kyber_shake256_prf
+  91              		.syntax unified
+  92              		.thumb
+  93              		.thumb_func
+  95              	PQCLEAN_MLKEM512_CLEAN_kyber_shake256_prf:
+  96              	.LVL4:
+  97              	.LFB1:
+  30:symmetric-shake.c **** 
+  31:symmetric-shake.c **** /*************************************************
+  32:symmetric-shake.c **** * Name:        PQCLEAN_MLKEM512_CLEAN_kyber_shake256_prf
+  33:symmetric-shake.c **** *
+  34:symmetric-shake.c **** * Description: Usage of SHAKE256 as a PRF, concatenates secret and public input
+  35:symmetric-shake.c **** *              and then generates outlen bytes of SHAKE256 output
+  36:symmetric-shake.c **** *
+  37:symmetric-shake.c **** * Arguments:   - uint8_t *out: pointer to output
+  38:symmetric-shake.c **** *              - size_t outlen: number of requested output bytes
+  39:symmetric-shake.c **** *              - const uint8_t *key: pointer to the key (of length KYBER_SYMBYTES)
+  40:symmetric-shake.c **** *              - uint8_t nonce: single-byte nonce (public PRF input)
+  41:symmetric-shake.c **** **************************************************/
+  42:symmetric-shake.c **** void PQCLEAN_MLKEM512_CLEAN_kyber_shake256_prf(uint8_t *out, size_t outlen, const uint8_t key[KYBER
+  98              		.loc 1 42 127 is_stmt 1 view -0
+  99              		.cfi_startproc
+ 100              		@ args = 0, pretend = 0, frame = 40
+ 101              		@ frame_needed = 0, uses_anonymous_args = 0
+  43:symmetric-shake.c ****     uint8_t extkey[KYBER_SYMBYTES + 1];
+ 102              		.loc 1 43 5 view .LVU17
+  44:symmetric-shake.c **** 
+  45:symmetric-shake.c ****     memcpy(extkey, key, KYBER_SYMBYTES);
+ 103              		.loc 1 45 5 view .LVU18
+  42:symmetric-shake.c ****     uint8_t extkey[KYBER_SYMBYTES + 1];
+ 104              		.loc 1 42 127 is_stmt 0 view .LVU19
+ 105 0000 F0B5     		push	{r4, r5, r6, r7, lr}
+ 106              	.LCFI3:
+ 107              		.cfi_def_cfa_offset 20
+ 108              		.cfi_offset 4, -20
+ 109              		.cfi_offset 5, -16
+ 110              		.cfi_offset 6, -12
+ 111              		.cfi_offset 7, -8
+ 112              		.cfi_offset 14, -4
+ 113 0002 8BB0     		sub	sp, sp, #44
+ 114              	.LCFI4:
+ 115              		.cfi_def_cfa_offset 64
+  42:symmetric-shake.c ****     uint8_t extkey[KYBER_SYMBYTES + 1];
+ 116              		.loc 1 42 127 view .LVU20
+ 117 0004 0546     		mov	r5, r0
+ 118 0006 0E46     		mov	r6, r1
+ 119              		.loc 1 45 5 view .LVU21
+ 120 0008 01AF     		add	r7, sp, #4
+ 121 000a 02F1200C 		add	ip, r2, #32
+ 122              	.LVL5:
+ 123              	.L5:
+ 124              		.loc 1 45 5 view .LVU22
+ 125 000e 1068     		ldr	r0, [r2]	@ unaligned
+ 126 0010 5168     		ldr	r1, [r2, #4]	@ unaligned
+ 127 0012 3C46     		mov	r4, r7
+ 128 0014 03C4     		stmia	r4!, {r0, r1}
+ 129 0016 0832     		adds	r2, r2, #8
+ 130 0018 6245     		cmp	r2, ip
+ 131 001a 2746     		mov	r7, r4
+ 132 001c F7D1     		bne	.L5
+  46:symmetric-shake.c ****     extkey[KYBER_SYMBYTES] = nonce;
+ 133              		.loc 1 46 5 is_stmt 1 view .LVU23
+ 134              		.loc 1 46 28 is_stmt 0 view .LVU24
+ 135 001e 8DF82430 		strb	r3, [sp, #36]
+  47:symmetric-shake.c **** 
+  48:symmetric-shake.c ****     shake256(out, outlen, extkey, sizeof(extkey));
+ 136              		.loc 1 48 5 is_stmt 1 view .LVU25
+ 137 0022 01AA     		add	r2, sp, #4
+ 138 0024 2123     		movs	r3, #33
+ 139              	.LVL6:
+ 140              		.loc 1 48 5 is_stmt 0 view .LVU26
+ 141 0026 3146     		mov	r1, r6
+ 142 0028 2846     		mov	r0, r5
+ 143 002a FFF7FEFF 		bl	shake256
+ 144              	.LVL7:
+  49:symmetric-shake.c **** }
+ 145              		.loc 1 49 1 view .LVU27
+ 146 002e 0BB0     		add	sp, sp, #44
+ 147              	.LCFI5:
+ 148              		.cfi_def_cfa_offset 20
+ 149              		@ sp needed
+ 150 0030 F0BD     		pop	{r4, r5, r6, r7, pc}
+ 151              		.loc 1 49 1 view .LVU28
+ 152              		.cfi_endproc
+ 153              	.LFE1:
+ 155              		.section	.text.PQCLEAN_MLKEM512_CLEAN_kyber_shake256_rkprf,"ax",%progbits
+ 156              		.align	1
+ 157              		.global	PQCLEAN_MLKEM512_CLEAN_kyber_shake256_rkprf
+ 158              		.syntax unified
+ 159              		.thumb
+ 160              		.thumb_func
+ 162              	PQCLEAN_MLKEM512_CLEAN_kyber_shake256_rkprf:
+ 163              	.LVL8:
+ 164              	.LFB2:
+  50:symmetric-shake.c **** 
+  51:symmetric-shake.c **** /*************************************************
+  52:symmetric-shake.c **** * Name:        PQCLEAN_MLKEM512_CLEAN_kyber_shake256_prf
+  53:symmetric-shake.c **** *
+  54:symmetric-shake.c **** * Description: Usage of SHAKE256 as a PRF, concatenates secret and public input
+  55:symmetric-shake.c **** *              and then generates outlen bytes of SHAKE256 output
+  56:symmetric-shake.c **** *
+  57:symmetric-shake.c **** * Arguments:   - uint8_t *out: pointer to output
+  58:symmetric-shake.c **** *              - size_t outlen: number of requested output bytes
+  59:symmetric-shake.c **** *              - const uint8_t *key: pointer to the key (of length KYBER_SYMBYTES)
+  60:symmetric-shake.c **** *              - uint8_t nonce: single-byte nonce (public PRF input)
+  61:symmetric-shake.c **** **************************************************/
+  62:symmetric-shake.c **** void PQCLEAN_MLKEM512_CLEAN_kyber_shake256_rkprf(uint8_t out[KYBER_SSBYTES], const uint8_t key[KYBE
+ 165              		.loc 1 62 157 is_stmt 1 view -0
+ 166              		.cfi_startproc
+ 167              		@ args = 0, pretend = 0, frame = 8
+ 168              		@ frame_needed = 0, uses_anonymous_args = 0
+  63:symmetric-shake.c ****     shake256incctx s;
+ 169              		.loc 1 63 5 view .LVU30
+  64:symmetric-shake.c **** 
+  65:symmetric-shake.c ****     shake256_inc_init(&s);
+ 170              		.loc 1 65 5 view .LVU31
+  62:symmetric-shake.c ****     shake256incctx s;
+ 171              		.loc 1 62 157 is_stmt 0 view .LVU32
+ 172 0000 73B5     		push	{r0, r1, r4, r5, r6, lr}
+ 173              	.LCFI6:
+ 174              		.cfi_def_cfa_offset 24
+ 175              		.cfi_offset 4, -16
+ 176              		.cfi_offset 5, -12
+ 177              		.cfi_offset 6, -8
+ 178              		.cfi_offset 14, -4
+  62:symmetric-shake.c ****     shake256incctx s;
+ 179              		.loc 1 62 157 view .LVU33
+ 180 0002 0446     		mov	r4, r0
+ 181 0004 0E46     		mov	r6, r1
+ 182              		.loc 1 65 5 view .LVU34
+ 183 0006 01A8     		add	r0, sp, #4
+ 184              	.LVL9:
+  62:symmetric-shake.c ****     shake256incctx s;
+ 185              		.loc 1 62 157 view .LVU35
+ 186 0008 1546     		mov	r5, r2
+ 187              		.loc 1 65 5 view .LVU36
+ 188 000a FFF7FEFF 		bl	shake256_inc_init
+ 189              	.LVL10:
+  66:symmetric-shake.c ****     shake256_inc_absorb(&s, key, KYBER_SYMBYTES);
+ 190              		.loc 1 66 5 is_stmt 1 view .LVU37
+ 191 000e 3146     		mov	r1, r6
+ 192 0010 01A8     		add	r0, sp, #4
+ 193 0012 2022     		movs	r2, #32
+ 194 0014 FFF7FEFF 		bl	shake256_inc_absorb
+ 195              	.LVL11:
+  67:symmetric-shake.c ****     shake256_inc_absorb(&s, input, KYBER_CIPHERTEXTBYTES);
+ 196              		.loc 1 67 5 view .LVU38
+ 197 0018 2946     		mov	r1, r5
+ 198 001a 4FF44072 		mov	r2, #768
+ 199 001e 01A8     		add	r0, sp, #4
+ 200 0020 FFF7FEFF 		bl	shake256_inc_absorb
+ 201              	.LVL12:
+  68:symmetric-shake.c ****     shake256_inc_finalize(&s);
+ 202              		.loc 1 68 5 view .LVU39
+ 203 0024 01A8     		add	r0, sp, #4
+ 204 0026 FFF7FEFF 		bl	shake256_inc_finalize
+ 205              	.LVL13:
+  69:symmetric-shake.c ****     shake256_inc_squeeze(out, KYBER_SSBYTES, &s);
+ 206              		.loc 1 69 5 view .LVU40
+ 207 002a 01AA     		add	r2, sp, #4
+ 208 002c 2021     		movs	r1, #32
+ 209 002e 2046     		mov	r0, r4
+ 210 0030 FFF7FEFF 		bl	shake256_inc_squeeze
+ 211              	.LVL14:
+  70:symmetric-shake.c ****     shake256_inc_ctx_release(&s);
+ 212              		.loc 1 70 5 view .LVU41
+ 213 0034 01A8     		add	r0, sp, #4
+ 214 0036 FFF7FEFF 		bl	shake256_inc_ctx_release
+ 215              	.LVL15:
+  71:symmetric-shake.c **** }
+ 216              		.loc 1 71 1 is_stmt 0 view .LVU42
+ 217 003a 02B0     		add	sp, sp, #8
+ 218              	.LCFI7:
+ 219              		.cfi_def_cfa_offset 16
+ 220              		@ sp needed
+ 221 003c 70BD     		pop	{r4, r5, r6, pc}
+ 222              		.loc 1 71 1 view .LVU43
+ 223              		.cfi_endproc
+ 224              	.LFE2:
+ 226              		.text
+ 227              	.Letext0:
+ 228              		.file 2 "/usr/lib/gcc/arm-none-eabi/14.2.1/include/stddef.h"
+ 229              		.file 3 "/usr/lib/gcc/arm-none-eabi/14.2.1/include/stdint.h"
+ 230              		.file 4 "fips202.h"
+ 231              		.file 5 "symmetric.h"
+ 232              		.file 6 "/usr/include/newlib/string.h"
+DEFINED SYMBOLS
+                            *ABS*:00000000 symmetric-shake.c
+     /tmp/ccJC9TUh.s:19     .text.PQCLEAN_MLKEM512_CLEAN_kyber_shake128_absorb:00000000 $t
+     /tmp/ccJC9TUh.s:25     .text.PQCLEAN_MLKEM512_CLEAN_kyber_shake128_absorb:00000000 PQCLEAN_MLKEM512_CLEAN_kyber_shake128_absorb
+     /tmp/ccJC9TUh.s:89     .text.PQCLEAN_MLKEM512_CLEAN_kyber_shake256_prf:00000000 $t
+     /tmp/ccJC9TUh.s:95     .text.PQCLEAN_MLKEM512_CLEAN_kyber_shake256_prf:00000000 PQCLEAN_MLKEM512_CLEAN_kyber_shake256_prf
+     /tmp/ccJC9TUh.s:156    .text.PQCLEAN_MLKEM512_CLEAN_kyber_shake256_rkprf:00000000 $t
+     /tmp/ccJC9TUh.s:162    .text.PQCLEAN_MLKEM512_CLEAN_kyber_shake256_rkprf:00000000 PQCLEAN_MLKEM512_CLEAN_kyber_shake256_rkprf
+
+UNDEFINED SYMBOLS
+shake128_absorb
+shake256
+shake256_inc_init
+shake256_inc_absorb
+shake256_inc_finalize
+shake256_inc_squeeze
+shake256_inc_ctx_release

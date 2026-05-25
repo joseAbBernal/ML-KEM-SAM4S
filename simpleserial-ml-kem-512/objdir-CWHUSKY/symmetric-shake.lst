@@ -343,7 +343,7 @@ DEFINED SYMBOLS
     {standard input}:169    .text.PQCLEAN_MLKEM512_CLEAN_kyber_shake256_rkprf:00000000 $t
     {standard input}:175    .text.PQCLEAN_MLKEM512_CLEAN_kyber_shake256_rkprf:00000000 PQCLEAN_MLKEM512_CLEAN_kyber_shake256_rkprf
     {standard input}:248    .text.PQCLEAN_MLKEM512_CLEAN_kyber_shake256_rkprf:0000003c $d
-                           .group:00000000 wm4.0.534b8d408cafabed4abbc6a1c4e55e02
+                           .group:00000000 wm4.0.2b10ec159abbf65f4ef33f6bb625bef4
                            .group:00000000 wm4.stddef.h.39.38eb7ec030421799c657b13be5aa21c7
                            .group:00000000 wm4.stdint.h.29.6d480f4ba0f60596e88234283d42444f
                            .group:00000000 wm4.fips202.h.7.7c5a967a0fe68eaeb1c480396f442363

@@ -1,0 +1,1442 @@
+   1              		.cpu cortex-m4
+   2              		.arch armv7e-m
+   3              		.fpu softvfp
+   4              		.eabi_attribute 20, 1
+   5              		.eabi_attribute 21, 1
+   6              		.eabi_attribute 23, 3
+   7              		.eabi_attribute 24, 1
+   8              		.eabi_attribute 25, 1
+   9              		.eabi_attribute 26, 1
+  10              		.eabi_attribute 30, 4
+  11              		.eabi_attribute 34, 1
+  12              		.eabi_attribute 18, 4
+  13              		.file	"poly.c"
+  14              		.text
+  15              	.Ltext0:
+  16              		.cfi_sections	.debug_frame
+  17              		.file 1 "poly.c"
+  18              		.section	.text.PQCLEAN_MLKEM512_CLEAN_poly_compress,"ax",%progbits
+  19              		.align	1
+  20              		.global	PQCLEAN_MLKEM512_CLEAN_poly_compress
+  21              		.syntax unified
+  22              		.thumb
+  23              		.thumb_func
+  25              	PQCLEAN_MLKEM512_CLEAN_poly_compress:
+  26              	.LVL0:
+  27              	.LFB0:
+   1:poly.c        **** #include "cbd.h"
+   2:poly.c        **** #include "ntt.h"
+   3:poly.c        **** #include "params.h"
+   4:poly.c        **** #include "poly.h"
+   5:poly.c        **** #include "reduce.h"
+   6:poly.c        **** #include "symmetric.h"
+   7:poly.c        **** #include "verify.h"
+   8:poly.c        **** #include <stdint.h>
+   9:poly.c        **** 
+  10:poly.c        **** /*************************************************
+  11:poly.c        **** * Name:        PQCLEAN_MLKEM512_CLEAN_poly_compress
+  12:poly.c        **** *
+  13:poly.c        **** * Description: Compression and subsequent serialization of a polynomial
+  14:poly.c        **** *
+  15:poly.c        **** * Arguments:   - uint8_t *r: pointer to output byte array
+  16:poly.c        **** *                            (of length KYBER_POLYCOMPRESSEDBYTES)
+  17:poly.c        **** *              - const poly *a: pointer to input polynomial
+  18:poly.c        **** **************************************************/
+  19:poly.c        **** void PQCLEAN_MLKEM512_CLEAN_poly_compress(uint8_t r[KYBER_POLYCOMPRESSEDBYTES], const poly *a) {
+  28              		.loc 1 19 96 view -0
+  29              		.cfi_startproc
+  30              		@ args = 0, pretend = 0, frame = 8
+  31              		@ frame_needed = 0, uses_anonymous_args = 0
+  20:poly.c        ****     unsigned int i, j;
+  32              		.loc 1 20 5 view .LVU1
+  21:poly.c        ****     int16_t u;
+  33              		.loc 1 21 5 view .LVU2
+  22:poly.c        ****     uint32_t d0;
+  34              		.loc 1 22 5 view .LVU3
+  23:poly.c        ****     uint8_t t[8];
+  35              		.loc 1 23 5 view .LVU4
+  24:poly.c        **** 
+  25:poly.c        **** 
+  26:poly.c        ****     for (i = 0; i < KYBER_N / 8; i++) {
+  36              		.loc 1 26 5 view .LVU5
+  37              		.loc 1 26 19 discriminator 1 view .LVU6
+  19:poly.c        ****     unsigned int i, j;
+  38              		.loc 1 19 96 is_stmt 0 view .LVU7
+  39 0000 F7B5     		push	{r0, r1, r2, r4, r5, r6, r7, lr}
+  40              	.LCFI0:
+  41              		.cfi_def_cfa_offset 32
+  42              		.cfi_offset 4, -20
+  43              		.cfi_offset 5, -16
+  44              		.cfi_offset 6, -12
+  45              		.cfi_offset 7, -8
+  46              		.cfi_offset 14, -4
+  27:poly.c        ****         for (j = 0; j < 8; j++) {
+  28:poly.c        ****             // map to positive standard representatives
+  29:poly.c        ****             u  = a->coeffs[8 * i + j];
+  30:poly.c        ****             u += (u >> 15) & KYBER_Q;
+  31:poly.c        ****             /*    t[j] = ((((uint16_t)u << 4) + KYBER_Q/2)/KYBER_Q) & 15; */
+  32:poly.c        ****             d0 = u << 4;
+  33:poly.c        ****             d0 += 1665;
+  34:poly.c        ****             d0 *= 80635;
+  47              		.loc 1 34 16 view .LVU8
+  48 0002 214E     		ldr	r6, .L6
+  49 0004 0A46     		mov	r2, r1
+  50 0006 0430     		adds	r0, r0, #4
+  51              	.LVL1:
+  52              		.loc 1 34 16 view .LVU9
+  53 0008 0021     		movs	r1, #0
+  54              	.LVL2:
+  30:poly.c        ****             /*    t[j] = ((((uint16_t)u << 4) + KYBER_Q/2)/KYBER_Q) & 15; */
+  55              		.loc 1 30 28 view .LVU10
+  56 000a 40F60155 		movw	r5, #3329
+  57              	.LVL3:
+  58              	.L2:
+  27:poly.c        ****         for (j = 0; j < 8; j++) {
+  59              		.loc 1 27 23 is_stmt 1 discriminator 1 view .LVU11
+  60 000e 6C46     		mov	r4, sp
+  61 0010 02F11007 		add	r7, r2, #16
+  62              	.LVL4:
+  63              	.L3:
+  29:poly.c        ****             u += (u >> 15) & KYBER_Q;
+  64              		.loc 1 29 13 view .LVU12
+  29:poly.c        ****             u += (u >> 15) & KYBER_Q;
+  65              		.loc 1 29 16 is_stmt 0 view .LVU13
+  66 0014 32F902CB 		ldrsh	ip, [r2], #2
+  67              	.LVL5:
+  30:poly.c        ****             /*    t[j] = ((((uint16_t)u << 4) + KYBER_Q/2)/KYBER_Q) & 15; */
+  68              		.loc 1 30 13 is_stmt 1 view .LVU14
+  30:poly.c        ****             /*    t[j] = ((((uint16_t)u << 4) + KYBER_Q/2)/KYBER_Q) & 15; */
+  69              		.loc 1 30 28 is_stmt 0 view .LVU15
+  70 0018 05EAEC73 		and	r3, r5, ip, asr #31
+  30:poly.c        ****             /*    t[j] = ((((uint16_t)u << 4) + KYBER_Q/2)/KYBER_Q) & 15; */
+  71              		.loc 1 30 15 view .LVU16
+  72 001c 6344     		add	r3, r3, ip
+  73              	.LVL6:
+  32:poly.c        ****             d0 += 1665;
+  74              		.loc 1 32 13 is_stmt 1 view .LVU17
+  32:poly.c        ****             d0 += 1665;
+  75              		.loc 1 32 20 is_stmt 0 view .LVU18
+  76 001e 1BB2     		sxth	r3, r3
+  32:poly.c        ****             d0 += 1665;
+  77              		.loc 1 32 16 view .LVU19
+  78 0020 1B01     		lsls	r3, r3, #4
+  79              	.LVL7:
+  33:poly.c        ****             d0 *= 80635;
+  80              		.loc 1 33 13 is_stmt 1 view .LVU20
+  33:poly.c        ****             d0 *= 80635;
+  81              		.loc 1 33 16 is_stmt 0 view .LVU21
+  82 0022 03F28163 		addw	r3, r3, #1665
+  83              	.LVL8:
+  84              		.loc 1 34 13 is_stmt 1 view .LVU22
+  85              		.loc 1 34 16 is_stmt 0 view .LVU23
+  86 0026 7343     		muls	r3, r6, r3
+  87              	.LVL9:
+  35:poly.c        ****             d0 >>= 28;
+  88              		.loc 1 35 13 is_stmt 1 view .LVU24
+  36:poly.c        ****             t[j] = d0 & 0xf;
+  89              		.loc 1 36 13 view .LVU25
+  35:poly.c        ****             d0 >>= 28;
+  90              		.loc 1 35 16 is_stmt 0 view .LVU26
+  91 0028 1B0F     		lsrs	r3, r3, #28
+  92              	.LVL10:
+  27:poly.c        ****             // map to positive standard representatives
+  93              		.loc 1 27 23 discriminator 1 view .LVU27
+  94 002a 9742     		cmp	r7, r2
+  95              		.loc 1 36 23 view .LVU28
+  96 002c 04F8013B 		strb	r3, [r4], #1
+  97              	.LVL11:
+  27:poly.c        ****             // map to positive standard representatives
+  98              		.loc 1 27 29 is_stmt 1 discriminator 3 view .LVU29
+  27:poly.c        ****             // map to positive standard representatives
+  99              		.loc 1 27 23 discriminator 1 view .LVU30
+ 100 0030 F0D1     		bne	.L3
+  37:poly.c        ****         }
+  38:poly.c        **** 
+  39:poly.c        ****         r[0] = t[0] | (t[1] << 4);
+ 101              		.loc 1 39 9 view .LVU31
+ 102              		.loc 1 39 21 is_stmt 0 view .LVU32
+ 103 0032 9DF80120 		ldrb	r2, [sp, #1]	@ zero_extendqisi2
+ 104 0036 9DF80030 		ldrb	r3, [sp]	@ zero_extendqisi2
+ 105              	.LVL12:
+ 106              		.loc 1 39 21 view .LVU33
+ 107 003a 43EA0213 		orr	r3, r3, r2, lsl #4
+ 108              		.loc 1 39 14 view .LVU34
+ 109 003e 00F8043C 		strb	r3, [r0, #-4]
+  40:poly.c        ****         r[1] = t[2] | (t[3] << 4);
+ 110              		.loc 1 40 9 is_stmt 1 view .LVU35
+ 111              		.loc 1 40 21 is_stmt 0 view .LVU36
+ 112 0042 9DF80320 		ldrb	r2, [sp, #3]	@ zero_extendqisi2
+ 113 0046 9DF80230 		ldrb	r3, [sp, #2]	@ zero_extendqisi2
+ 114 004a 43EA0213 		orr	r3, r3, r2, lsl #4
+ 115              		.loc 1 40 14 view .LVU37
+ 116 004e 00F8033C 		strb	r3, [r0, #-3]
+  41:poly.c        ****         r[2] = t[4] | (t[5] << 4);
+ 117              		.loc 1 41 9 is_stmt 1 view .LVU38
+ 118              		.loc 1 41 21 is_stmt 0 view .LVU39
+ 119 0052 9DF80520 		ldrb	r2, [sp, #5]	@ zero_extendqisi2
+ 120 0056 9DF80430 		ldrb	r3, [sp, #4]	@ zero_extendqisi2
+ 121 005a 43EA0213 		orr	r3, r3, r2, lsl #4
+ 122              		.loc 1 41 14 view .LVU40
+ 123 005e 00F8023C 		strb	r3, [r0, #-2]
+  42:poly.c        ****         r[3] = t[6] | (t[7] << 4);
+ 124              		.loc 1 42 9 is_stmt 1 view .LVU41
+ 125              		.loc 1 42 21 is_stmt 0 view .LVU42
+ 126 0062 9DF80720 		ldrb	r2, [sp, #7]	@ zero_extendqisi2
+ 127 0066 9DF80630 		ldrb	r3, [sp, #6]	@ zero_extendqisi2
+  26:poly.c        ****         for (j = 0; j < 8; j++) {
+ 128              		.loc 1 26 19 discriminator 1 view .LVU43
+ 129 006a 0831     		adds	r1, r1, #8
+ 130              		.loc 1 42 21 view .LVU44
+ 131 006c 43EA0213 		orr	r3, r3, r2, lsl #4
+  26:poly.c        ****         for (j = 0; j < 8; j++) {
+ 132              		.loc 1 26 19 discriminator 1 view .LVU45
+ 133 0070 B1F5807F 		cmp	r1, #256
+ 134              		.loc 1 42 14 view .LVU46
+ 135 0074 00F8013C 		strb	r3, [r0, #-1]
+  43:poly.c        ****         r += 4;
+ 136              		.loc 1 43 9 is_stmt 1 view .LVU47
+ 137              	.LVL13:
+  26:poly.c        ****         for (j = 0; j < 8; j++) {
+ 138              		.loc 1 26 35 discriminator 2 view .LVU48
+  26:poly.c        ****         for (j = 0; j < 8; j++) {
+ 139              		.loc 1 26 19 discriminator 1 view .LVU49
+ 140 0078 00F10400 		add	r0, r0, #4
+ 141              	.LVL14:
+  26:poly.c        ****         for (j = 0; j < 8; j++) {
+ 142              		.loc 1 26 19 is_stmt 0 discriminator 1 view .LVU50
+ 143 007c 01D0     		beq	.L1
+ 144 007e 3A46     		mov	r2, r7
+ 145 0080 C5E7     		b	.L2
+ 146              	.L1:
+  44:poly.c        ****     }
+  45:poly.c        **** }
+ 147              		.loc 1 45 1 view .LVU51
+ 148 0082 03B0     		add	sp, sp, #12
+ 149              	.LCFI1:
+ 150              		.cfi_def_cfa_offset 20
+ 151              		@ sp needed
+ 152 0084 F0BD     		pop	{r4, r5, r6, r7, pc}
+ 153              	.LVL15:
+ 154              	.L7:
+ 155              		.loc 1 45 1 view .LVU52
+ 156 0086 00BF     		.align	2
+ 157              	.L6:
+ 158 0088 FB3A0100 		.word	80635
+ 159              		.cfi_endproc
+ 160              	.LFE0:
+ 162              		.section	.text.PQCLEAN_MLKEM512_CLEAN_poly_decompress,"ax",%progbits
+ 163              		.align	1
+ 164              		.global	PQCLEAN_MLKEM512_CLEAN_poly_decompress
+ 165              		.syntax unified
+ 166              		.thumb
+ 167              		.thumb_func
+ 169              	PQCLEAN_MLKEM512_CLEAN_poly_decompress:
+ 170              	.LVL16:
+ 171              	.LFB1:
+  46:poly.c        **** 
+  47:poly.c        **** /*************************************************
+  48:poly.c        **** * Name:        PQCLEAN_MLKEM512_CLEAN_poly_decompress
+  49:poly.c        **** *
+  50:poly.c        **** * Description: De-serialization and subsequent decompression of a polynomial;
+  51:poly.c        **** *              approximate inverse of PQCLEAN_MLKEM512_CLEAN_poly_compress
+  52:poly.c        **** *
+  53:poly.c        **** * Arguments:   - poly *r: pointer to output polynomial
+  54:poly.c        **** *              - const uint8_t *a: pointer to input byte array
+  55:poly.c        **** *                                  (of length KYBER_POLYCOMPRESSEDBYTES bytes)
+  56:poly.c        **** **************************************************/
+  57:poly.c        **** void PQCLEAN_MLKEM512_CLEAN_poly_decompress(poly *r, const uint8_t a[KYBER_POLYCOMPRESSEDBYTES]) {
+ 172              		.loc 1 57 98 is_stmt 1 view -0
+ 173              		.cfi_startproc
+ 174              		@ args = 0, pretend = 0, frame = 0
+ 175              		@ frame_needed = 0, uses_anonymous_args = 0
+  58:poly.c        ****     size_t i;
+ 176              		.loc 1 58 5 view .LVU54
+  59:poly.c        **** 
+  60:poly.c        ****     for (i = 0; i < KYBER_N / 2; i++) {
+ 177              		.loc 1 60 5 view .LVU55
+ 178              		.loc 1 60 19 discriminator 1 view .LVU56
+  57:poly.c        ****     size_t i;
+ 179              		.loc 1 57 98 is_stmt 0 view .LVU57
+ 180 0000 70B5     		push	{r4, r5, r6, lr}
+ 181              	.LCFI2:
+ 182              		.cfi_def_cfa_offset 16
+ 183              		.cfi_offset 4, -16
+ 184              		.cfi_offset 5, -12
+ 185              		.cfi_offset 6, -8
+ 186              		.cfi_offset 14, -4
+ 187 0002 0139     		subs	r1, r1, #1
+ 188              	.LVL17:
+ 189              		.loc 1 60 12 view .LVU58
+ 190 0004 0022     		movs	r2, #0
+  61:poly.c        ****         r->coeffs[2 * i + 0] = (((uint16_t)(a[0] & 15) * KYBER_Q) + 8) >> 4;
+ 191              		.loc 1 61 67 view .LVU59
+ 192 0006 40F60155 		movw	r5, #3329
+ 193 000a 0824     		movs	r4, #8
+  62:poly.c        ****         r->coeffs[2 * i + 1] = (((uint16_t)(a[0] >> 4) * KYBER_Q) + 8) >> 4;
+ 194              		.loc 1 62 30 view .LVU60
+ 195 000c 861C     		adds	r6, r0, #2
+ 196              	.LVL18:
+ 197              	.L9:
+  61:poly.c        ****         r->coeffs[2 * i + 0] = (((uint16_t)(a[0] & 15) * KYBER_Q) + 8) >> 4;
+ 198              		.loc 1 61 9 is_stmt 1 view .LVU61
+  61:poly.c        ****         r->coeffs[2 * i + 0] = (((uint16_t)(a[0] & 15) * KYBER_Q) + 8) >> 4;
+ 199              		.loc 1 61 34 is_stmt 0 view .LVU62
+ 200 000e 11F8013F 		ldrb	r3, [r1, #1]!	@ zero_extendqisi2
+ 201 0012 03F00F03 		and	r3, r3, #15
+  61:poly.c        ****         r->coeffs[2 * i + 0] = (((uint16_t)(a[0] & 15) * KYBER_Q) + 8) >> 4;
+ 202              		.loc 1 61 67 view .LVU63
+ 203 0016 13FB0543 		smlabb	r3, r3, r5, r4
+  61:poly.c        ****         r->coeffs[2 * i + 0] = (((uint16_t)(a[0] & 15) * KYBER_Q) + 8) >> 4;
+ 204              		.loc 1 61 72 view .LVU64
+ 205 001a 1B11     		asrs	r3, r3, #4
+  61:poly.c        ****         r->coeffs[2 * i + 0] = (((uint16_t)(a[0] & 15) * KYBER_Q) + 8) >> 4;
+ 206              		.loc 1 61 30 view .LVU65
+ 207 001c 20F82230 		strh	r3, [r0, r2, lsl #2]	@ movhi
+ 208              		.loc 1 62 9 is_stmt 1 view .LVU66
+ 209              		.loc 1 62 34 is_stmt 0 view .LVU67
+ 210 0020 0B78     		ldrb	r3, [r1]	@ zero_extendqisi2
+ 211 0022 1B09     		lsrs	r3, r3, #4
+ 212              		.loc 1 62 67 view .LVU68
+ 213 0024 13FB0543 		smlabb	r3, r3, r5, r4
+ 214              		.loc 1 62 72 view .LVU69
+ 215 0028 1B11     		asrs	r3, r3, #4
+ 216              		.loc 1 62 30 view .LVU70
+ 217 002a 26F82230 		strh	r3, [r6, r2, lsl #2]	@ movhi
+  63:poly.c        ****         a += 1;
+ 218              		.loc 1 63 9 is_stmt 1 view .LVU71
+ 219              	.LVL19:
+  60:poly.c        ****         r->coeffs[2 * i + 0] = (((uint16_t)(a[0] & 15) * KYBER_Q) + 8) >> 4;
+ 220              		.loc 1 60 35 discriminator 3 view .LVU72
+ 221 002e 0132     		adds	r2, r2, #1
+ 222              	.LVL20:
+  60:poly.c        ****         r->coeffs[2 * i + 0] = (((uint16_t)(a[0] & 15) * KYBER_Q) + 8) >> 4;
+ 223              		.loc 1 60 19 discriminator 1 view .LVU73
+ 224 0030 802A     		cmp	r2, #128
+ 225 0032 ECD1     		bne	.L9
+  64:poly.c        ****     }
+  65:poly.c        **** }
+ 226              		.loc 1 65 1 is_stmt 0 view .LVU74
+ 227 0034 70BD     		pop	{r4, r5, r6, pc}
+ 228              		.cfi_endproc
+ 229              	.LFE1:
+ 231              		.section	.text.PQCLEAN_MLKEM512_CLEAN_poly_tobytes,"ax",%progbits
+ 232              		.align	1
+ 233              		.global	PQCLEAN_MLKEM512_CLEAN_poly_tobytes
+ 234              		.syntax unified
+ 235              		.thumb
+ 236              		.thumb_func
+ 238              	PQCLEAN_MLKEM512_CLEAN_poly_tobytes:
+ 239              	.LVL21:
+ 240              	.LFB2:
+  66:poly.c        **** 
+  67:poly.c        **** /*************************************************
+  68:poly.c        **** * Name:        PQCLEAN_MLKEM512_CLEAN_poly_tobytes
+  69:poly.c        **** *
+  70:poly.c        **** * Description: Serialization of a polynomial
+  71:poly.c        **** *
+  72:poly.c        **** * Arguments:   - uint8_t *r: pointer to output byte array
+  73:poly.c        **** *                            (needs space for KYBER_POLYBYTES bytes)
+  74:poly.c        **** *              - const poly *a: pointer to input polynomial
+  75:poly.c        **** **************************************************/
+  76:poly.c        **** void PQCLEAN_MLKEM512_CLEAN_poly_tobytes(uint8_t r[KYBER_POLYBYTES], const poly *a) {
+ 241              		.loc 1 76 85 is_stmt 1 view -0
+ 242              		.cfi_startproc
+ 243              		@ args = 0, pretend = 0, frame = 0
+ 244              		@ frame_needed = 0, uses_anonymous_args = 0
+  77:poly.c        ****     size_t i;
+ 245              		.loc 1 77 5 view .LVU76
+  78:poly.c        ****     uint16_t t0, t1;
+ 246              		.loc 1 78 5 view .LVU77
+  79:poly.c        **** 
+  80:poly.c        ****     for (i = 0; i < KYBER_N / 2; i++) {
+ 247              		.loc 1 80 5 view .LVU78
+ 248              		.loc 1 80 19 discriminator 1 view .LVU79
+  76:poly.c        ****     size_t i;
+ 249              		.loc 1 76 85 is_stmt 0 view .LVU80
+ 250 0000 F0B5     		push	{r4, r5, r6, r7, lr}
+ 251              	.LCFI3:
+ 252              		.cfi_def_cfa_offset 20
+ 253              		.cfi_offset 4, -20
+ 254              		.cfi_offset 5, -16
+ 255              		.cfi_offset 6, -12
+ 256              		.cfi_offset 7, -8
+ 257              		.cfi_offset 14, -4
+ 258              		.loc 1 80 12 view .LVU81
+ 259 0002 0022     		movs	r2, #0
+  81:poly.c        ****         // map to positive standard representatives
+  82:poly.c        ****         t0  = a->coeffs[2 * i];
+  83:poly.c        ****         t0 += ((int16_t)t0 >> 15) & KYBER_Q;
+ 260              		.loc 1 83 35 view .LVU82
+ 261 0004 40F60156 		movw	r6, #3329
+  84:poly.c        ****         t1 = a->coeffs[2 * i + 1];
+ 262              		.loc 1 84 23 view .LVU83
+ 263 0008 8F1C     		adds	r7, r1, #2
+ 264              	.LVL22:
+ 265              	.L12:
+  82:poly.c        ****         t0 += ((int16_t)t0 >> 15) & KYBER_Q;
+ 266              		.loc 1 82 9 is_stmt 1 view .LVU84
+  82:poly.c        ****         t0 += ((int16_t)t0 >> 15) & KYBER_Q;
+ 267              		.loc 1 82 24 is_stmt 0 view .LVU85
+ 268 000a 31F92230 		ldrsh	r3, [r1, r2, lsl #2]
+  82:poly.c        ****         t0 += ((int16_t)t0 >> 15) & KYBER_Q;
+ 269              		.loc 1 82 13 view .LVU86
+ 270 000e 31F82240 		ldrh	r4, [r1, r2, lsl #2]
+ 271              	.LVL23:
+  83:poly.c        ****         t1 = a->coeffs[2 * i + 1];
+ 272              		.loc 1 83 9 is_stmt 1 view .LVU87
+ 273              		.loc 1 84 23 is_stmt 0 view .LVU88
+ 274 0012 37F92250 		ldrsh	r5, [r7, r2, lsl #2]
+  83:poly.c        ****         t1 = a->coeffs[2 * i + 1];
+ 275              		.loc 1 83 35 view .LVU89
+ 276 0016 06EAE373 		and	r3, r6, r3, asr #31
+  83:poly.c        ****         t1 = a->coeffs[2 * i + 1];
+ 277              		.loc 1 83 12 view .LVU90
+ 278 001a 1C44     		add	r4, r4, r3
+ 279              	.LVL24:
+ 280              		.loc 1 84 12 view .LVU91
+ 281 001c 37F82230 		ldrh	r3, [r7, r2, lsl #2]
+  85:poly.c        ****         t1 += ((int16_t)t1 >> 15) & KYBER_Q;
+ 282              		.loc 1 85 35 view .LVU92
+ 283 0020 06EAE575 		and	r5, r6, r5, asr #31
+ 284              		.loc 1 85 12 view .LVU93
+ 285 0024 2B44     		add	r3, r3, r5
+ 286 0026 9BB2     		uxth	r3, r3
+  83:poly.c        ****         t1 = a->coeffs[2 * i + 1];
+ 287              		.loc 1 83 12 view .LVU94
+ 288 0028 A4B2     		uxth	r4, r4
+ 289              	.LVL25:
+  84:poly.c        ****         t1 += ((int16_t)t1 >> 15) & KYBER_Q;
+ 290              		.loc 1 84 9 is_stmt 1 view .LVU95
+ 291              		.loc 1 85 9 view .LVU96
+  86:poly.c        ****         r[3 * i + 0] = (uint8_t)(t0 >> 0);
+ 292              		.loc 1 86 9 view .LVU97
+  87:poly.c        ****         r[3 * i + 1] = (uint8_t)((t0 >> 8) | (t1 << 4));
+ 293              		.loc 1 87 44 is_stmt 0 view .LVU98
+ 294 002a 1D01     		lsls	r5, r3, #4
+  80:poly.c        ****         // map to positive standard representatives
+ 295              		.loc 1 80 35 discriminator 3 view .LVU99
+ 296 002c 0132     		adds	r2, r2, #1
+ 297              	.LVL26:
+  86:poly.c        ****         r[3 * i + 0] = (uint8_t)(t0 >> 0);
+ 298              		.loc 1 86 24 view .LVU100
+ 299 002e 0470     		strb	r4, [r0]
+ 300              		.loc 1 87 9 is_stmt 1 view .LVU101
+  88:poly.c        ****         r[3 * i + 2] = (uint8_t)(t1 >> 4);
+ 301              		.loc 1 88 24 is_stmt 0 view .LVU102
+ 302 0030 1B09     		lsrs	r3, r3, #4
+ 303              	.LVL27:
+  87:poly.c        ****         r[3 * i + 1] = (uint8_t)((t0 >> 8) | (t1 << 4));
+ 304              		.loc 1 87 44 view .LVU103
+ 305 0032 45EA1424 		orr	r4, r5, r4, lsr #8
+ 306              	.LVL28:
+  80:poly.c        ****         // map to positive standard representatives
+ 307              		.loc 1 80 19 discriminator 1 view .LVU104
+ 308 0036 802A     		cmp	r2, #128
+  87:poly.c        ****         r[3 * i + 1] = (uint8_t)((t0 >> 8) | (t1 << 4));
+ 309              		.loc 1 87 22 view .LVU105
+ 310 0038 4470     		strb	r4, [r0, #1]
+ 311              		.loc 1 88 9 is_stmt 1 view .LVU106
+ 312              		.loc 1 88 24 is_stmt 0 view .LVU107
+ 313 003a 8370     		strb	r3, [r0, #2]
+  80:poly.c        ****         // map to positive standard representatives
+ 314              		.loc 1 80 35 is_stmt 1 discriminator 3 view .LVU108
+ 315              	.LVL29:
+  80:poly.c        ****         // map to positive standard representatives
+ 316              		.loc 1 80 19 discriminator 1 view .LVU109
+ 317 003c 00F10300 		add	r0, r0, #3
+ 318 0040 E3D1     		bne	.L12
+  89:poly.c        ****     }
+  90:poly.c        **** }
+ 319              		.loc 1 90 1 is_stmt 0 view .LVU110
+ 320 0042 F0BD     		pop	{r4, r5, r6, r7, pc}
+ 321              		.cfi_endproc
+ 322              	.LFE2:
+ 324              		.section	.text.PQCLEAN_MLKEM512_CLEAN_poly_frombytes,"ax",%progbits
+ 325              		.align	1
+ 326              		.global	PQCLEAN_MLKEM512_CLEAN_poly_frombytes
+ 327              		.syntax unified
+ 328              		.thumb
+ 329              		.thumb_func
+ 331              	PQCLEAN_MLKEM512_CLEAN_poly_frombytes:
+ 332              	.LVL30:
+ 333              	.LFB3:
+  91:poly.c        **** 
+  92:poly.c        **** /*************************************************
+  93:poly.c        **** * Name:        PQCLEAN_MLKEM512_CLEAN_poly_frombytes
+  94:poly.c        **** *
+  95:poly.c        **** * Description: De-serialization of a polynomial;
+  96:poly.c        **** *              inverse of PQCLEAN_MLKEM512_CLEAN_poly_tobytes
+  97:poly.c        **** *
+  98:poly.c        **** * Arguments:   - poly *r: pointer to output polynomial
+  99:poly.c        **** *              - const uint8_t *a: pointer to input byte array
+ 100:poly.c        **** *                                  (of KYBER_POLYBYTES bytes)
+ 101:poly.c        **** **************************************************/
+ 102:poly.c        **** void PQCLEAN_MLKEM512_CLEAN_poly_frombytes(poly *r, const uint8_t a[KYBER_POLYBYTES]) {
+ 334              		.loc 1 102 87 is_stmt 1 view -0
+ 335              		.cfi_startproc
+ 336              		@ args = 0, pretend = 0, frame = 0
+ 337              		@ frame_needed = 0, uses_anonymous_args = 0
+ 103:poly.c        ****     size_t i;
+ 338              		.loc 1 103 5 view .LVU112
+ 104:poly.c        ****     for (i = 0; i < KYBER_N / 2; i++) {
+ 339              		.loc 1 104 5 view .LVU113
+ 340              		.loc 1 104 19 discriminator 1 view .LVU114
+ 102:poly.c        ****     size_t i;
+ 341              		.loc 1 102 87 is_stmt 0 view .LVU115
+ 342 0000 30B5     		push	{r4, r5, lr}
+ 343              	.LCFI4:
+ 344              		.cfi_def_cfa_offset 12
+ 345              		.cfi_offset 4, -12
+ 346              		.cfi_offset 5, -8
+ 347              		.cfi_offset 14, -4
+ 348              		.loc 1 104 12 view .LVU116
+ 349 0002 0023     		movs	r3, #0
+ 105:poly.c        ****         r->coeffs[2 * i]   = ((a[3 * i + 0] >> 0) | ((uint16_t)a[3 * i + 1] << 8)) & 0xFFF;
+ 106:poly.c        ****         r->coeffs[2 * i + 1] = ((a[3 * i + 1] >> 4) | ((uint16_t)a[3 * i + 2] << 4)) & 0xFFF;
+ 350              		.loc 1 106 30 view .LVU117
+ 351 0004 841C     		adds	r4, r0, #2
+ 352              	.LVL31:
+ 353              	.L15:
+ 105:poly.c        ****         r->coeffs[2 * i]   = ((a[3 * i + 0] >> 0) | ((uint16_t)a[3 * i + 1] << 8)) & 0xFFF;
+ 354              		.loc 1 105 9 is_stmt 1 view .LVU118
+ 105:poly.c        ****         r->coeffs[2 * i]   = ((a[3 * i + 0] >> 0) | ((uint16_t)a[3 * i + 1] << 8)) & 0xFFF;
+ 355              		.loc 1 105 51 is_stmt 0 view .LVU119
+ 356 0006 4D78     		ldrb	r5, [r1, #1]	@ zero_extendqisi2
+ 105:poly.c        ****         r->coeffs[2 * i]   = ((a[3 * i + 0] >> 0) | ((uint16_t)a[3 * i + 1] << 8)) & 0xFFF;
+ 357              		.loc 1 105 33 view .LVU120
+ 358 0008 0A78     		ldrb	r2, [r1]	@ zero_extendqisi2
+ 105:poly.c        ****         r->coeffs[2 * i]   = ((a[3 * i + 0] >> 0) | ((uint16_t)a[3 * i + 1] << 8)) & 0xFFF;
+ 359              		.loc 1 105 51 view .LVU121
+ 360 000a 42EA0522 		orr	r2, r2, r5, lsl #8
+ 105:poly.c        ****         r->coeffs[2 * i]   = ((a[3 * i + 0] >> 0) | ((uint16_t)a[3 * i + 1] << 8)) & 0xFFF;
+ 361              		.loc 1 105 84 view .LVU122
+ 362 000e C2F30B02 		ubfx	r2, r2, #0, #12
+ 105:poly.c        ****         r->coeffs[2 * i]   = ((a[3 * i + 0] >> 0) | ((uint16_t)a[3 * i + 1] << 8)) & 0xFFF;
+ 363              		.loc 1 105 28 view .LVU123
+ 364 0012 20F82320 		strh	r2, [r0, r3, lsl #2]	@ movhi
+ 365              		.loc 1 106 9 is_stmt 1 view .LVU124
+ 366              		.loc 1 106 53 is_stmt 0 view .LVU125
+ 367 0016 8A78     		ldrb	r2, [r1, #2]	@ zero_extendqisi2
+ 368 0018 4D78     		ldrb	r5, [r1, #1]	@ zero_extendqisi2
+ 369 001a 1201     		lsls	r2, r2, #4
+ 370 001c 42EA1512 		orr	r2, r2, r5, lsr #4
+ 371              		.loc 1 106 30 view .LVU126
+ 372 0020 24F82320 		strh	r2, [r4, r3, lsl #2]	@ movhi
+ 104:poly.c        ****         r->coeffs[2 * i]   = ((a[3 * i + 0] >> 0) | ((uint16_t)a[3 * i + 1] << 8)) & 0xFFF;
+ 373              		.loc 1 104 35 is_stmt 1 discriminator 3 view .LVU127
+ 374 0024 0133     		adds	r3, r3, #1
+ 375              	.LVL32:
+ 104:poly.c        ****         r->coeffs[2 * i]   = ((a[3 * i + 0] >> 0) | ((uint16_t)a[3 * i + 1] << 8)) & 0xFFF;
+ 376              		.loc 1 104 19 discriminator 1 view .LVU128
+ 377 0026 802B     		cmp	r3, #128
+ 378 0028 01F10301 		add	r1, r1, #3
+ 379 002c EBD1     		bne	.L15
+ 107:poly.c        ****     }
+ 108:poly.c        **** }
+ 380              		.loc 1 108 1 is_stmt 0 view .LVU129
+ 381 002e 30BD     		pop	{r4, r5, pc}
+ 382              		.cfi_endproc
+ 383              	.LFE3:
+ 385              		.section	.text.PQCLEAN_MLKEM512_CLEAN_poly_frommsg,"ax",%progbits
+ 386              		.align	1
+ 387              		.global	PQCLEAN_MLKEM512_CLEAN_poly_frommsg
+ 388              		.syntax unified
+ 389              		.thumb
+ 390              		.thumb_func
+ 392              	PQCLEAN_MLKEM512_CLEAN_poly_frommsg:
+ 393              	.LVL33:
+ 394              	.LFB4:
+ 109:poly.c        **** 
+ 110:poly.c        **** /*************************************************
+ 111:poly.c        **** * Name:        PQCLEAN_MLKEM512_CLEAN_poly_frommsg
+ 112:poly.c        **** *
+ 113:poly.c        **** * Description: Convert 32-byte message to polynomial
+ 114:poly.c        **** *
+ 115:poly.c        **** * Arguments:   - poly *r: pointer to output polynomial
+ 116:poly.c        **** *              - const uint8_t *msg: pointer to input message
+ 117:poly.c        **** **************************************************/
+ 118:poly.c        **** void PQCLEAN_MLKEM512_CLEAN_poly_frommsg(poly *r, const uint8_t msg[KYBER_INDCPA_MSGBYTES]) {
+ 395              		.loc 1 118 93 is_stmt 1 view -0
+ 396              		.cfi_startproc
+ 397              		@ args = 0, pretend = 0, frame = 0
+ 398              		@ frame_needed = 0, uses_anonymous_args = 0
+ 119:poly.c        ****     size_t i, j;
+ 399              		.loc 1 119 5 view .LVU131
+ 120:poly.c        **** 
+ 121:poly.c        ****     for (i = 0; i < KYBER_N / 8; i++) {
+ 400              		.loc 1 121 5 view .LVU132
+ 401              		.loc 1 121 19 discriminator 1 view .LVU133
+ 118:poly.c        ****     size_t i, j;
+ 402              		.loc 1 118 93 is_stmt 0 view .LVU134
+ 403 0000 2DE9F843 		push	{r3, r4, r5, r6, r7, r8, r9, lr}
+ 404              	.LCFI5:
+ 405              		.cfi_def_cfa_offset 32
+ 406              		.cfi_offset 3, -32
+ 407              		.cfi_offset 4, -28
+ 408              		.cfi_offset 5, -24
+ 409              		.cfi_offset 6, -20
+ 410              		.cfi_offset 7, -16
+ 411              		.cfi_offset 8, -12
+ 412              		.cfi_offset 9, -8
+ 413              		.cfi_offset 14, -4
+ 414              		.loc 1 121 12 view .LVU135
+ 415 0004 0024     		movs	r4, #0
+ 118:poly.c        ****     size_t i, j;
+ 416              		.loc 1 118 93 view .LVU136
+ 417 0006 0746     		mov	r7, r0
+ 418 0008 8846     		mov	r8, r1
+ 122:poly.c        ****         for (j = 0; j < 8; j++) {
+ 123:poly.c        ****             r->coeffs[8 * i + j] = 0;
+ 419              		.loc 1 123 34 view .LVU137
+ 420 000a A146     		mov	r9, r4
+ 421              	.LVL34:
+ 422              	.L18:
+ 122:poly.c        ****         for (j = 0; j < 8; j++) {
+ 423              		.loc 1 122 23 is_stmt 1 discriminator 1 view .LVU138
+ 424 000c 07EB0416 		add	r6, r7, r4, lsl #4
+ 122:poly.c        ****         for (j = 0; j < 8; j++) {
+ 425              		.loc 1 122 16 is_stmt 0 view .LVU139
+ 426 0010 0025     		movs	r5, #0
+ 427              	.LVL35:
+ 428              	.L19:
+ 429              		.loc 1 123 13 is_stmt 1 view .LVU140
+ 430 0012 3046     		mov	r0, r6
+ 431              		.loc 1 123 34 is_stmt 0 view .LVU141
+ 432 0014 26F8029B 		strh	r9, [r6], #2	@ movhi
+ 124:poly.c        ****             PQCLEAN_MLKEM512_CLEAN_cmov_int16(r->coeffs + 8 * i + j, ((KYBER_Q + 1) / 2), (msg[i] >
+ 433              		.loc 1 124 13 is_stmt 1 view .LVU142
+ 434              		.loc 1 124 95 is_stmt 0 view .LVU143
+ 435 0018 18F80420 		ldrb	r2, [r8, r4]	@ zero_extendqisi2
+ 436              		.loc 1 124 99 view .LVU144
+ 437 001c 2A41     		asrs	r2, r2, r5
+ 438              		.loc 1 124 13 view .LVU145
+ 439 001e 02F00102 		and	r2, r2, #1
+ 440 0022 40F28161 		movw	r1, #1665
+ 122:poly.c        ****         for (j = 0; j < 8; j++) {
+ 441              		.loc 1 122 29 discriminator 3 view .LVU146
+ 442 0026 0135     		adds	r5, r5, #1
+ 443              	.LVL36:
+ 444              		.loc 1 124 13 view .LVU147
+ 445 0028 FFF7FEFF 		bl	PQCLEAN_MLKEM512_CLEAN_cmov_int16
+ 446              	.LVL37:
+ 122:poly.c        ****         for (j = 0; j < 8; j++) {
+ 447              		.loc 1 122 29 is_stmt 1 discriminator 3 view .LVU148
+ 122:poly.c        ****         for (j = 0; j < 8; j++) {
+ 448              		.loc 1 122 23 discriminator 1 view .LVU149
+ 449 002c 082D     		cmp	r5, #8
+ 450 002e F0D1     		bne	.L19
+ 121:poly.c        ****         for (j = 0; j < 8; j++) {
+ 451              		.loc 1 121 35 discriminator 2 view .LVU150
+ 452 0030 0134     		adds	r4, r4, #1
+ 453              	.LVL38:
+ 121:poly.c        ****         for (j = 0; j < 8; j++) {
+ 454              		.loc 1 121 19 discriminator 1 view .LVU151
+ 455 0032 202C     		cmp	r4, #32
+ 456 0034 EAD1     		bne	.L18
+ 125:poly.c        ****         }
+ 126:poly.c        ****     }
+ 127:poly.c        **** }
+ 457              		.loc 1 127 1 is_stmt 0 view .LVU152
+ 458 0036 BDE8F883 		pop	{r3, r4, r5, r6, r7, r8, r9, pc}
+ 459              		.loc 1 127 1 view .LVU153
+ 460              		.cfi_endproc
+ 461              	.LFE4:
+ 463              		.section	.text.PQCLEAN_MLKEM512_CLEAN_poly_tomsg,"ax",%progbits
+ 464              		.align	1
+ 465              		.global	PQCLEAN_MLKEM512_CLEAN_poly_tomsg
+ 466              		.syntax unified
+ 467              		.thumb
+ 468              		.thumb_func
+ 470              	PQCLEAN_MLKEM512_CLEAN_poly_tomsg:
+ 471              	.LVL39:
+ 472              	.LFB5:
+ 128:poly.c        **** 
+ 129:poly.c        **** /*************************************************
+ 130:poly.c        **** * Name:        PQCLEAN_MLKEM512_CLEAN_poly_tomsg
+ 131:poly.c        **** *
+ 132:poly.c        **** * Description: Convert polynomial to 32-byte message
+ 133:poly.c        **** *
+ 134:poly.c        **** * Arguments:   - uint8_t *msg: pointer to output message
+ 135:poly.c        **** *              - const poly *a: pointer to input polynomial
+ 136:poly.c        **** **************************************************/
+ 137:poly.c        **** void PQCLEAN_MLKEM512_CLEAN_poly_tomsg(uint8_t msg[KYBER_INDCPA_MSGBYTES], const poly *a) {
+ 473              		.loc 1 137 91 is_stmt 1 view -0
+ 474              		.cfi_startproc
+ 475              		@ args = 0, pretend = 0, frame = 0
+ 476              		@ frame_needed = 0, uses_anonymous_args = 0
+ 138:poly.c        ****     unsigned int i, j;
+ 477              		.loc 1 138 5 view .LVU155
+ 139:poly.c        ****     uint32_t t;
+ 478              		.loc 1 139 5 view .LVU156
+ 140:poly.c        **** 
+ 141:poly.c        ****     for (i = 0; i < KYBER_N / 8; i++) {
+ 479              		.loc 1 141 5 view .LVU157
+ 480              		.loc 1 141 19 discriminator 1 view .LVU158
+ 137:poly.c        ****     unsigned int i, j;
+ 481              		.loc 1 137 91 is_stmt 0 view .LVU159
+ 482 0000 F0B5     		push	{r4, r5, r6, r7, lr}
+ 483              	.LCFI6:
+ 484              		.cfi_def_cfa_offset 20
+ 485              		.cfi_offset 4, -20
+ 486              		.cfi_offset 5, -16
+ 487              		.cfi_offset 6, -12
+ 488              		.cfi_offset 7, -8
+ 489              		.cfi_offset 14, -4
+ 142:poly.c        ****         msg[i] = 0;
+ 143:poly.c        ****         for (j = 0; j < 8; j++) {
+ 144:poly.c        ****             t  = a->coeffs[8 * i + j];
+ 145:poly.c        ****             // t += ((int16_t)t >> 15) & KYBER_Q;
+ 146:poly.c        ****             // t  = (((t << 1) + KYBER_Q/2)/KYBER_Q) & 1;
+ 147:poly.c        ****             t <<= 1;
+ 148:poly.c        ****             t += 1665;
+ 149:poly.c        ****             t *= 80635;
+ 490              		.loc 1 149 15 view .LVU160
+ 491 0002 DFF840C0 		ldr	ip, .L27
+ 137:poly.c        ****     unsigned int i, j;
+ 492              		.loc 1 137 91 view .LVU161
+ 493 0006 0024     		movs	r4, #0
+ 494 0008 0138     		subs	r0, r0, #1
+ 495              	.LVL40:
+ 142:poly.c        ****         msg[i] = 0;
+ 496              		.loc 1 142 16 view .LVU162
+ 497 000a 2746     		mov	r7, r4
+ 498              	.LVL41:
+ 499              	.L24:
+ 142:poly.c        ****         msg[i] = 0;
+ 500              		.loc 1 142 9 is_stmt 1 view .LVU163
+ 142:poly.c        ****         msg[i] = 0;
+ 501              		.loc 1 142 16 is_stmt 0 view .LVU164
+ 502 000c 0022     		movs	r2, #0
+ 503 000e 00F8017F 		strb	r7, [r0, #1]!
+ 504              	.LVL42:
+ 143:poly.c        ****             t  = a->coeffs[8 * i + j];
+ 505              		.loc 1 143 9 is_stmt 1 view .LVU165
+ 143:poly.c        ****             t  = a->coeffs[8 * i + j];
+ 506              		.loc 1 143 23 discriminator 1 view .LVU166
+ 507 0012 01EB4406 		add	r6, r1, r4, lsl #1
+ 143:poly.c        ****             t  = a->coeffs[8 * i + j];
+ 508              		.loc 1 143 16 is_stmt 0 view .LVU167
+ 509 0016 1546     		mov	r5, r2
+ 510              	.LVL43:
+ 511              	.L23:
+ 144:poly.c        ****             // t += ((int16_t)t >> 15) & KYBER_Q;
+ 512              		.loc 1 144 13 is_stmt 1 view .LVU168
+ 144:poly.c        ****             // t += ((int16_t)t >> 15) & KYBER_Q;
+ 513              		.loc 1 144 27 is_stmt 0 view .LVU169
+ 514 0018 36F9023B 		ldrsh	r3, [r6], #2
+ 515              	.LVL44:
+ 147:poly.c        ****             t += 1665;
+ 516              		.loc 1 147 13 is_stmt 1 view .LVU170
+ 147:poly.c        ****             t += 1665;
+ 517              		.loc 1 147 15 is_stmt 0 view .LVU171
+ 518 001c 5B00     		lsls	r3, r3, #1
+ 519              	.LVL45:
+ 148:poly.c        ****             t *= 80635;
+ 520              		.loc 1 148 13 is_stmt 1 view .LVU172
+ 148:poly.c        ****             t *= 80635;
+ 521              		.loc 1 148 15 is_stmt 0 view .LVU173
+ 522 001e 03F28163 		addw	r3, r3, #1665
+ 523              	.LVL46:
+ 524              		.loc 1 149 13 is_stmt 1 view .LVU174
+ 525              		.loc 1 149 15 is_stmt 0 view .LVU175
+ 526 0022 0CFB03F3 		mul	r3, ip, r3
+ 527              	.LVL47:
+ 150:poly.c        ****             t >>= 28;
+ 528              		.loc 1 150 13 is_stmt 1 view .LVU176
+ 151:poly.c        ****             t &= 1;
+ 529              		.loc 1 151 13 view .LVU177
+ 152:poly.c        ****             msg[i] |= t << j;
+ 530              		.loc 1 152 13 view .LVU178
+ 151:poly.c        ****             t &= 1;
+ 531              		.loc 1 151 15 is_stmt 0 view .LVU179
+ 532 0026 C3F30073 		ubfx	r3, r3, #28, #1
+ 533              	.LVL48:
+ 534              		.loc 1 152 25 view .LVU180
+ 535 002a AB40     		lsls	r3, r3, r5
+ 536              		.loc 1 152 20 view .LVU181
+ 537 002c 1A43     		orrs	r2, r2, r3
+ 143:poly.c        ****             t  = a->coeffs[8 * i + j];
+ 538              		.loc 1 143 29 discriminator 3 view .LVU182
+ 539 002e 0135     		adds	r5, r5, #1
+ 540              	.LVL49:
+ 541              		.loc 1 152 20 view .LVU183
+ 542 0030 D2B2     		uxtb	r2, r2
+ 143:poly.c        ****             t  = a->coeffs[8 * i + j];
+ 543              		.loc 1 143 23 discriminator 1 view .LVU184
+ 544 0032 082D     		cmp	r5, #8
+ 545              		.loc 1 152 20 view .LVU185
+ 546 0034 0270     		strb	r2, [r0]
+ 547              	.LVL50:
+ 143:poly.c        ****             t  = a->coeffs[8 * i + j];
+ 548              		.loc 1 143 29 is_stmt 1 discriminator 3 view .LVU186
+ 143:poly.c        ****             t  = a->coeffs[8 * i + j];
+ 549              		.loc 1 143 23 discriminator 1 view .LVU187
+ 550 0036 EFD1     		bne	.L23
+ 141:poly.c        ****         msg[i] = 0;
+ 551              		.loc 1 141 35 discriminator 2 view .LVU188
+ 552              	.LVL51:
+ 141:poly.c        ****         msg[i] = 0;
+ 553              		.loc 1 141 19 discriminator 1 view .LVU189
+ 554 0038 0834     		adds	r4, r4, #8
+ 555 003a B4F5807F 		cmp	r4, #256
+ 556 003e E5D1     		bne	.L24
+ 153:poly.c        ****         }
+ 154:poly.c        ****     }
+ 155:poly.c        **** }
+ 557              		.loc 1 155 1 is_stmt 0 view .LVU190
+ 558 0040 F0BD     		pop	{r4, r5, r6, r7, pc}
+ 559              	.LVL52:
+ 560              	.L28:
+ 561              		.loc 1 155 1 view .LVU191
+ 562 0042 00BF     		.align	2
+ 563              	.L27:
+ 564 0044 FB3A0100 		.word	80635
+ 565              		.cfi_endproc
+ 566              	.LFE5:
+ 568              		.section	.text.PQCLEAN_MLKEM512_CLEAN_poly_getnoise_eta1,"ax",%progbits
+ 569              		.align	1
+ 570              		.global	PQCLEAN_MLKEM512_CLEAN_poly_getnoise_eta1
+ 571              		.syntax unified
+ 572              		.thumb
+ 573              		.thumb_func
+ 575              	PQCLEAN_MLKEM512_CLEAN_poly_getnoise_eta1:
+ 576              	.LVL53:
+ 577              	.LFB6:
+ 156:poly.c        **** 
+ 157:poly.c        **** /*************************************************
+ 158:poly.c        **** * Name:        PQCLEAN_MLKEM512_CLEAN_poly_getnoise_eta1
+ 159:poly.c        **** *
+ 160:poly.c        **** * Description: Sample a polynomial deterministically from a seed and a nonce,
+ 161:poly.c        **** *              with output polynomial close to centered binomial distribution
+ 162:poly.c        **** *              with parameter KYBER_ETA1
+ 163:poly.c        **** *
+ 164:poly.c        **** * Arguments:   - poly *r: pointer to output polynomial
+ 165:poly.c        **** *              - const uint8_t *seed: pointer to input seed
+ 166:poly.c        **** *                                     (of length KYBER_SYMBYTES bytes)
+ 167:poly.c        **** *              - uint8_t nonce: one-byte input nonce
+ 168:poly.c        **** **************************************************/
+ 169:poly.c        **** void PQCLEAN_MLKEM512_CLEAN_poly_getnoise_eta1(poly *r, const uint8_t seed[KYBER_SYMBYTES], uint8_t
+ 578              		.loc 1 169 108 is_stmt 1 view -0
+ 579              		.cfi_startproc
+ 580              		@ args = 0, pretend = 0, frame = 192
+ 581              		@ frame_needed = 0, uses_anonymous_args = 0
+ 170:poly.c        ****     uint8_t buf[KYBER_ETA1 * KYBER_N / 4];
+ 582              		.loc 1 170 5 view .LVU193
+ 171:poly.c        ****     prf(buf, sizeof(buf), seed, nonce);
+ 583              		.loc 1 171 5 view .LVU194
+ 169:poly.c        ****     uint8_t buf[KYBER_ETA1 * KYBER_N / 4];
+ 584              		.loc 1 169 108 is_stmt 0 view .LVU195
+ 585 0000 10B5     		push	{r4, lr}
+ 586              	.LCFI7:
+ 587              		.cfi_def_cfa_offset 8
+ 588              		.cfi_offset 4, -8
+ 589              		.cfi_offset 14, -4
+ 590 0002 B0B0     		sub	sp, sp, #192
+ 591              	.LCFI8:
+ 592              		.cfi_def_cfa_offset 200
+ 169:poly.c        ****     uint8_t buf[KYBER_ETA1 * KYBER_N / 4];
+ 593              		.loc 1 169 108 view .LVU196
+ 594 0004 1346     		mov	r3, r2
+ 595 0006 0446     		mov	r4, r0
+ 596              		.loc 1 171 5 view .LVU197
+ 597 0008 0A46     		mov	r2, r1
+ 598              	.LVL54:
+ 599              		.loc 1 171 5 view .LVU198
+ 600 000a 6846     		mov	r0, sp
+ 601              	.LVL55:
+ 602              		.loc 1 171 5 view .LVU199
+ 603 000c C021     		movs	r1, #192
+ 604              	.LVL56:
+ 605              		.loc 1 171 5 view .LVU200
+ 606 000e FFF7FEFF 		bl	PQCLEAN_MLKEM512_CLEAN_kyber_shake256_prf
+ 607              	.LVL57:
+ 172:poly.c        ****     PQCLEAN_MLKEM512_CLEAN_poly_cbd_eta1(r, buf);
+ 608              		.loc 1 172 5 is_stmt 1 view .LVU201
+ 609 0012 6946     		mov	r1, sp
+ 610 0014 2046     		mov	r0, r4
+ 611 0016 FFF7FEFF 		bl	PQCLEAN_MLKEM512_CLEAN_poly_cbd_eta1
+ 612              	.LVL58:
+ 173:poly.c        **** }
+ 613              		.loc 1 173 1 is_stmt 0 view .LVU202
+ 614 001a 30B0     		add	sp, sp, #192
+ 615              	.LCFI9:
+ 616              		.cfi_def_cfa_offset 8
+ 617              		@ sp needed
+ 618 001c 10BD     		pop	{r4, pc}
+ 619              		.loc 1 173 1 view .LVU203
+ 620              		.cfi_endproc
+ 621              	.LFE6:
+ 623              		.section	.text.PQCLEAN_MLKEM512_CLEAN_poly_getnoise_eta2,"ax",%progbits
+ 624              		.align	1
+ 625              		.global	PQCLEAN_MLKEM512_CLEAN_poly_getnoise_eta2
+ 626              		.syntax unified
+ 627              		.thumb
+ 628              		.thumb_func
+ 630              	PQCLEAN_MLKEM512_CLEAN_poly_getnoise_eta2:
+ 631              	.LVL59:
+ 632              	.LFB7:
+ 174:poly.c        **** 
+ 175:poly.c        **** /*************************************************
+ 176:poly.c        **** * Name:        PQCLEAN_MLKEM512_CLEAN_poly_getnoise_eta2
+ 177:poly.c        **** *
+ 178:poly.c        **** * Description: Sample a polynomial deterministically from a seed and a nonce,
+ 179:poly.c        **** *              with output polynomial close to centered binomial distribution
+ 180:poly.c        **** *              with parameter KYBER_ETA2
+ 181:poly.c        **** *
+ 182:poly.c        **** * Arguments:   - poly *r: pointer to output polynomial
+ 183:poly.c        **** *              - const uint8_t *seed: pointer to input seed
+ 184:poly.c        **** *                                     (of length KYBER_SYMBYTES bytes)
+ 185:poly.c        **** *              - uint8_t nonce: one-byte input nonce
+ 186:poly.c        **** **************************************************/
+ 187:poly.c        **** void PQCLEAN_MLKEM512_CLEAN_poly_getnoise_eta2(poly *r, const uint8_t seed[KYBER_SYMBYTES], uint8_t
+ 633              		.loc 1 187 108 is_stmt 1 view -0
+ 634              		.cfi_startproc
+ 635              		@ args = 0, pretend = 0, frame = 128
+ 636              		@ frame_needed = 0, uses_anonymous_args = 0
+ 188:poly.c        ****     uint8_t buf[KYBER_ETA2 * KYBER_N / 4];
+ 637              		.loc 1 188 5 view .LVU205
+ 189:poly.c        ****     prf(buf, sizeof(buf), seed, nonce);
+ 638              		.loc 1 189 5 view .LVU206
+ 187:poly.c        ****     uint8_t buf[KYBER_ETA2 * KYBER_N / 4];
+ 639              		.loc 1 187 108 is_stmt 0 view .LVU207
+ 640 0000 10B5     		push	{r4, lr}
+ 641              	.LCFI10:
+ 642              		.cfi_def_cfa_offset 8
+ 643              		.cfi_offset 4, -8
+ 644              		.cfi_offset 14, -4
+ 645 0002 A0B0     		sub	sp, sp, #128
+ 646              	.LCFI11:
+ 647              		.cfi_def_cfa_offset 136
+ 187:poly.c        ****     uint8_t buf[KYBER_ETA2 * KYBER_N / 4];
+ 648              		.loc 1 187 108 view .LVU208
+ 649 0004 1346     		mov	r3, r2
+ 650 0006 0446     		mov	r4, r0
+ 651              		.loc 1 189 5 view .LVU209
+ 652 0008 0A46     		mov	r2, r1
+ 653              	.LVL60:
+ 654              		.loc 1 189 5 view .LVU210
+ 655 000a 6846     		mov	r0, sp
+ 656              	.LVL61:
+ 657              		.loc 1 189 5 view .LVU211
+ 658 000c 8021     		movs	r1, #128
+ 659              	.LVL62:
+ 660              		.loc 1 189 5 view .LVU212
+ 661 000e FFF7FEFF 		bl	PQCLEAN_MLKEM512_CLEAN_kyber_shake256_prf
+ 662              	.LVL63:
+ 190:poly.c        ****     PQCLEAN_MLKEM512_CLEAN_poly_cbd_eta2(r, buf);
+ 663              		.loc 1 190 5 is_stmt 1 view .LVU213
+ 664 0012 6946     		mov	r1, sp
+ 665 0014 2046     		mov	r0, r4
+ 666 0016 FFF7FEFF 		bl	PQCLEAN_MLKEM512_CLEAN_poly_cbd_eta2
+ 667              	.LVL64:
+ 191:poly.c        **** }
+ 668              		.loc 1 191 1 is_stmt 0 view .LVU214
+ 669 001a 20B0     		add	sp, sp, #128
+ 670              	.LCFI12:
+ 671              		.cfi_def_cfa_offset 8
+ 672              		@ sp needed
+ 673 001c 10BD     		pop	{r4, pc}
+ 674              		.loc 1 191 1 view .LVU215
+ 675              		.cfi_endproc
+ 676              	.LFE7:
+ 678              		.section	.text.PQCLEAN_MLKEM512_CLEAN_poly_invntt_tomont,"ax",%progbits
+ 679              		.align	1
+ 680              		.global	PQCLEAN_MLKEM512_CLEAN_poly_invntt_tomont
+ 681              		.syntax unified
+ 682              		.thumb
+ 683              		.thumb_func
+ 685              	PQCLEAN_MLKEM512_CLEAN_poly_invntt_tomont:
+ 686              	.LVL65:
+ 687              	.LFB9:
+ 192:poly.c        **** 
+ 193:poly.c        **** 
+ 194:poly.c        **** /*************************************************
+ 195:poly.c        **** * Name:        PQCLEAN_MLKEM512_CLEAN_poly_ntt
+ 196:poly.c        **** *
+ 197:poly.c        **** * Description: Computes negacyclic number-theoretic transform (NTT) of
+ 198:poly.c        **** *              a polynomial in place;
+ 199:poly.c        **** *              inputs assumed to be in normal order, output in bitreversed order
+ 200:poly.c        **** *
+ 201:poly.c        **** * Arguments:   - uint16_t *r: pointer to in/output polynomial
+ 202:poly.c        **** **************************************************/
+ 203:poly.c        **** void PQCLEAN_MLKEM512_CLEAN_poly_ntt(poly *r) {
+ 204:poly.c        ****     PQCLEAN_MLKEM512_CLEAN_ntt(r->coeffs);
+ 205:poly.c        ****     PQCLEAN_MLKEM512_CLEAN_poly_reduce(r);
+ 206:poly.c        **** }
+ 207:poly.c        **** 
+ 208:poly.c        **** /*************************************************
+ 209:poly.c        **** * Name:        PQCLEAN_MLKEM512_CLEAN_poly_invntt_tomont
+ 210:poly.c        **** *
+ 211:poly.c        **** * Description: Computes inverse of negacyclic number-theoretic transform (NTT)
+ 212:poly.c        **** *              of a polynomial in place;
+ 213:poly.c        **** *              inputs assumed to be in bitreversed order, output in normal order
+ 214:poly.c        **** *
+ 215:poly.c        **** * Arguments:   - uint16_t *a: pointer to in/output polynomial
+ 216:poly.c        **** **************************************************/
+ 217:poly.c        **** void PQCLEAN_MLKEM512_CLEAN_poly_invntt_tomont(poly *r) {
+ 688              		.loc 1 217 57 is_stmt 1 view -0
+ 689              		.cfi_startproc
+ 690              		@ args = 0, pretend = 0, frame = 0
+ 691              		@ frame_needed = 0, uses_anonymous_args = 0
+ 692              		@ link register save eliminated.
+ 218:poly.c        ****     PQCLEAN_MLKEM512_CLEAN_invntt(r->coeffs);
+ 693              		.loc 1 218 5 view .LVU217
+ 694 0000 FFF7FEBF 		b	PQCLEAN_MLKEM512_CLEAN_invntt
+ 695              	.LVL66:
+ 696              		.loc 1 218 5 is_stmt 0 view .LVU218
+ 697              		.cfi_endproc
+ 698              	.LFE9:
+ 700              		.section	.text.PQCLEAN_MLKEM512_CLEAN_poly_basemul_montgomery,"ax",%progbits
+ 701              		.align	1
+ 702              		.global	PQCLEAN_MLKEM512_CLEAN_poly_basemul_montgomery
+ 703              		.syntax unified
+ 704              		.thumb
+ 705              		.thumb_func
+ 707              	PQCLEAN_MLKEM512_CLEAN_poly_basemul_montgomery:
+ 708              	.LVL67:
+ 709              	.LFB10:
+ 219:poly.c        **** }
+ 220:poly.c        **** 
+ 221:poly.c        **** /*************************************************
+ 222:poly.c        **** * Name:        PQCLEAN_MLKEM512_CLEAN_poly_basemul_montgomery
+ 223:poly.c        **** *
+ 224:poly.c        **** * Description: Multiplication of two polynomials in NTT domain
+ 225:poly.c        **** *
+ 226:poly.c        **** * Arguments:   - poly *r: pointer to output polynomial
+ 227:poly.c        **** *              - const poly *a: pointer to first input polynomial
+ 228:poly.c        **** *              - const poly *b: pointer to second input polynomial
+ 229:poly.c        **** **************************************************/
+ 230:poly.c        **** void PQCLEAN_MLKEM512_CLEAN_poly_basemul_montgomery(poly *r, const poly *a, const poly *b) {
+ 710              		.loc 1 230 92 is_stmt 1 view -0
+ 711              		.cfi_startproc
+ 712              		@ args = 0, pretend = 0, frame = 0
+ 713              		@ frame_needed = 0, uses_anonymous_args = 0
+ 231:poly.c        ****     size_t i;
+ 714              		.loc 1 231 5 view .LVU220
+ 232:poly.c        ****     for (i = 0; i < KYBER_N / 4; i++) {
+ 715              		.loc 1 232 5 view .LVU221
+ 716              		.loc 1 232 19 discriminator 1 view .LVU222
+ 230:poly.c        ****     size_t i;
+ 717              		.loc 1 230 92 is_stmt 0 view .LVU223
+ 718 0000 2DE9F843 		push	{r3, r4, r5, r6, r7, r8, r9, lr}
+ 719              	.LCFI13:
+ 720              		.cfi_def_cfa_offset 32
+ 721              		.cfi_offset 3, -32
+ 722              		.cfi_offset 4, -28
+ 723              		.cfi_offset 5, -24
+ 724              		.cfi_offset 6, -20
+ 725              		.cfi_offset 7, -16
+ 726              		.cfi_offset 8, -12
+ 727              		.cfi_offset 9, -8
+ 728              		.cfi_offset 14, -4
+ 729 0004 0F4F     		ldr	r7, .L35
+ 730 0006 061D     		adds	r6, r0, #4
+ 731 0008 0D1D     		adds	r5, r1, #4
+ 732 000a 141D     		adds	r4, r2, #4
+ 733 000c 07F18009 		add	r9, r7, #128
+ 734              	.LVL68:
+ 735              	.L33:
+ 233:poly.c        ****         PQCLEAN_MLKEM512_CLEAN_basemul(&r->coeffs[4 * i], &a->coeffs[4 * i], &b->coeffs[4 * i], PQC
+ 736              		.loc 1 233 9 is_stmt 1 view .LVU224
+ 737              		.loc 1 233 125 is_stmt 0 view .LVU225
+ 738 0010 37F9028F 		ldrsh	r8, [r7, #2]!
+ 739              		.loc 1 233 9 view .LVU226
+ 740 0014 221F     		subs	r2, r4, #4
+ 741 0016 291F     		subs	r1, r5, #4
+ 742 0018 301F     		subs	r0, r6, #4
+ 743 001a 4346     		mov	r3, r8
+ 744 001c FFF7FEFF 		bl	PQCLEAN_MLKEM512_CLEAN_basemul
+ 745              	.LVL69:
+ 234:poly.c        ****         PQCLEAN_MLKEM512_CLEAN_basemul(&r->coeffs[4 * i + 2], &a->coeffs[4 * i + 2], &b->coeffs[4 *
+ 746              		.loc 1 234 9 is_stmt 1 view .LVU227
+ 747 0020 C8F10003 		rsb	r3, r8, #0
+ 748 0024 2246     		mov	r2, r4
+ 749 0026 2946     		mov	r1, r5
+ 750 0028 3046     		mov	r0, r6
+ 751 002a 1BB2     		sxth	r3, r3
+ 752 002c FFF7FEFF 		bl	PQCLEAN_MLKEM512_CLEAN_basemul
+ 753              	.LVL70:
+ 232:poly.c        ****         PQCLEAN_MLKEM512_CLEAN_basemul(&r->coeffs[4 * i], &a->coeffs[4 * i], &b->coeffs[4 * i], PQC
+ 754              		.loc 1 232 35 discriminator 3 view .LVU228
+ 232:poly.c        ****         PQCLEAN_MLKEM512_CLEAN_basemul(&r->coeffs[4 * i], &a->coeffs[4 * i], &b->coeffs[4 * i], PQC
+ 755              		.loc 1 232 19 discriminator 1 view .LVU229
+ 756 0030 4F45     		cmp	r7, r9
+ 757 0032 06F10806 		add	r6, r6, #8
+ 758 0036 05F10805 		add	r5, r5, #8
+ 759 003a 04F10804 		add	r4, r4, #8
+ 760 003e E7D1     		bne	.L33
+ 235:poly.c        ****     }
+ 236:poly.c        **** }
+ 761              		.loc 1 236 1 is_stmt 0 view .LVU230
+ 762 0040 BDE8F883 		pop	{r3, r4, r5, r6, r7, r8, r9, pc}
+ 763              	.L36:
+ 764              		.align	2
+ 765              	.L35:
+ 766 0044 7E000000 		.word	PQCLEAN_MLKEM512_CLEAN_zetas+126
+ 767              		.cfi_endproc
+ 768              	.LFE10:
+ 770              		.section	.text.PQCLEAN_MLKEM512_CLEAN_poly_tomont,"ax",%progbits
+ 771              		.align	1
+ 772              		.global	PQCLEAN_MLKEM512_CLEAN_poly_tomont
+ 773              		.syntax unified
+ 774              		.thumb
+ 775              		.thumb_func
+ 777              	PQCLEAN_MLKEM512_CLEAN_poly_tomont:
+ 778              	.LVL71:
+ 779              	.LFB11:
+ 237:poly.c        **** 
+ 238:poly.c        **** /*************************************************
+ 239:poly.c        **** * Name:        PQCLEAN_MLKEM512_CLEAN_poly_tomont
+ 240:poly.c        **** *
+ 241:poly.c        **** * Description: Inplace conversion of all coefficients of a polynomial
+ 242:poly.c        **** *              from normal domain to Montgomery domain
+ 243:poly.c        **** *
+ 244:poly.c        **** * Arguments:   - poly *r: pointer to input/output polynomial
+ 245:poly.c        **** **************************************************/
+ 246:poly.c        **** void PQCLEAN_MLKEM512_CLEAN_poly_tomont(poly *r) {
+ 780              		.loc 1 246 50 is_stmt 1 view -0
+ 781              		.cfi_startproc
+ 782              		@ args = 0, pretend = 0, frame = 0
+ 783              		@ frame_needed = 0, uses_anonymous_args = 0
+ 247:poly.c        ****     size_t i;
+ 784              		.loc 1 247 5 view .LVU232
+ 248:poly.c        ****     const int16_t f = (1ULL << 32) % KYBER_Q;
+ 785              		.loc 1 248 5 view .LVU233
+ 249:poly.c        ****     for (i = 0; i < KYBER_N; i++) {
+ 786              		.loc 1 249 5 view .LVU234
+ 787              		.loc 1 249 19 discriminator 1 view .LVU235
+ 246:poly.c        ****     size_t i;
+ 788              		.loc 1 246 50 is_stmt 0 view .LVU236
+ 789 0000 70B5     		push	{r4, r5, r6, lr}
+ 790              	.LCFI14:
+ 791              		.cfi_def_cfa_offset 16
+ 792              		.cfi_offset 4, -16
+ 793              		.cfi_offset 5, -12
+ 794              		.cfi_offset 6, -8
+ 795              		.cfi_offset 14, -4
+ 796 0002 851E     		subs	r5, r0, #2
+ 797 0004 00F5FF74 		add	r4, r0, #510
+ 250:poly.c        ****         r->coeffs[i] = PQCLEAN_MLKEM512_CLEAN_montgomery_reduce((int32_t)r->coeffs[i] * f);
+ 798              		.loc 1 250 24 view .LVU237
+ 799 0008 40F24956 		movw	r6, #1353
+ 800              	.LVL72:
+ 801              	.L38:
+ 802              		.loc 1 250 9 is_stmt 1 view .LVU238
+ 803              		.loc 1 250 24 is_stmt 0 view .LVU239
+ 804 000c 35F9020F 		ldrsh	r0, [r5, #2]!
+ 805 0010 7043     		muls	r0, r6, r0
+ 806 0012 FFF7FEFF 		bl	PQCLEAN_MLKEM512_CLEAN_montgomery_reduce
+ 807              	.LVL73:
+ 249:poly.c        ****     for (i = 0; i < KYBER_N; i++) {
+ 808              		.loc 1 249 19 discriminator 1 view .LVU240
+ 809 0016 A542     		cmp	r5, r4
+ 810              		.loc 1 250 22 discriminator 1 view .LVU241
+ 811 0018 2880     		strh	r0, [r5]	@ movhi
+ 249:poly.c        ****     for (i = 0; i < KYBER_N; i++) {
+ 812              		.loc 1 249 31 is_stmt 1 discriminator 3 view .LVU242
+ 249:poly.c        ****     for (i = 0; i < KYBER_N; i++) {
+ 813              		.loc 1 249 19 discriminator 1 view .LVU243
+ 814 001a F7D1     		bne	.L38
+ 251:poly.c        ****     }
+ 252:poly.c        **** }
+ 815              		.loc 1 252 1 is_stmt 0 view .LVU244
+ 816 001c 70BD     		pop	{r4, r5, r6, pc}
+ 817              		.loc 1 252 1 view .LVU245
+ 818              		.cfi_endproc
+ 819              	.LFE11:
+ 821              		.section	.text.PQCLEAN_MLKEM512_CLEAN_poly_reduce,"ax",%progbits
+ 822              		.align	1
+ 823              		.global	PQCLEAN_MLKEM512_CLEAN_poly_reduce
+ 824              		.syntax unified
+ 825              		.thumb
+ 826              		.thumb_func
+ 828              	PQCLEAN_MLKEM512_CLEAN_poly_reduce:
+ 829              	.LVL74:
+ 830              	.LFB12:
+ 253:poly.c        **** 
+ 254:poly.c        **** /*************************************************
+ 255:poly.c        **** * Name:        PQCLEAN_MLKEM512_CLEAN_poly_reduce
+ 256:poly.c        **** *
+ 257:poly.c        **** * Description: Applies Barrett reduction to all coefficients of a polynomial
+ 258:poly.c        **** *              for details of the Barrett reduction see comments in reduce.c
+ 259:poly.c        **** *
+ 260:poly.c        **** * Arguments:   - poly *r: pointer to input/output polynomial
+ 261:poly.c        **** **************************************************/
+ 262:poly.c        **** void PQCLEAN_MLKEM512_CLEAN_poly_reduce(poly *r) {
+ 831              		.loc 1 262 50 is_stmt 1 view -0
+ 832              		.cfi_startproc
+ 833              		@ args = 0, pretend = 0, frame = 0
+ 834              		@ frame_needed = 0, uses_anonymous_args = 0
+ 263:poly.c        ****     size_t i;
+ 835              		.loc 1 263 5 view .LVU247
+ 264:poly.c        ****     for (i = 0; i < KYBER_N; i++) {
+ 836              		.loc 1 264 5 view .LVU248
+ 837              		.loc 1 264 19 discriminator 1 view .LVU249
+ 262:poly.c        ****     size_t i;
+ 838              		.loc 1 262 50 is_stmt 0 view .LVU250
+ 839 0000 38B5     		push	{r3, r4, r5, lr}
+ 840              	.LCFI15:
+ 841              		.cfi_def_cfa_offset 16
+ 842              		.cfi_offset 3, -16
+ 843              		.cfi_offset 4, -12
+ 844              		.cfi_offset 5, -8
+ 845              		.cfi_offset 14, -4
+ 846 0002 851E     		subs	r5, r0, #2
+ 847 0004 00F5FF74 		add	r4, r0, #510
+ 848              	.LVL75:
+ 849              	.L41:
+ 265:poly.c        ****         r->coeffs[i] = PQCLEAN_MLKEM512_CLEAN_barrett_reduce(r->coeffs[i]);
+ 850              		.loc 1 265 9 is_stmt 1 view .LVU251
+ 851              		.loc 1 265 24 is_stmt 0 view .LVU252
+ 852 0008 35F9020F 		ldrsh	r0, [r5, #2]!
+ 853 000c FFF7FEFF 		bl	PQCLEAN_MLKEM512_CLEAN_barrett_reduce
+ 854              	.LVL76:
+ 264:poly.c        ****     for (i = 0; i < KYBER_N; i++) {
+ 855              		.loc 1 264 19 discriminator 1 view .LVU253
+ 856 0010 A542     		cmp	r5, r4
+ 857              		.loc 1 265 22 discriminator 1 view .LVU254
+ 858 0012 2880     		strh	r0, [r5]	@ movhi
+ 264:poly.c        ****     for (i = 0; i < KYBER_N; i++) {
+ 859              		.loc 1 264 31 is_stmt 1 discriminator 3 view .LVU255
+ 264:poly.c        ****     for (i = 0; i < KYBER_N; i++) {
+ 860              		.loc 1 264 19 discriminator 1 view .LVU256
+ 861 0014 F8D1     		bne	.L41
+ 266:poly.c        ****     }
+ 267:poly.c        **** }
+ 862              		.loc 1 267 1 is_stmt 0 view .LVU257
+ 863 0016 38BD     		pop	{r3, r4, r5, pc}
+ 864              		.loc 1 267 1 view .LVU258
+ 865              		.cfi_endproc
+ 866              	.LFE12:
+ 868              		.section	.text.PQCLEAN_MLKEM512_CLEAN_poly_ntt,"ax",%progbits
+ 869              		.align	1
+ 870              		.global	PQCLEAN_MLKEM512_CLEAN_poly_ntt
+ 871              		.syntax unified
+ 872              		.thumb
+ 873              		.thumb_func
+ 875              	PQCLEAN_MLKEM512_CLEAN_poly_ntt:
+ 876              	.LVL77:
+ 877              	.LFB8:
+ 203:poly.c        ****     PQCLEAN_MLKEM512_CLEAN_ntt(r->coeffs);
+ 878              		.loc 1 203 47 is_stmt 1 view -0
+ 879              		.cfi_startproc
+ 880              		@ args = 0, pretend = 0, frame = 0
+ 881              		@ frame_needed = 0, uses_anonymous_args = 0
+ 204:poly.c        ****     PQCLEAN_MLKEM512_CLEAN_poly_reduce(r);
+ 882              		.loc 1 204 5 view .LVU260
+ 203:poly.c        ****     PQCLEAN_MLKEM512_CLEAN_ntt(r->coeffs);
+ 883              		.loc 1 203 47 is_stmt 0 view .LVU261
+ 884 0000 10B5     		push	{r4, lr}
+ 885              	.LCFI16:
+ 886              		.cfi_def_cfa_offset 8
+ 887              		.cfi_offset 4, -8
+ 888              		.cfi_offset 14, -4
+ 203:poly.c        ****     PQCLEAN_MLKEM512_CLEAN_ntt(r->coeffs);
+ 889              		.loc 1 203 47 view .LVU262
+ 890 0002 0446     		mov	r4, r0
+ 204:poly.c        ****     PQCLEAN_MLKEM512_CLEAN_poly_reduce(r);
+ 891              		.loc 1 204 5 view .LVU263
+ 892 0004 FFF7FEFF 		bl	PQCLEAN_MLKEM512_CLEAN_ntt
+ 893              	.LVL78:
+ 205:poly.c        **** }
+ 894              		.loc 1 205 5 is_stmt 1 view .LVU264
+ 895 0008 2046     		mov	r0, r4
+ 206:poly.c        **** 
+ 896              		.loc 1 206 1 is_stmt 0 view .LVU265
+ 897 000a BDE81040 		pop	{r4, lr}
+ 898              	.LCFI17:
+ 899              		.cfi_restore 14
+ 900              		.cfi_restore 4
+ 901              		.cfi_def_cfa_offset 0
+ 902              	.LVL79:
+ 205:poly.c        **** }
+ 903              		.loc 1 205 5 view .LVU266
+ 904 000e FFF7FEBF 		b	PQCLEAN_MLKEM512_CLEAN_poly_reduce
+ 905              	.LVL80:
+ 205:poly.c        **** }
+ 906              		.loc 1 205 5 view .LVU267
+ 907              		.cfi_endproc
+ 908              	.LFE8:
+ 910              		.section	.text.PQCLEAN_MLKEM512_CLEAN_poly_add,"ax",%progbits
+ 911              		.align	1
+ 912              		.global	PQCLEAN_MLKEM512_CLEAN_poly_add
+ 913              		.syntax unified
+ 914              		.thumb
+ 915              		.thumb_func
+ 917              	PQCLEAN_MLKEM512_CLEAN_poly_add:
+ 918              	.LVL81:
+ 919              	.LFB13:
+ 268:poly.c        **** 
+ 269:poly.c        **** /*************************************************
+ 270:poly.c        **** * Name:        PQCLEAN_MLKEM512_CLEAN_poly_add
+ 271:poly.c        **** *
+ 272:poly.c        **** * Description: Add two polynomials; no modular reduction is performed
+ 273:poly.c        **** *
+ 274:poly.c        **** * Arguments: - poly *r: pointer to output polynomial
+ 275:poly.c        **** *            - const poly *a: pointer to first input polynomial
+ 276:poly.c        **** *            - const poly *b: pointer to second input polynomial
+ 277:poly.c        **** **************************************************/
+ 278:poly.c        **** void PQCLEAN_MLKEM512_CLEAN_poly_add(poly *r, const poly *a, const poly *b) {
+ 920              		.loc 1 278 77 is_stmt 1 view -0
+ 921              		.cfi_startproc
+ 922              		@ args = 0, pretend = 0, frame = 0
+ 923              		@ frame_needed = 0, uses_anonymous_args = 0
+ 279:poly.c        ****     size_t i;
+ 924              		.loc 1 279 5 view .LVU269
+ 280:poly.c        ****     for (i = 0; i < KYBER_N; i++) {
+ 925              		.loc 1 280 5 view .LVU270
+ 926              		.loc 1 280 19 discriminator 1 view .LVU271
+ 278:poly.c        ****     size_t i;
+ 927              		.loc 1 278 77 is_stmt 0 view .LVU272
+ 928 0000 30B5     		push	{r4, r5, lr}
+ 929              	.LCFI18:
+ 930              		.cfi_def_cfa_offset 12
+ 931              		.cfi_offset 4, -12
+ 932              		.cfi_offset 5, -8
+ 933              		.cfi_offset 14, -4
+ 934              		.loc 1 280 12 view .LVU273
+ 935 0002 0023     		movs	r3, #0
+ 936              	.LVL82:
+ 937              	.L45:
+ 281:poly.c        ****         r->coeffs[i] = a->coeffs[i] + b->coeffs[i];
+ 938              		.loc 1 281 9 is_stmt 1 view .LVU274
+ 939              		.loc 1 281 37 is_stmt 0 view .LVU275
+ 940 0004 31F81340 		ldrh	r4, [r1, r3, lsl #1]
+ 941 0008 32F81350 		ldrh	r5, [r2, r3, lsl #1]
+ 942 000c 2C44     		add	r4, r4, r5
+ 943              		.loc 1 281 22 view .LVU276
+ 944 000e 20F81340 		strh	r4, [r0, r3, lsl #1]	@ movhi
+ 280:poly.c        ****     for (i = 0; i < KYBER_N; i++) {
+ 945              		.loc 1 280 31 is_stmt 1 discriminator 3 view .LVU277
+ 946 0012 0133     		adds	r3, r3, #1
+ 947              	.LVL83:
+ 280:poly.c        ****     for (i = 0; i < KYBER_N; i++) {
+ 948              		.loc 1 280 19 discriminator 1 view .LVU278
+ 949 0014 B3F5807F 		cmp	r3, #256
+ 950 0018 F4D1     		bne	.L45
+ 282:poly.c        ****     }
+ 283:poly.c        **** }
+ 951              		.loc 1 283 1 is_stmt 0 view .LVU279
+ 952 001a 30BD     		pop	{r4, r5, pc}
+ 953              		.cfi_endproc
+ 954              	.LFE13:
+ 956              		.section	.text.PQCLEAN_MLKEM512_CLEAN_poly_sub,"ax",%progbits
+ 957              		.align	1
+ 958              		.global	PQCLEAN_MLKEM512_CLEAN_poly_sub
+ 959              		.syntax unified
+ 960              		.thumb
+ 961              		.thumb_func
+ 963              	PQCLEAN_MLKEM512_CLEAN_poly_sub:
+ 964              	.LVL84:
+ 965              	.LFB14:
+ 284:poly.c        **** 
+ 285:poly.c        **** /*************************************************
+ 286:poly.c        **** * Name:        PQCLEAN_MLKEM512_CLEAN_poly_sub
+ 287:poly.c        **** *
+ 288:poly.c        **** * Description: Subtract two polynomials; no modular reduction is performed
+ 289:poly.c        **** *
+ 290:poly.c        **** * Arguments: - poly *r:       pointer to output polynomial
+ 291:poly.c        **** *            - const poly *a: pointer to first input polynomial
+ 292:poly.c        **** *            - const poly *b: pointer to second input polynomial
+ 293:poly.c        **** **************************************************/
+ 294:poly.c        **** void PQCLEAN_MLKEM512_CLEAN_poly_sub(poly *r, const poly *a, const poly *b) {
+ 966              		.loc 1 294 77 is_stmt 1 view -0
+ 967              		.cfi_startproc
+ 968              		@ args = 0, pretend = 0, frame = 0
+ 969              		@ frame_needed = 0, uses_anonymous_args = 0
+ 295:poly.c        ****     size_t i;
+ 970              		.loc 1 295 5 view .LVU281
+ 296:poly.c        ****     for (i = 0; i < KYBER_N; i++) {
+ 971              		.loc 1 296 5 view .LVU282
+ 972              		.loc 1 296 19 discriminator 1 view .LVU283
+ 294:poly.c        ****     size_t i;
+ 973              		.loc 1 294 77 is_stmt 0 view .LVU284
+ 974 0000 30B5     		push	{r4, r5, lr}
+ 975              	.LCFI19:
+ 976              		.cfi_def_cfa_offset 12
+ 977              		.cfi_offset 4, -12
+ 978              		.cfi_offset 5, -8
+ 979              		.cfi_offset 14, -4
+ 980              		.loc 1 296 12 view .LVU285
+ 981 0002 0023     		movs	r3, #0
+ 982              	.LVL85:
+ 983              	.L48:
+ 297:poly.c        ****         r->coeffs[i] = a->coeffs[i] - b->coeffs[i];
+ 984              		.loc 1 297 9 is_stmt 1 view .LVU286
+ 985              		.loc 1 297 37 is_stmt 0 view .LVU287
+ 986 0004 31F81340 		ldrh	r4, [r1, r3, lsl #1]
+ 987 0008 32F81350 		ldrh	r5, [r2, r3, lsl #1]
+ 988 000c 641B     		subs	r4, r4, r5
+ 989              		.loc 1 297 22 view .LVU288
+ 990 000e 20F81340 		strh	r4, [r0, r3, lsl #1]	@ movhi
+ 296:poly.c        ****     for (i = 0; i < KYBER_N; i++) {
+ 991              		.loc 1 296 31 is_stmt 1 discriminator 3 view .LVU289
+ 992 0012 0133     		adds	r3, r3, #1
+ 993              	.LVL86:
+ 296:poly.c        ****     for (i = 0; i < KYBER_N; i++) {
+ 994              		.loc 1 296 19 discriminator 1 view .LVU290
+ 995 0014 B3F5807F 		cmp	r3, #256
+ 996 0018 F4D1     		bne	.L48
+ 298:poly.c        ****     }
+ 299:poly.c        **** }
+ 997              		.loc 1 299 1 is_stmt 0 view .LVU291
+ 998 001a 30BD     		pop	{r4, r5, pc}
+ 999              		.cfi_endproc
+ 1000              	.LFE14:
+ 1002              		.text
+ 1003              	.Letext0:
+ 1004              		.file 2 "/usr/lib/gcc/arm-none-eabi/14.2.1/include/stdint.h"
+ 1005              		.file 3 "poly.h"
+ 1006              		.file 4 "/usr/lib/gcc/arm-none-eabi/14.2.1/include/stddef.h"
+ 1007              		.file 5 "reduce.h"
+ 1008              		.file 6 "ntt.h"
+ 1009              		.file 7 "cbd.h"
+ 1010              		.file 8 "symmetric.h"
+ 1011              		.file 9 "verify.h"
+DEFINED SYMBOLS
+                            *ABS*:00000000 poly.c
+     /tmp/ccdDbpJc.s:19     .text.PQCLEAN_MLKEM512_CLEAN_poly_compress:00000000 $t
+     /tmp/ccdDbpJc.s:25     .text.PQCLEAN_MLKEM512_CLEAN_poly_compress:00000000 PQCLEAN_MLKEM512_CLEAN_poly_compress
+     /tmp/ccdDbpJc.s:158    .text.PQCLEAN_MLKEM512_CLEAN_poly_compress:00000088 $d
+     /tmp/ccdDbpJc.s:163    .text.PQCLEAN_MLKEM512_CLEAN_poly_decompress:00000000 $t
+     /tmp/ccdDbpJc.s:169    .text.PQCLEAN_MLKEM512_CLEAN_poly_decompress:00000000 PQCLEAN_MLKEM512_CLEAN_poly_decompress
+     /tmp/ccdDbpJc.s:232    .text.PQCLEAN_MLKEM512_CLEAN_poly_tobytes:00000000 $t
+     /tmp/ccdDbpJc.s:238    .text.PQCLEAN_MLKEM512_CLEAN_poly_tobytes:00000000 PQCLEAN_MLKEM512_CLEAN_poly_tobytes
+     /tmp/ccdDbpJc.s:325    .text.PQCLEAN_MLKEM512_CLEAN_poly_frombytes:00000000 $t
+     /tmp/ccdDbpJc.s:331    .text.PQCLEAN_MLKEM512_CLEAN_poly_frombytes:00000000 PQCLEAN_MLKEM512_CLEAN_poly_frombytes
+     /tmp/ccdDbpJc.s:386    .text.PQCLEAN_MLKEM512_CLEAN_poly_frommsg:00000000 $t
+     /tmp/ccdDbpJc.s:392    .text.PQCLEAN_MLKEM512_CLEAN_poly_frommsg:00000000 PQCLEAN_MLKEM512_CLEAN_poly_frommsg
+     /tmp/ccdDbpJc.s:464    .text.PQCLEAN_MLKEM512_CLEAN_poly_tomsg:00000000 $t
+     /tmp/ccdDbpJc.s:470    .text.PQCLEAN_MLKEM512_CLEAN_poly_tomsg:00000000 PQCLEAN_MLKEM512_CLEAN_poly_tomsg
+     /tmp/ccdDbpJc.s:564    .text.PQCLEAN_MLKEM512_CLEAN_poly_tomsg:00000044 $d
+     /tmp/ccdDbpJc.s:569    .text.PQCLEAN_MLKEM512_CLEAN_poly_getnoise_eta1:00000000 $t
+     /tmp/ccdDbpJc.s:575    .text.PQCLEAN_MLKEM512_CLEAN_poly_getnoise_eta1:00000000 PQCLEAN_MLKEM512_CLEAN_poly_getnoise_eta1
+     /tmp/ccdDbpJc.s:624    .text.PQCLEAN_MLKEM512_CLEAN_poly_getnoise_eta2:00000000 $t
+     /tmp/ccdDbpJc.s:630    .text.PQCLEAN_MLKEM512_CLEAN_poly_getnoise_eta2:00000000 PQCLEAN_MLKEM512_CLEAN_poly_getnoise_eta2
+     /tmp/ccdDbpJc.s:679    .text.PQCLEAN_MLKEM512_CLEAN_poly_invntt_tomont:00000000 $t
+     /tmp/ccdDbpJc.s:685    .text.PQCLEAN_MLKEM512_CLEAN_poly_invntt_tomont:00000000 PQCLEAN_MLKEM512_CLEAN_poly_invntt_tomont
+     /tmp/ccdDbpJc.s:701    .text.PQCLEAN_MLKEM512_CLEAN_poly_basemul_montgomery:00000000 $t
+     /tmp/ccdDbpJc.s:707    .text.PQCLEAN_MLKEM512_CLEAN_poly_basemul_montgomery:00000000 PQCLEAN_MLKEM512_CLEAN_poly_basemul_montgomery
+     /tmp/ccdDbpJc.s:766    .text.PQCLEAN_MLKEM512_CLEAN_poly_basemul_montgomery:00000044 $d
+     /tmp/ccdDbpJc.s:771    .text.PQCLEAN_MLKEM512_CLEAN_poly_tomont:00000000 $t
+     /tmp/ccdDbpJc.s:777    .text.PQCLEAN_MLKEM512_CLEAN_poly_tomont:00000000 PQCLEAN_MLKEM512_CLEAN_poly_tomont
+     /tmp/ccdDbpJc.s:822    .text.PQCLEAN_MLKEM512_CLEAN_poly_reduce:00000000 $t
+     /tmp/ccdDbpJc.s:828    .text.PQCLEAN_MLKEM512_CLEAN_poly_reduce:00000000 PQCLEAN_MLKEM512_CLEAN_poly_reduce
+     /tmp/ccdDbpJc.s:869    .text.PQCLEAN_MLKEM512_CLEAN_poly_ntt:00000000 $t
+     /tmp/ccdDbpJc.s:875    .text.PQCLEAN_MLKEM512_CLEAN_poly_ntt:00000000 PQCLEAN_MLKEM512_CLEAN_poly_ntt
+     /tmp/ccdDbpJc.s:911    .text.PQCLEAN_MLKEM512_CLEAN_poly_add:00000000 $t
+     /tmp/ccdDbpJc.s:917    .text.PQCLEAN_MLKEM512_CLEAN_poly_add:00000000 PQCLEAN_MLKEM512_CLEAN_poly_add
+     /tmp/ccdDbpJc.s:957    .text.PQCLEAN_MLKEM512_CLEAN_poly_sub:00000000 $t
+     /tmp/ccdDbpJc.s:963    .text.PQCLEAN_MLKEM512_CLEAN_poly_sub:00000000 PQCLEAN_MLKEM512_CLEAN_poly_sub
+
+UNDEFINED SYMBOLS
+PQCLEAN_MLKEM512_CLEAN_cmov_int16
+PQCLEAN_MLKEM512_CLEAN_kyber_shake256_prf
+PQCLEAN_MLKEM512_CLEAN_poly_cbd_eta1
+PQCLEAN_MLKEM512_CLEAN_poly_cbd_eta2
+PQCLEAN_MLKEM512_CLEAN_invntt
+PQCLEAN_MLKEM512_CLEAN_basemul
+PQCLEAN_MLKEM512_CLEAN_zetas
+PQCLEAN_MLKEM512_CLEAN_montgomery_reduce
+PQCLEAN_MLKEM512_CLEAN_barrett_reduce
+PQCLEAN_MLKEM512_CLEAN_ntt

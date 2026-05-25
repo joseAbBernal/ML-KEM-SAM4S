@@ -1061,7 +1061,7 @@ DEFINED SYMBOLS
     {standard input}:689    .text.PQCLEAN_MLKEM512_CLEAN_polyvec_add:00000000 $t
     {standard input}:695    .text.PQCLEAN_MLKEM512_CLEAN_polyvec_add:00000000 PQCLEAN_MLKEM512_CLEAN_polyvec_add
     {standard input}:750    .text.PQCLEAN_MLKEM512_CLEAN_polyvec_add:00000024 $d
-                           .group:00000000 wm4.0.534b8d408cafabed4abbc6a1c4e55e02
+                           .group:00000000 wm4.0.2b10ec159abbf65f4ef33f6bb625bef4
                            .group:00000000 wm4.params.h.2.d79c82d51e9988956f2b45f64d62e466
                            .group:00000000 wm4.stdint.h.29.6d480f4ba0f60596e88234283d42444f
 
