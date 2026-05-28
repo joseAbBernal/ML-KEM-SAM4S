@@ -1,0 +1,198 @@
+// RFC 7748: Curve25519 / X25519 en Magma CAS
+// E: v^2 = u^3 + A*u^2 + u sobre GF(2^255 - 19)
+// ============================================================
+// PARÁMETROS RFC 7748
+// ============================================================
+p := 2^255 - 19;                              // Primo del campo
+A := 486662;                                  // Coeficiente Montgomery
+a24 := (A - 2) div 4;                         // 121665 (para escalado)
+// Campo finito y curva de Montgomery
+F := GF(p);
+P25519<x> := PolynomialRing(F);
+// Curva de Montgomery: v^2 = x^3 + A*x^2 + x
+f := x^3 + A*x^2 + x;
+// Punto base (u=9, v=147816194...)
+u_base := 9;
+
+u_coord := BitwiseAnd(u_base, 2^(255) - 1); // Fuerza bits 0, 1, 2 a 0
+
+// ============================================================
+// FUNCIÓN cswap (Intercambio condicional)
+// ============================================================
+cswap := function(x2, z2, x3, z3)
+        // Intercambiar (x2,z2) con (x3,z3)
+        tmp := x2;
+        x2 := x3;
+        x3 := tmp;
+        //x2, x3 := x3, x2;  // Alternativa más compacta
+        tmp := z2;
+        z2 := z3;
+        z3 := tmp;        
+        //z2, z3 := z3, z2;  // Alternativa más compacta
+    return x2, z2, x3, z3;
+end function;
+
+// ============================================================
+// FUNCIÓN Clamp (Aplica la máscara de seguridad del RFC 7748)
+// ============================================================
+Clamp := function(bytes)
+    // bytes es una lista de 32 enteros (0..255) en orden Little-Endian
+    // 1. Limpiar los 3 bits menos significativos del primer byte
+    //"bytes:= ",bytes:Hex;
+    //"bytes[1]:= ",bytes[1]:Hex;
+    bytes[1] := BitwiseAnd(bytes[1], 248);  // 248 = 0xF8
+    //"bytes[1]:= ",bytes[1]:Hex;
+    // 2. Limpiar el bit más significativo del último byte
+    //"bytes[32] := ", bytes[32]:Hex;
+    bytes[32] := BitwiseAnd(bytes[32], 127); // 127 = 0x7F
+    //"bytes[32] := ", bytes[32]:Hex;
+    // 3. Forzar el bit 254 a 1 (el segundo bit del último byte)
+    //"bytes[32] := ", bytes[32]:Hex;
+    bytes[32] := BitwiseOr(bytes[32], 64);   // 64 = 0x40
+    //"bytes[32] := ", bytes[32]:Hex;
+    //"bytes final: ",bytes:Hex;
+    //"\n";
+    return bytes;
+end function;
+
+// ============================================================
+// FUNCIÓN decodeScalar25519 (Convierte bytes a escalar válido)
+// ============================================================
+decodeScalar25519 := function(bytes)
+    // 1. Aplicar la máscara de seguridad (Clamping) RFC 7748
+    bytes_clamped := Clamp(bytes);
+    // 2. ¡Optimizado! Reconstruye el entero little-endian desde los bytes
+    bytes := Seqint(bytes_clamped, 2^8);
+    return bytes;
+end function;
+
+// ============================================================
+// FUNCIÓN X25519 (Optimizada y SIN función cswap)
+// ============================================================
+X25519 := function(scalar, u_coord)    
+    // Precomputamos los bits (MSB -> LSB)
+    scalarbits := Reverse(Intseq(scalar, 2));
+    while #scalarbits lt 255 do
+        scalarbits := [0] cat scalarbits;
+    end while;
+    
+    // Estado inicial de la escalera
+    x2 := F!1;    z2 := F!0;
+    x3 := F!u_coord; z3 := F!1;
+    swap := 0;
+    for t in [1..255] do
+        k_t := scalarbits[t];
+        swap := BitwiseXor(swap, k_t);
+        
+        // Conditional swap INLINE (La clave del éxito en Magma)
+        // Si swap es 1, intercambiamos (x2,z2) con (x3,z3)
+        if swap eq 1 then
+            x2, z2, x3, z3 := cswap(x2, z2, x3, z3);
+        end if;
+        // Fórmulas diferenciales de Montgomery (Estándar RFC)
+        A1 := x2 + z2;
+        AA := A1^2;
+        B1 := x2 - z2;
+        BB := B1^2;
+        E  := F!(AA - BB); // <-- Forzamos que E sea elemento de F
+        
+        C  := x3 + z3;
+        D  := x3 - z3;
+        DA := F!D * F!A1;  // <-- Aseguramos que todo sea FldFinElt
+        CB := F!C * F!B1;
+        
+        x3 := (DA + CB)^2;
+        z3 := F!u_coord * (DA - CB)^2; // <-- u_coord forzado a F
+        x2 := AA * BB;
+        z2 := E * (F!AA + F!a24 * E); // <-- a24 también debe estar en F
+        
+        swap := k_t; // Actualiza el swap para la siguiente iteración
+    end for;
+    
+    // Último swap final (Inline también)
+    if swap eq 1 then
+        x2, z2, x3, z3 := cswap(x2, z2, x3, z3);
+    end if;
+    
+    // Retorna u = x2 / z2
+    return x2 * (z2^(p-2));
+end function;
+/*
+// ============================================================
+// EJEMPLO: Test Vector RFC 7748
+// ============================================================
+// 1. Definimos los HEXADECIMALES completos (como los da el RFC)
+alice_hex := 0x77076d0a7318a57d3c16c17251b26645df4c2f87ebc0992ab177fba51db92c2a;
+bob_hex   := 0x5dab087e624a8a4b79e17f8b83800ee66f3bb1292618b6fd1c2f8b27ff88e0eb;
+// 2. Los convertimos a LISTA DE BYTES (Little-Endian, 32 bytes)
+alice_bytes := Intseq(alice_hex, 2^8);
+bob_bytes   := Intseq(bob_hex, 2^8);
+// 3. ¡AQUÍ ESTÁ EL CAMBIO! Aplicamos "decodeScalar25519" 
+//    (que limpia bits y convierte a número).
+alice_scalar := decodeScalar25519(alice_bytes);
+bob_scalar   := decodeScalar25519(bob_bytes);
+// 4. Ejecutamos el algoritmo
+u9 := F!9;
+A_alice := X25519(alice_scalar, u9);
+printf "Alice public key: %o\n", A_alice;
+B_bob := X25519(bob_scalar, u9);
+printf "Bob public key: %o\n", B_bob;
+secret_alice := X25519(alice_scalar, B_bob);
+printf "Alice shared secret: %o\n", secret_alice;
+secret_bob := X25519(bob_scalar, A_alice);
+printf "Bob shared secret: %o\n", secret_bob;
+// Verificación
+assert secret_alice eq secret_bob;
+printf "✅ Secreto compartido interno verificado!\n";
+// Test Vector Oficial
+expected := 0x4a5d9d5ba4ce2de1728e3bf480350f25e07e21c947d19e3376f09b3c1e161742;
+printf "Expected RFC 7748: %o\n", expected;
+// ¡AHORA ESTO DEBE SER TRUE!
+assert secret_alice eq expected;
+printf "✅ ¡El test vector oficial es CORRECTO!\n";
+*/
+
+// ============================================================
+// AUDITORÍA DE DATOS (DEBUG)
+// ============================================================
+alice_hex := 0x77076d0a7318a57d3c16c17251b26645df4c2f87ebc0992ab177fba51db92c2a;
+bob_hex   := 0x5dab087e624a8a4b79e17f8b83800ee66f3bb1292618b6fd1c2f8b27ff88e0eb;
+// 1. Sacamos los bytes RAW (los que Intseq nos da)
+alice_raw := Intseq(alice_hex, 2^8);
+bob_raw   := Intseq(bob_hex, 2^8);
+"1. Bytes RAW de Alice (primer byte 0x2A): ", alice_raw[1..4];
+"1. Bytes RAW de Bob   (primer byte 0xEB): ", bob_raw[1..4];
+// 2. Vemos qué pasa DENTRO de Clamp (tu función)
+alice_clamped_bytes := Clamp(alice_raw);
+bob_clamped_bytes   := Clamp(bob_raw);
+"2. Bytes CLAMPED de Alice (primer byte debe ser 0x28): ", alice_clamped_bytes[1..4]:Hex;
+"2. Bytes CLAMPED de Bob   (primer byte debe ser 0xE8): ", bob_clamped_bytes[1..4]:Hex;
+// 3. Vemos el ESCLAR FINAL que entra a X25519 (debe coincidir con el RFC)
+// El RFC dice que la clave privada de Alice procesada debe ser:
+// 0x77076d0a7318a57d3c16c17251b26645df4c2f87ebc0992ab177fba51db92c2a
+// Pero OJO: El 0x77 debe ser el BYTE 32 (el más significativo) si miramos en Big-Endian.
+alice_scalar := decodeScalar25519(alice_raw);
+bob_scalar   := decodeScalar25519(bob_raw);
+"3. Escalar Alice (Numérico): ", alice_scalar;
+"3. Escalar Bob   (Numérico): ", bob_scalar;
+// El RFC oficial de X25519 dice que el secreto debe ser ESTE:
+expected := 0x4a5d9d5ba4ce2de1728e3bf480350f25e07e21c947d19e3376f09b3c1e161742;
+// Ejecutamos
+u9 := F!9;
+A_alice := X25519(alice_scalar, u9);
+B_bob   := X25519(bob_scalar, u9);
+secret_alice := X25519(alice_scalar, B_bob);
+secret_bob   := X25519(bob_scalar, A_alice);
+assert secret_alice eq secret_bob;
+"4. Secreto calculado por nosotros: ", secret_alice;
+"4. Secreto esperado por RFC    : ", expected;
+// ¿SON EL MISMO NÚMERO?
+if secret_alice eq expected then
+    print "✅ ¡SÍ! ¡Coinciden!";
+else
+    // Calculamos la diferencia para entender qué falla
+    "❌ NO coinciden. Diferencia (mod p): ", (Integers() ! secret_alice) - (Integers() ! expected);
+    // A veces Magma tiene problemas con el campo GF(p) vs ZZ
+    expected_Fp := F!expected; 
+    print "Comparando dentro de GF(p): ", secret_alice eq expected_Fp;
+end if;

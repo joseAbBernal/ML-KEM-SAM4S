@@ -29,11 +29,11 @@
 .endm
 
 .macro doubleplant a, tmp, q, qa, plantconst
-	smulwb \tmp, \plantconst, \a
-	smulwt \a, \plantconst, \a
-	smlabt \tmp, \tmp, \q, \qa
-	smlabt \a, \a, \q, \qa
-	pkhtb \a, \a, \tmp, asr#16
+  smulwb \tmp, \plantconst, \a
+  smulwt \a, \plantconst, \a
+  smlabt \tmp, \tmp, \q, \qa
+  smlabt \a, \a, \q, \qa
+  pkhtb \a, \a, \tmp, asr#16
 .endm
 
 .macro doublebarrett a, tmp, tmp2, q, barrettconst
@@ -49,10 +49,10 @@
 
 // q locate in the top half of the register
 .macro plant_red q, qa, qinv, tmp
-	mul \tmp, \tmp, \qinv     
-	//tmp*qinv mod 2^2n/ 2^n; in high half
-	smlatt \tmp, \tmp, \q, \qa
-	// result in high half
+  mul \tmp, \tmp, \qinv     
+  //tmp*qinv mod 2^2n/ 2^n; in high half
+  smlatt \tmp, \tmp, \q, \qa
+  // result in high half
 .endm
 
 

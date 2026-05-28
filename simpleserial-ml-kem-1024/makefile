@@ -52,7 +52,14 @@ SRC += reduce.c
 SRC += randombytes.c
 
 # No assembly files needed for ref implementation
-# ASRC +=
+ASRC += cmov_int16.S
+ASRC += fastaddsub.S
+ASRC += fastbasemul.S
+ASRC += fastinvntt.S
+ASRC += matacc_asm.S
+ASRC += poly_asm.S
+ASRC += reduce.S
+ASRC += test.S
 
 # -----------------------------------------------------------------------------
 EXTRA_OPTS = NO_EXTRA_OPTS

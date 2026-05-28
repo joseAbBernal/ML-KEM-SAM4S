@@ -1,13 +1,10 @@
-#ifndef PQCLEAN_MLKEM1024_CLEAN_VERIFY_H
-#define PQCLEAN_MLKEM1024_CLEAN_VERIFY_H
-#include "params.h"
-#include <stddef.h>
-#include <stdint.h>
+#ifndef VERIFY_H
+#define VERIFY_H
 
-int PQCLEAN_MLKEM1024_CLEAN_verify(const uint8_t *a, const uint8_t *b, size_t len);
+#include <stdio.h>
 
-void PQCLEAN_MLKEM1024_CLEAN_cmov(uint8_t *r, const uint8_t *x, size_t len, uint8_t b);
+unsigned char verify(const unsigned char *a, const unsigned char *b, size_t len);
 
-void PQCLEAN_MLKEM1024_CLEAN_cmov_int16(int16_t *r, int16_t v, uint16_t b);
+void cmov(unsigned char *r, const unsigned char *x, size_t len, unsigned char b);
 
 #endif
