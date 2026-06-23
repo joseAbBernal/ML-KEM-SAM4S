@@ -23,8 +23,10 @@
 /* GPIO: SAM (ASF) vs otros (STM32, AVR, etc.) */
 #if defined(__SAM4LS4C__) || defined(__SAM4LS4B__) || defined(__SAM4S__) || defined(__SAM4S2B__)
 #include "pio.h"
-#include "gpio.h"
+//#include "gpio.h"
 #else
+#include "gpio.h"
+#include "pio.h"
 /* Stubs para plataformas sin ASF (STM32, AVR, etc.) */
 #define gpio_set_pin_high(pin) do { (void)(pin); } while(0)
 #define gpio_set_pin_low(pin)  do { (void)(pin); } while(0)
