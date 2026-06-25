@@ -146,7 +146,7 @@ void Sum(const WORD* U, const WORD* V, WORD* W, int N){
 void SubMod(const WORD* U, const WORD* V, WORD* W, const WORD* P, int N){
 	int i;
 	WORD C[N+1];
-	uint64_t borrow = 0;
+	uint64_t borrow = 0; //uint64_t borrow = 0; //original line of 64-bit implementation 
 	for ( i = 0; i < N; i++)
 	{
 		W[i] = U[i] - V[i] - borrow;
@@ -285,6 +285,19 @@ void DivTwo(WORD * U, WORD* V, int N){
 	}
 	V[N-1] = U[N-1] >> 1;
 }
+
+/*
+void DivTwo(WORD * U, WORD* V, int N){
+	int i;
+	uint32_t lsb;
+	for (i = 0; i < N-1; i++)
+	{
+		lsb = U[i+1] & 0x1;
+		V[i] = (U[i] >> 1) ^ (lsb << 31);
+	}
+	V[N-1] = U[N-1] >> 1;
+}
+*/
 
 void Barr(const WORD* A, const WORD* P, WORD* R, WORD* Red, int N){
 	WORD q[2*N+2];
