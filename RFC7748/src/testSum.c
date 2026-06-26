@@ -25,7 +25,7 @@ void testKar(int N){
 	printf("u := VectorToInteger(U);\n");
 	printf("v := VectorToInteger(V);\n");
 	printf("d := u*v;\n");
-	printf("D := Intseq(d, %s);\n", MAGMA_BASE_STR);
+	printf("D := Intseq(d, BASE);\n");
 	printf("if D ne C then \n");
 	printf("\t\"U:=\",U:Hex;\n");
 	printf("\t\"V:=\",V:Hex;\n");
