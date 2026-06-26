@@ -25,7 +25,7 @@ void bench(int W)
         cycles2 = cpucycles();
         cycles = cycles+(cycles2-cycles1);
     }
-    printf("Addition runs in .......................................... %7lld ", cycles/BENCH_LOOPS); print_unit;
+    printf("Addition runs in .......................................... %7lldu ", cycles/BENCH_LOOPS); print_unit;
     printf("\n");
     printf("\n--------------------------------------------------------------------------------------------------------\n\n"); 
     printf("Benchmarking Subtraction: \n\n");
@@ -39,7 +39,7 @@ void bench(int W)
         cycles2 = cpucycles();
         cycles = cycles+(cycles2-cycles1);
     }
-    printf("Subtraction runs in ....................................... %7lld ", cycles/BENCH_LOOPS); print_unit;
+    printf("Subtraction runs in ....................................... %7lldu ", cycles/BENCH_LOOPS); print_unit;
     printf("\n");
     printf("\n--------------------------------------------------------------------------------------------------------\n\n"); 
     printf("Benchmarking Schoolbook multiplication: \n\n");
@@ -53,7 +53,7 @@ void bench(int W)
         cycles2 = cpucycles();
         cycles = cycles+(cycles2-cycles1);
     }
-    printf("Schoolbook multiplication runs in .................................... %7lld ", cycles/BENCH_LOOPS); print_unit;
+    printf("Schoolbook multiplication runs in .................................... %7lldu ", cycles/BENCH_LOOPS); print_unit;
     printf("\n");
     printf("\n--------------------------------------------------------------------------------------------------------\n\n"); 
     printf("Benchmarking Karatsuba: \n\n");
@@ -66,7 +66,7 @@ void bench(int W)
         cycles2 = cpucycles();
         cycles = cycles+(cycles2-cycles1);
     }
-    printf("Karatsuba runs in ......................................... %7lld ", cycles/BENCH_LOOPS); print_unit;
+    printf("Karatsuba runs in ......................................... %7lldu ", cycles/BENCH_LOOPS); print_unit;
     printf("\n");
     printf("\n--------------------------------------------------------------------------------------------------------\n\n"); 
     printf("Benchmarking Barret reduction: \n\n");
@@ -128,7 +128,7 @@ void bench(int W)
          printf("Not prime available to bench\n" );
          exit(0);
     }
-    printf("Barret reduction for %d Words runs in ........................ %7lld ", W, cycles/BENCH_LOOPS); print_unit;
+    printf("Barret reduction for %d Words runs in ........................ %7lldu ", W, cycles/BENCH_LOOPS); print_unit;
     printf("\n");
     printf("\n--------------------------------------------------------------------------------------------------------\n\n"); 
     printf("Benchmarking extended binary GCD: \n\n");
@@ -190,14 +190,19 @@ void bench(int W)
          printf("Not prime available to bench\n" );
          exit(0);
     }
-    printf("Extended binary GCD for %d Words runs in ........................ %7lld ", W, cycles/BENCH_LOOPS); print_unit;
+    printf("Extended binary GCD for %d Words runs in ........................ %7lldu ", W, cycles/BENCH_LOOPS); print_unit;
     printf("\n");
 }
 
 
 int main(int argc, char const *argv[])
 {
-    int W = atoi(argv[1]);
+    if (argc < 2) {
+        fprintf(stderr, "Uso: %s <W>\n", argv[0]);
+        return 1;
+    }
+
+    int W = atoi(argv[1]);  
     bench(W);
     return 0;
 }

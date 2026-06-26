@@ -1,6 +1,7 @@
 #ifndef __TEST_EXTRAS_H__
 #define __TEST_EXTRAS_H__
 #include <inttypes.h>
+#include <stdio.h>
 
 #define print_unit printf("cycles");
 
@@ -12,11 +13,11 @@
 
 #if WORD_BITS == 64
 /* 64-bit version*/
-int64_t cpucycles(void);
+uint64_t cpucycles(void);
 
 #elif WORD_BITS == 32
 /* 32-bit version */
-int32_t cpucycles(void);
+uint64_t cpucycles(void);
 
 #else
 	#error "Must select 32 / 64"

@@ -6,22 +6,20 @@
 #include<stdlib.h>
 #include<time.h>
 
-#ifndef WORD_BITS
-	#error "Define WORD_BITS=32 or WORD_BITS=64."
+#if WORD_BITS == 64
+typedef uint64_t WORD;
+
+#if defined(__SIZEOF_INT128__)
+typedef __uint128_t DWORD;
+#else
+#error "No 128-bit integer support on this compiler for WORD_BITS=64"
 #endif
 
-#if WORD_BITS == 64
-/* Definition used on x64 architectures */
-typedef uint64_t WORD;
-typedef __uint128_t DWORD;
-
 #elif WORD_BITS == 32
-/* Definition used on x86 architectures */
 typedef uint32_t WORD;
 typedef uint64_t DWORD;
-
 #else
-	#error "Must select 32 / 64."
+#error "Must select 32 / 64."
 #endif
 
 /* Functions definition */

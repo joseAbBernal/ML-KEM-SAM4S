@@ -1,5 +1,13 @@
-#include<types.h>
+#include "types.h"
 #include "Primes.h"
+
+#if WORD_BITS == 64
+	#define BASE "2^64"
+#elif WORD_BITS == 32
+	#define BASE "2^32"
+#else
+	#error "Must select 32 / 64."
+#endif
 
 void testKar(int N){
 	int i;
@@ -17,7 +25,7 @@ void testKar(int N){
 	printf("u := VectorToInteger(U);\n");
 	printf("v := VectorToInteger(V);\n");
 	printf("d := u*v;\n");
-	printf("D := Intseq(d, 2^64);\n");
+	printf("D := Intseq(d, %s);\n", MAGMA_BASE_STR);
 	printf("if D ne C then \n");
 	printf("\t\"U:=\",U:Hex;\n");
 	printf("\t\"V:=\",V:Hex;\n");
@@ -44,7 +52,7 @@ void testMul(int N){
 	printf("u := VectorToInteger(U);\n");
 	printf("v := VectorToInteger(V);\n");
 	printf("d := u*v;\n");
-	printf("D := Intseq(d, 2^64);\n");
+	printf("D := Intseq(d, BASE);\n");
 	printf("if D ne C then \n");
 	printf("\t\"U:=\",U:Hex;\n");
 	printf("\t\"V:=\",V:Hex;\n");
@@ -71,7 +79,7 @@ void testSum(int N){
 	printf("u := VectorToInteger(U);\n");
 	printf("v := VectorToInteger(V);\n");
 	printf("d := u+v;\n");
-	printf("D := Intseq(d, 2^64);\n");
+	printf("D := Intseq(d, BASE);\n");
 	printf("if D ne C then \n");
 	printf("\t\"U:=\",U:Hex;\n");
 	printf("\t\"V:=\",V:Hex;\n");
@@ -97,7 +105,7 @@ void testSub(int N){
 	printf("u := VectorToInteger(U);\n");
 	printf("v := VectorToInteger(V);\n");
 	printf("d := Abs(u-v);\n");
-	printf("D := Intseq(d, 2^64);\n");
+	printf("D := Intseq(d, BASE);\n");
 	printf("if D ne C then \n");
 	printf("\t\"U:=\",U:Hex;\n");
 	printf("\t\"V:=\",V:Hex;\n");
@@ -171,7 +179,7 @@ void testDiv(int N){
 	printer(V, N, "V");
 	// Magma program to test the addition//
 	printf("\n");
-	printf("if (Intseq(ShiftRight(Seqint(U, 2^64),1), 2^64) ne V) then \n");
+	printf("if (Intseq(ShiftRight(Seqint(U, BASE),1), BASE) ne V) then \n");
 	printf("\t\"U:=\",U:Hex;\n");
 	printf("\t\"V:=\",V:Hex;\n");
 	printf("\texit;\n");
@@ -240,7 +248,7 @@ void testXGCD(int N){
 	printf("p := VectorToInteger(P);\n");
 	printf("a := VectorToInteger(A);\n");
 	printf("d := XHGC(p, a);\n");
-	printf("D := Intseq(d, 2^64);\n");
+	printf("D := Intseq(d, BASE);\n");
 	printf("if D ne Inv then \n");
 	printf("\t\"P:=\",P:Hex;\n");
 	printf("\t\"A:=\",A:Hex;\n");
@@ -321,7 +329,7 @@ void testBarret(int N){
 	printf("r := VectorToInteger(R);\n");
 	printf("N := %d;\n",N);
 	printf("rs := Barret(a,p,r, N);\n");
-	printf("rr := Intseq(rs,2^64);\n");
+	printf("rr := Intseq(rs,BASE);\n");
 	printf("if rr ne Red then \n");
 	printf("\t\"P:=\",P:Hex;\n");
 	printf("\t\"A:=\",A:Hex;\n");
@@ -335,6 +343,11 @@ void testBarret(int N){
 
 int main(int argc, char const *argv[])
 {
+	if (argc < 3) {
+        fprintf(stderr, "Uso: %s <sel> <N>\n", argv[0]);
+        return 1;
+    }
+
 	time_t t;									//this must be here always
 	srand((unsigned)time(&t));					//and this too
 	int ctr = 0, sel = atoi(argv[1]), N = atoi(argv[2]);

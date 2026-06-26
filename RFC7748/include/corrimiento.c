@@ -17,7 +17,7 @@
 				  0xFCE4CCCCFEF39D27, 0xF8F63D5D61409E1, 0xC64C0415B64CC219, 0x22F46DEB167267F4, 
 				  0x941B487F07FC7D23, 0xBE31B92DF95EF5C0, 0xE50B91093B5B013B, 0x947C06AF03B9A98A };
 	int N = 36;	//number of words 36 -> 64-bit; 72 -> 32-bit
-	int word = 64 - 1;	//Word size in bits 64 -> 64-bit; 32 -> 32-bit
+	int word = 64;	//Word size in bits 64 -> 64-bit; 32 -> 32-bit
 
 #elif WORD_BITS == 32
 		/* 32-bit words version */
@@ -34,12 +34,12 @@
 					  0xB64CC219, 0xC64C0415, 0x167267F4, 0x22F46DEB, 0x7FC7D23, 0x941B487F, 
 					  0xF95EF5C0, 0xBE31B92D, 0x3B5B013B, 0xE50B9109, 0x3B9A98A, 0x947C06AF };
 	int N = 72;	//number of words 36 -> 64-bit; 72 -> 32-bit
-	int word = 32 - 1;	//Word size in bits 64 -> 64-bit; 32 -> 32-bit
+	int word = 32;	//Word size in bits 64 -> 64-bit; 32 -> 32-bit
 #else
 	#error "Must select 32 / 64"
 #endif
 
-void main(int argc, char const *argv[])
+int main(int argc, char const *argv[])
 {
 	int cor = 4;   		//Number of bits per word 64 -> 4; 32 -> 4
 	for (int i = 0; i < N; ++i)
@@ -48,20 +48,22 @@ void main(int argc, char const *argv[])
 			#if WORD_BITS == 64
 				/* Print function for 64-bit words */
 				printf("Palabra U[%i]\n", i );
-				for (int j = 0; j < (word/cor); j++)
+				for (int j = 0; j <= (word/cor); j++)
 				{
-					uint64_t c = U[0] >> (j*4) ;
+					uint64_t c = U[i] >> (j*4) ;
 					printf("0x%.16jX \n",c );
 				}
 			#elif WORD_BITS == 32
 				/* Print function for 32-bit words */
 				printf("Palabra U[%i]\n", i );
-				for (int j = 0; j < (word/cor); j++)
+				for (int j = 0; j <= (word/cor); j++)
 				{
-					uint32_t c = U[0] >> (j*4) ;
+					uint32_t c = U[i] >> (j*4) ;
 					printf("0x%.8jX \n",c );
 				}
 			#endif
 		#endif
 	}
+
+	return 0;
 }

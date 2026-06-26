@@ -2,12 +2,24 @@
 
 void printer(const WORD* P, int N, char* C){
 	int i;
-	printf("%s := [",C);
-	for (i = 0; i < N-1; i++)
+	printf("%s := [", C);
+	for (i = 0; i < N - 1; i++)
 	{
-		printf("0x%.16jx, ",P[i]);
+		#if WORD_BITS == 64
+			printf("0x%016" PRIx64 ", ", (uint64_t)P[i]);
+		#elif WORD_BITS == 32
+			printf("0x%08" PRIx32 ", ", (uint32_t)P[i]);
+		#else
+			#error "Must select 32 / 64."
+		#endif
 	}
-	printf("0x%.16jx];\n",P[i]);
+	#if WORD_BITS == 64
+		printf("0x%016" PRIx64 "];\n", (uint64_t)P[i]);
+	#elif WORD_BITS == 32
+		printf("0x%08" PRIx32 "];\n", (uint32_t)P[i]);
+	#else
+		#error "Must select 32 / 64."
+	#endif
 	printf("\n");
 }
 
@@ -83,8 +95,15 @@ void Mul(const WORD* U, const WORD* V, WORD* W, int N){
 		{
 			carry = 0;				//carry for the less significant parts
 			P = (DWORD)U[i] * V[j];	//U*V in a registe of 128 bits
-			Pl = P;					//less significant 64 bits of the result
-			Ph = P >> 64;			//most significant 64 bits of the result
+			Pl = (WORD)P;			//less significant 64 bits of the result
+			#if WORD_BITS == 64					
+    			Ph = (WORD)(P >> 64);			//most significant 64 bits of the result
+			#elif WORD_BITS == 32			
+    			Ph = (WORD)(P >> 32);			//most significant 32 bits of the result
+			#else
+    			#error "Must select 32 / 64."
+			#endif
+
 			W[i+j] += Pl;			//adding Pl + bits of the result word
 			if (W[i+j] < Pl){		//checking carry after the additon
 				carry =1;			//if yes then
@@ -112,8 +131,15 @@ void MulB(const WORD* U, const WORD* V, WORD* W, int N, int M){
 		{
 			carry = 0;				//carry for the less significant parts
 			P = (DWORD)U[i] * V[j];	//U*V in a registe of 128 bits
-			Pl = P;					//less significant 64 bits of the result
-			Ph = P >> 64;			//most significant 64 bits of the result
+			Pl = (WORD)P;			//less significant 64 bits of the result
+			#if WORD_BITS == 64
+    			Ph = (WORD)(P >> 64);			//most significant 64 bits of the result
+			#elif WORD_BITS == 32
+    			Ph = (WORD)(P >> 32);			//most significant 32 bits of the result
+			#else
+    			#error "Must select 32 / 64."
+			#endif
+
 			W[i+j] += Pl;			//adding Pl + bits of the result word
 			if (W[i+j] < Pl){		//checking carry after the additon
 				carry =1;			//if yes then
@@ -129,18 +155,18 @@ void MulB(const WORD* U, const WORD* V, WORD* W, int N, int M){
 }
 
 void Sum(const WORD* U, const WORD* V, WORD* W, int N){
-	int i;
-	WORD carry = 0;
-	for ( i = 0; i < N; i++)
-	{
-		W[i] = U[i] + V[i] + carry;
-		if (W[i] < V[i]){
-			carry = 1;
-		}else{
-			carry = 0;
-		}
-	}
-	W[i] = carry;
+    int i;
+    WORD carry = 0;
+    for (i = 0; i < N; i++)
+    {
+        WORD s1 = U[i] + V[i];
+        WORD c1 = (s1 < U[i]);
+        WORD s2 = s1 + carry;
+        WORD c2 = (s2 < s1);
+        W[i] = s2;
+        carry = (WORD)(c1 | c2);
+    }
+    W[i] = carry;
 }
 
 void SubMod(const WORD* U, const WORD* V, WORD* W, const WORD* P, int N){
@@ -210,14 +236,22 @@ void Cpy( WORD* U, const WORD *V, int N){
 }
 
 void Ran(WORD* U, WORD* V, int N){
-	int i;
-	for (i = 0; i < N; i++)
-	{
-		U[i] = rand() & 0x0FFFFFFF;
-		U[i] = (WORD)(U[i] << 32) | rand();
-		V[i] = rand() & 0x0FFFFFFF;
-		V[i] = (WORD)(V[i] << 32) | rand();
-	}
+    int i;
+#if WORD_BITS == 64
+    for (i = 0; i < N; i++)
+    {
+        U[i] = ((uint64_t)rand() << 32) | (uint64_t)rand();
+        V[i] = ((uint64_t)rand() << 32) | (uint64_t)rand();
+    }
+#elif WORD_BITS == 32
+    for (i = 0; i < N; i++)
+    {
+        U[i] = (uint32_t)rand();
+        V[i] = (uint32_t)rand();
+    }
+#else
+    #error "Must select 32 / 64."
+#endif
 }
 
 void XGCD(WORD* P, WORD* A, WORD* Inv, int N){
@@ -228,7 +262,7 @@ void XGCD(WORD* P, WORD* A, WORD* Inv, int N){
 	Zeroes(x1, N);
 	x1[0] = 0x1;
 	Zeroes(x2, N);
-	while ((u[0] != 0x1) & (v[0] != 0x1)){
+	while ((u[0] != 0x1) && (v[0] != 0x1)){
 		while (!(u[0] & 0x1)){
 			DivTwo(u, aux, N);
 			Cpy(u, aux, N);
@@ -275,29 +309,16 @@ void XGCD(WORD* P, WORD* A, WORD* Inv, int N){
 	}
 }
 
-void DivTwo(WORD * U, WORD* V, int N){
-	int i;
-	uint64_t lsb;
-	for (i = 0; i < N-1; i++)
-	{
-		lsb = U[i+1] & 0x1;
-		V[i] = (U[i] >> 1) ^ (lsb << 63);
-	}
-	V[N-1] = U[N-1] >> 1;
+void DivTwo(WORD *U, WORD *V, int N){
+    int i;
+    WORD lsb;
+    for (i = 0; i < N - 1; i++)
+    {
+        lsb = U[i + 1] & (WORD)0x1;
+        V[i] = (U[i] >> 1) | (lsb << (WORD_BITS - 1));
+    }
+    V[N - 1] = U[N - 1] >> 1;
 }
-
-/*
-void DivTwo(WORD * U, WORD* V, int N){
-	int i;
-	uint32_t lsb;
-	for (i = 0; i < N-1; i++)
-	{
-		lsb = U[i+1] & 0x1;
-		V[i] = (U[i] >> 1) ^ (lsb << 31);
-	}
-	V[N-1] = U[N-1] >> 1;
-}
-*/
 
 void Barr(const WORD* A, const WORD* P, WORD* R, WORD* Red, int N){
 	WORD q[2*N+2];

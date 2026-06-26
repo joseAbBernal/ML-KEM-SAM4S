@@ -20,23 +20,34 @@
 void Ran(WORD* U, WORD* V, int N);
 
 void Ran(WORD* U, WORD* V, int N){
-	int i;
-	for (i = 0; i < N; i++)
-	{
-		U[i] = rand() & 0x0000FFFFFFFFFFFF;
-		U[i] = (U[i] << 32) | rand();
-		V[i] = rand() & 0x00FFFFFFFFFFFFFF;
-		V[i] = (V[i] << ((WORD)32)) | (WORD)rand();
-	}
+    int i;
+#if WORD_BITS == 64
+    for (i = 0; i < N; i++)
+    {
+        U[i] = ((uint64_t)rand() << 32) | rand();
+        V[i] = ((uint64_t)rand() << 32) | rand();
+    }
+#elif WORD_BITS == 32
+    for (i = 0; i < N; i++)
+    {
+        U[i] = rand();
+        V[i] = rand();
+    }
+#endif
 }
 
-void main(int argc, char const *argv[])
+int main(int argc, char const *argv[])
 {
 	time_t t;
 	srand((unsigned)time(&t));
 	int N = 80, i;
-	WORD U[N];
-	WORD V[N];
+	WORD* U = (WORD*)malloc(N * sizeof(WORD));
+    WORD* V = (WORD*)malloc(N * sizeof(WORD));
+
+	if (U == NULL || V == NULL) {
+        fprintf(stderr, "Error: malloc failed\n");
+        return 1;
+    }
 
 	printf("Generando palabra aleatoria\n");
 	Ran(U, V, N);
@@ -74,4 +85,9 @@ void main(int argc, char const *argv[])
 	#else
 		#error "Must select 32 / 64"
  	#endif
+
+	free(U);
+	free(V);
+
+	return 0;
 }
