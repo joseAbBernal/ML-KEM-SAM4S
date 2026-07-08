@@ -25,7 +25,7 @@ check-word-bits:
 		exit 1; \
 	fi
 
-all: check-word-bits test bench
+all: check-word-bits test bench x25519test
 
 functions.o: types.h functions.c
 	gcc $(CFLAGS) -c src/functions.c -o functions.o
@@ -39,11 +39,20 @@ Benching.o: Bench.h Bench.c
 Benchmaking.o: Bench.h types.h BenchMaking.c
 	gcc $(CFLAGS) -c src/BenchMaking.c -o Benchmaking.o
 
+rfc7748.o: types.h Primes.h rfc7748.c
+	gcc $(CFLAGS) -c src/rfc7748.c -o rfc7748.o
+
+testRFC7748.o: types.h Primes.h testRFC7748.c
+	gcc $(CFLAGS) -c src/testRFC7748.c -o testRFC7748.o
+
 bench: check-word-bits functions.o Benching.o Benchmaking.o
 	gcc $(CFLAGS) functions.o Benching.o Benchmaking.o -o bench
 
 test: check-word-bits functions.o testSum.o	
 	gcc $(CFLAGS) functions.o testSum.o -o test
 
+x25519test: check-word-bits functions.o rfc7748.o testRFC7748.o
+	gcc $(CFLAGS) functions.o rfc7748.o testRFC7748.o -o x25519test
+
 clean:
-	rm -f *.o test bench
+	rm -f *.o test bench x25519test

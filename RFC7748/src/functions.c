@@ -172,15 +172,14 @@ void Sum(const WORD* U, const WORD* V, WORD* W, int N){
 void SubMod(const WORD* U, const WORD* V, WORD* W, const WORD* P, int N){
 	int i;
 	WORD C[N+1];
-	uint64_t borrow = 0; //uint64_t borrow = 0; //original line of 64-bit implementation 
-	for ( i = 0; i < N; i++)
-	{
-		W[i] = U[i] - V[i] - borrow;
-		if (W[i] > U[i]){
-			borrow = 1;
-		}else{
-			borrow = 0;
-		}
+	WORD borrow = 0;
+	for ( i = 0; i < N; i++) {
+		WORD s1 = U[i] - V[i];
+		WORD b1 = (s1 > U[i]) ? (WORD)1 : (WORD)0;
+		WORD s2 = s1 - borrow;
+		WORD b2 = (s2 > s1) ? (WORD)1 : (WORD)0;
+		W[i] = s2;
+		borrow = b1 | b2;
 	}
 	if (borrow == 1)
 	{	
@@ -203,12 +202,12 @@ void Sub(const WORD* Ut, const WORD* Vt, WORD* W, int N){
 	WORD borrow = 0;
 	for ( i = 0; i < N; i++)
 	{
-		W[i] = U[i] - V[i] - borrow;
-		if (W[i] > U[i]){
-			borrow = 1;
-		}else{
-			borrow = 0;
-		}
+		WORD s1 = U[i] - V[i];
+		WORD b1 = (s1 > U[i]) ? (WORD)1 : (WORD)0;
+		WORD s2 = s1 - borrow;
+		WORD b2 = (s2 > s1) ? (WORD)1 : (WORD)0;
+		W[i] = s2;
+		borrow = b1 | b2;
 	}
 	W[i] = borrow;
 }
@@ -334,4 +333,97 @@ void Barr(const WORD* A, const WORD* P, WORD* R, WORD* Red, int N){
 		Cpy(rp, aux, N);	
 	}
 	Cpy(Red, rp, N);
+}
+
+/* SumCL: addition with carry stored in W[N] (identical behaviour to Sum). */
+void SumCL(const WORD* U, const WORD* V, WORD* W, int N){
+    Sum(U, V, W, N);
+}
+
+/* ModAdd: W = (U + V) mod P.
+ * Assumes U, V ∈ [0, P), so the unreduced sum fits in N+1 words and at
+ * most one conditional subtraction is needed to bring the result into [0, P). */
+void ModAdd(const WORD* U, const WORD* V, WORD* W, const WORD* P, int N){
+    int i;
+    WORD tmp[N + 1];
+    Sum(U, V, tmp, N);   /* tmp[N] holds the carry out */
+
+    /* If the carry is set OR the N-word sum is >= P, subtract P once. */
+    if (tmp[N] != 0 || Cmp(tmp, P, N) >= 0) {
+        WORD borrow = 0;
+        for (i = 0; i < N; i++) {
+            WORD s = tmp[i];
+            tmp[i] = s - P[i] - borrow;
+            /* borrow = 1 when the subtraction underflowed */
+            borrow = (borrow ? (s <= P[i]) : (s < P[i]));
+        }
+    }
+    Cpy(W, tmp, N);
+}
+
+/* ModMul: Red = (U * V) mod P using schoolbook multiplication + Barrett reduction.
+ * R_barr must be the precomputed Barrett parameter for P (N+1 words). */
+void ModMul(const WORD* U, const WORD* V, const WORD* P, WORD* R_barr, WORD* Red, int N){
+    WORD tmp[2 * N];
+    Mul(U, V, tmp, N);
+    Barr(tmp, P, R_barr, Red, N);
+}
+
+/* ModExp: Res = Base^Exp mod P  (left-to-right binary square-and-multiply).
+ * R_barr must be the precomputed Barrett parameter for P (N+1 words). */
+void ModExp(const WORD* Base, const WORD* Exp, const WORD* P, WORD* R_barr, WORD* Res, int N){
+    int i, wi, bi;
+    WORD result[N];
+    WORD tmp[N];
+
+    /* result = 1 */
+    Zeroes(result, N);
+    result[0] = 1;
+
+    /* Find the index of the most-significant set bit in Exp. */
+    int start = N * WORD_BITS - 1;
+    while (start >= 0) {
+        wi = start / WORD_BITS;
+        bi = start % WORD_BITS;
+        if ((Exp[wi] >> bi) & (WORD)1) break;
+        start--;
+    }
+
+    if (start < 0) {
+        /* Exp == 0: Base^0 = 1 */
+        Cpy(Res, result, N);
+        return;
+    }
+
+    /* Square-and-multiply from MSB down to bit 0. */
+    for (i = start; i >= 0; i--) {
+        /* result = result^2 mod P */
+        ModMul(result, result, P, R_barr, tmp, N);
+        Cpy(result, tmp, N);
+
+        wi = i / WORD_BITS;
+        bi = i % WORD_BITS;
+        if ((Exp[wi] >> bi) & (WORD)1) {
+            /* result = result * Base mod P */
+            ModMul(result, Base, P, R_barr, tmp, N);
+            Cpy(result, tmp, N);
+        }
+    }
+
+    Cpy(Res, result, N);
+}
+
+/* CSWAP: constant-time conditional swap (RFC 7748 §5).
+ * If swap == 1 the contents of A[0..N-1] and B[0..N-1] are exchanged.
+ * If swap == 0 they are left untouched.
+ * The execution time is independent of swap to prevent side-channel leaks. */
+void CSWAP(WORD swap, WORD* A, WORD* B, int N){
+    int i;
+    /* mask = 0xFF…F when swap == 1, mask = 0 when swap == 0 */
+    WORD mask = (WORD)0 - swap;
+    for (i = 0; i < N; i++) {
+        WORD t = mask & (A[i] ^ B[i]);
+        A[i] ^= t;
+        B[i] ^= t;
+    }
 }

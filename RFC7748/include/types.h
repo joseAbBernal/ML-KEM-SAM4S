@@ -71,5 +71,31 @@ void DivTwo(WORD * U, WORD* V, int N);
 /* Multiplication B?*/
 void MulB(const WORD* U, const WORD* V, WORD* W, int N, int M);
 
+/* Addition carry (alias for Sum: result W[0..N-1], carry in W[N]) */
+void SumCL(const WORD* U, const WORD* V, WORD* W, int N);
+
+/* Modular addition: W = (U + V) mod P */
+void ModAdd(const WORD* U, const WORD* V, WORD* W, const WORD* P, int N);
+
+/* Modular multiplication using Barrett reduction: Red = (U * V) mod P
+ * R_barr is the precomputed Barrett parameter (N+1 words) */
+void ModMul(const WORD* U, const WORD* V, const WORD* P, WORD* R_barr, WORD* Red, int N);
+
+/* Modular exponentiation (left-to-right binary method): Res = Base^Exp mod P
+ * R_barr is the precomputed Barrett parameter (N+1 words) */
+void ModExp(const WORD* Base, const WORD* Exp, const WORD* P, WORD* R_barr, WORD* Res, int N);
+
+/* Constant-time conditional swap (RFC 7748 CSWAP):
+ * if swap == 1 exchange A[0..N-1] with B[0..N-1]; if swap == 0 do nothing.
+ * The operation takes the same time regardless of swap to prevent side-channel leaks. */
+void CSWAP(WORD swap, WORD* A, WORD* B, int N);
+
+/* RFC 7748 X25519 Diffie-Hellman function.
+ * k_in : 32-byte little-endian private scalar  (clamped internally per RFC 7748 §5)
+ * u_in : 32-byte little-endian u-coordinate of the peer public key
+ * out  : 32-byte little-endian result (shared u-coordinate)
+ * Uses P25519 / R25519 from Primes.h and the Montgomery ladder algorithm. */
+void X25519(const uint8_t k_in[32], const uint8_t u_in[32], uint8_t out[32]);
+
 
 #endif

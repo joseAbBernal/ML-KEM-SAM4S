@@ -160,6 +160,68 @@ WORD R_64 [129] = {0x820266BF, 0xE98381B8, 0xE2BEAE60, 0x7D065F7A, 0x9D301DCE, 0
 	#error "Must select 32 / 64."
 #endif
 
+/* -----------------------------------------------------------------------
+ * Curve25519 / X25519 (RFC 7748)
+ * p25519 = 2^255 - 19  (the Curve25519 prime)
+ *
+ * Barrett parameter R25519 = floor(2^(2*N25519*WORD_BITS) / p25519)
+ *                          = floor(2^512 / p25519)
+ *                          = 2^257 + 76
+ * Verification: (2^255-19)*(2^257+76) = 2^512 - 1444,  remainder = 1444 < p
+ *
+ * Words are stored in little-endian order (least-significant word first).
+ * ----------------------------------------------------------------------- */
+
+#if WORD_BITS == 64
+#define N25519 4
+
+WORD P25519[N25519] = {
+    0xFFFFFFFFFFFFFFEDULL,   /* bits   0- 63 */
+    0xFFFFFFFFFFFFFFFFULL,   /* bits  64-127 */
+    0xFFFFFFFFFFFFFFFFULL,   /* bits 128-191 */
+    0x7FFFFFFFFFFFFFFFULL    /* bits 192-255 */
+};
+
+/* R25519 = 2^257 + 76, stored in N25519+1 = 5 words */
+WORD R25519[N25519 + 1] = {
+    0x000000000000004CULL,   /* 76 */
+    0x0000000000000000ULL,
+    0x0000000000000000ULL,
+    0x0000000000000000ULL,
+    0x0000000000000002ULL    /* 2^(257-256) = 2 */
+};
+
+#elif WORD_BITS == 32
+#define N25519 8
+
+WORD P25519[N25519] = {
+    0xFFFFFFEDU,   /* bits   0- 31 */
+    0xFFFFFFFFU,   /* bits  32- 63 */
+    0xFFFFFFFFU,   /* bits  64- 95 */
+    0xFFFFFFFFU,   /* bits  96-127 */
+    0xFFFFFFFFU,   /* bits 128-159 */
+    0xFFFFFFFFU,   /* bits 160-191 */
+    0xFFFFFFFFU,   /* bits 192-223 */
+    0x7FFFFFFFU    /* bits 224-255 */
+};
+
+/* R25519 = 2^257 + 76, stored in N25519+1 = 9 words */
+WORD R25519[N25519 + 1] = {
+    0x0000004CU,   /* 76 */
+    0x00000000U,
+    0x00000000U,
+    0x00000000U,
+    0x00000000U,
+    0x00000000U,
+    0x00000000U,
+    0x00000000U,
+    0x00000002U    /* 2^(257-256) = 2 */
+};
+
+#else
+    #error "Must select 32 / 64."
+#endif
+
 /*
 WORD P_128 [128] = {};
 WORD R_128 [129] = {};
