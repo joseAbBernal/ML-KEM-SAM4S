@@ -113,9 +113,6 @@ putch('\n');
 	simpleserial_addcmd('p', 16, get_pt);
 	simpleserial_addcmd('k', 16, get_key);
 	simpleserial_addcmd('x', 0, reset);
-	simpleserial_addcmd('h', 1, led_on_cmd_v11);
-	simpleserial_addcmd('l', 1, led_off_cmd_v11);
-	simpleserial_addcmd('t', 1, led_toggle_cmd_v11);
 #else
 	simpleserial_addcmd(0x01, 16, aes);
 	simpleserial_addcmd(0x02, 248, rx_key); // SK: receive chunk

@@ -29,18 +29,27 @@
 #----------------------------------------------------------------------------
 
 # Target file name (without extension).
-# This is the name of the compiled .hex file.
-TARGET = simpleserial-base
+# This is the base name of the compiled .hex file.
+TARGET = simpleserial-aes
 
 # List C source files here.
 # Header files (.h) are automatically pulled in.
-SRC += simpleserial-base.c
+#CPPSRC += simpleserial-aes.cpp
+VPATH += src
+CFLAGS += -Ilib
+SRC += simpleserial-aes.c LedCW.c Chunks.c
 
 # -----------------------------------------------------------------------------
+EXTRA_OPTS = NO_EXTRA_OPTS
+CFLAGS += -D$(EXTRA_OPTS)
 
-ifeq ($(CRYPTO_OPTIONS),)
-CRYPTO_OPTIONS = AES128C
+
+ifeq ($(CRYPTO_TARGET),)
+  ${info No CRYPTO_TARGET passed - defaulting to TINYAES128C}
+  CRYPTO_TARGET = TINYAES128C
 endif
+
+${info Building for platform ${PLATFORM} with CRYPTO_TARGET=$(CRYPTO_TARGET)}
 
 #Add simpleserial project to build
 include ../simpleserial/Makefile.simpleserial
