@@ -35,6 +35,18 @@ static int hex_to_bytes(const char *hex, uint8_t out[32])
     return 1;
 }
 
+static int hex_to_bytes56(const char *hex, uint8_t out[56])
+{
+    size_t i;
+    if (strlen(hex) != 112) return 0;
+    for (i = 0; i < 56; i++) {
+        unsigned int v;
+        if (sscanf(&hex[i * 2], "%2x", &v) != 1) return 0;
+        out[i] = (uint8_t)v;
+    }
+    return 1;
+}
+
 /* Helper: print 32 bytes as hex in the same byte-order as RFC 7748 vectors. */
 static void print_hex(const char *label, const uint8_t buf[32])
 {
@@ -43,6 +55,94 @@ static void print_hex(const char *label, const uint8_t buf[32])
     for (i = 0; i < 32; i++)
         printf("%02x", buf[i]);
     printf("\n");
+}
+
+static void print_hex56(const char *label, const uint8_t buf[56])
+{
+    int i;
+    printf("%s", label);
+    for (i = 0; i < 56; i++)
+        printf("%02x", buf[i]);
+    printf("\n");
+}
+
+static int test_x448_vector(void)
+{
+    static const char k_hex[] =
+        "3d262fddf9ec8e88495266fea19a34d28882acef045104d0d1aae121"
+        "700a779c984c24f8cdd78fbff44943eba368f54b29259a4f1c600ad3";
+    static const char u_hex[] =
+        "06fce640fa3487bfda5f6cf2d5263f8aad88334cbd07437f020f08f9"
+        "814dc031ddbdc38c19c6da2583fa5429db94ada18aa7a7fb4ef8a086";
+    static const char expected_hex[] =
+        "ce3e4ff95a60dc6697da1db1d85e6afbdf79b50a2412d7546d5f239f"
+        "e14fbaadeb445fc66a01b0779d98223961111e21766282f73dd96b6f";
+    uint8_t k[56], u[56], expected[56], result[56];
+
+    if (!hex_to_bytes56(k_hex, k) || !hex_to_bytes56(u_hex, u) ||
+        !hex_to_bytes56(expected_hex, expected)) {
+        fprintf(stderr, "FAIL: hex conversion error in X448 test\n");
+        return 0;
+    }
+
+    X448(k, u, result);
+    print_hex56("X448 result  : ", result);
+    print_hex56("X448 expected: ", expected);
+    if (memcmp(result, expected, 56) != 0) {
+        fprintf(stderr, "FAIL: RFC 7748 X448 vector does not match.\n");
+        return 0;
+    }
+    printf("PASS: RFC 7748 X448 scalar multiplication\n");
+    return 1;
+}
+
+static int test_x448_ecdh(void)
+{
+    static const uint8_t base_point[56] = {5};
+    static const char alice_priv_hex[] =
+        "9a8f4925d1519f5775cf46b04b5800d4ee9ee8bae8bc5565d498c28d"
+        "d9c9baf574a9419744897391006382a6f127ab1d9ac2d8c0a598726b";
+    static const char alice_pub_hex[] =
+        "9b08f7cc31b7e3e67d22d5aea121074a273bd2b83de09c63faa73d2c"
+        "22c5d9bbc836647241d953d40c5b12da88120d53177f80e532c41fa0";
+    static const char bob_priv_hex[] =
+        "1c306a7ac2a0e2e0990b294470cba339e6453772b075811d8fad0d1d"
+        "6927c120bb5ee8972b0d3e21374c9c921b09d1b0366f10b65173992d";
+    static const char bob_pub_hex[] =
+        "3eb7a829b0cd20f5bcfc0b599b6feccf6da4627107bdb0d4f345b430"
+        "27d8b972fc3e34fb4232a13ca706dcb57aec3dae07bdc1c67bf33609";
+    static const char shared_hex[] =
+        "07fff4181ac6cc95ec1c16a94a0f74d12da232ce40a77552281d282b"
+        "b60c0b56fd2464c335543936521c24403085d59a449a5037514a879d";
+    uint8_t alice_priv[56], alice_pub_exp[56], alice_pub[56];
+    uint8_t bob_priv[56], bob_pub_exp[56], bob_pub[56];
+    uint8_t shared_exp[56], shared_ab[56], shared_ba[56];
+    int ok = 1;
+
+    if (!hex_to_bytes56(alice_priv_hex, alice_priv) ||
+        !hex_to_bytes56(alice_pub_hex, alice_pub_exp) ||
+        !hex_to_bytes56(bob_priv_hex, bob_priv) ||
+        !hex_to_bytes56(bob_pub_hex, bob_pub_exp) ||
+        !hex_to_bytes56(shared_hex, shared_exp)) {
+        fprintf(stderr, "FAIL: hex conversion error in X448 ECDH test\n");
+        return 0;
+    }
+
+    X448(alice_priv, base_point, alice_pub);
+    X448(bob_priv, base_point, bob_pub);
+    X448(alice_priv, bob_pub, shared_ab);
+    X448(bob_priv, alice_pub, shared_ba);
+
+    ok &= memcmp(alice_pub, alice_pub_exp, 56) == 0;
+    ok &= memcmp(bob_pub, bob_pub_exp, 56) == 0;
+    ok &= memcmp(shared_ab, shared_ba, 56) == 0;
+    ok &= memcmp(shared_ab, shared_exp, 56) == 0;
+    if (!ok) {
+        fprintf(stderr, "FAIL: RFC 7748 X448 ECDH test\n");
+        return 0;
+    }
+    printf("PASS: RFC 7748 X448 ECDH test\n");
+    return 1;
 }
 
 /* -------------------------------------------------------------------------
@@ -175,7 +275,7 @@ static int test_rfc7748_ecdh(void)
  * ---------------------------------------------------------------------- */
 int main(void)
 {
-    int passed = 0, total = 2;
+    int passed = 0, total = 4;
 
     printf("=== RFC 7748 X25519 test suite (WORD_BITS=%d) ===\n\n", WORD_BITS);
 
@@ -183,6 +283,9 @@ int main(void)
     printf("\n");
     passed += test_rfc7748_ecdh();
     printf("\n");
+    passed += test_x448_vector();
+    printf("\n");
+    passed += test_x448_ecdh();
 
     printf("Results: %d/%d tests passed.\n", passed, total);
     return (passed == total) ? 0 : 1;

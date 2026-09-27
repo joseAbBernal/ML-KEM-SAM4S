@@ -24,6 +24,36 @@
 #include "Primes.h"
 #include <string.h>  /* memcpy */
 
+#if WORD_BITS == 64
+#define N448 7
+static const WORD P448[N448] = {
+    0xFFFFFFFFFFFFFFFFULL, 0xFFFFFFFFFFFFFFFFULL,
+    0xFFFFFFFFFFFFFFFFULL, 0xFFFFFFFEFFFFFFFFULL,
+    0xFFFFFFFFFFFFFFFFULL, 0xFFFFFFFFFFFFFFFFULL,
+    0xFFFFFFFFFFFFFFFFULL
+};
+static WORD R448[N448 + 1] = {
+    0x0000000000000002ULL, 0x0000000000000000ULL,
+    0x0000000000000000ULL, 0x0000000100000000ULL,
+    0x0000000000000000ULL, 0x0000000000000000ULL,
+    0x0000000000000000ULL, 0x0000000000000001ULL
+};
+#elif WORD_BITS == 32
+#define N448 14
+static const WORD P448[N448] = {
+    0xFFFFFFFFU, 0xFFFFFFFFU, 0xFFFFFFFFU, 0xFFFFFFFFU,
+    0xFFFFFFFFU, 0xFFFFFFFFU, 0xFFFFFFFFU, 0xFFFFFFFEU,
+    0xFFFFFFFFU, 0xFFFFFFFFU, 0xFFFFFFFFU, 0xFFFFFFFFU,
+    0xFFFFFFFFU, 0xFFFFFFFFU
+};
+static WORD R448[N448 + 1] = {
+    0x00000002U, 0x00000000U, 0x00000000U, 0x00000000U,
+    0x00000000U, 0x00000000U, 0x00000000U, 0x00000001U,
+    0x00000000U, 0x00000000U, 0x00000000U, 0x00000000U,
+    0x00000000U, 0x00000000U, 0x00000001U
+};
+#endif
+
 /* -------------------------------------------------------------------------
  * Internal helper: decode 32 bytes (little-endian) into a WORD array.
  * The output array must have N25519 words; excess bits above 255 are zero.
@@ -198,5 +228,97 @@ void X25519(const uint8_t k_in[32], const uint8_t u_in[32], uint8_t out[32])
 
     /* --- 8. Encode the result to 32 bytes (little-endian) --- */
     encode_bytes(result, out);
+}
+
+static void decode_bytes448(const uint8_t bytes[56], WORD *out)
+{
+    int i;
+    const int bpw = WORD_BITS / 8;
+
+    Zeroes(out, N448);
+    for (i = 0; i < 56; i++) {
+        int wi = i / bpw;
+        int shift = (i % bpw) * 8;
+        out[wi] |= (WORD)bytes[i] << shift;
+    }
+}
+
+static void encode_bytes448(const WORD *in, uint8_t out[56])
+{
+    int i;
+    const int bpw = WORD_BITS / 8;
+
+    memset(out, 0, 56);
+    for (i = 0; i < 56; i++) {
+        int wi = i / bpw;
+        int shift = (i % bpw) * 8;
+        out[i] = (uint8_t)(in[wi] >> shift);
+    }
+}
+
+void X448(const uint8_t k_in[56], const uint8_t u_in[56], uint8_t out[56])
+{
+    int t;
+    uint8_t k[56], u_bytes[56];
+    WORD k_w[N448], u_w[N448], a24[N448];
+    WORD x2[N448], z2[N448], x3[N448], z3[N448];
+    WORD A1[N448], AA[N448], B1[N448], BB[N448];
+    WORD E1[N448], C1[N448], D1[N448], DA[N448], CB[N448];
+    WORD tmp1[N448], tmp2[N448], p_minus_2[N448];
+    WORD z2_inv[N448], result[N448];
+    WORD swap = 0;
+
+    memcpy(k, k_in, 56);
+    memcpy(u_bytes, u_in, 56);
+    k[0] &= 252;
+    k[55] |= 128;
+
+    decode_bytes448(k, k_w);
+    decode_bytes448(u_bytes, u_w);
+
+    Zeroes(a24, N448);
+    a24[0] = 39081;
+    Zeroes(x2, N448); x2[0] = 1;
+    Zeroes(z2, N448);
+    Cpy(x3, u_w, N448);
+    Zeroes(z3, N448); z3[0] = 1;
+
+    for (t = 447; t >= 0; t--) {
+        int wi = t / WORD_BITS;
+        int bi = t % WORD_BITS;
+        WORD k_t = (k_w[wi] >> bi) & (WORD)1;
+
+        swap ^= k_t;
+        CSWAP(swap, x2, x3, N448);
+        CSWAP(swap, z2, z3, N448);
+        swap = k_t;
+
+        ModAdd(x2, z2, A1, P448, N448);
+        ModMul(A1, A1, P448, R448, AA, N448);
+        SubMod(x2, z2, B1, P448, N448);
+        ModMul(B1, B1, P448, R448, BB, N448);
+        SubMod(AA, BB, E1, P448, N448);
+        ModAdd(x3, z3, C1, P448, N448);
+        SubMod(x3, z3, D1, P448, N448);
+        ModMul(D1, A1, P448, R448, DA, N448);
+        ModMul(C1, B1, P448, R448, CB, N448);
+        ModAdd(DA, CB, tmp1, P448, N448);
+        ModMul(tmp1, tmp1, P448, R448, x3, N448);
+        SubMod(DA, CB, tmp1, P448, N448);
+        ModMul(tmp1, tmp1, P448, R448, tmp2, N448);
+        ModMul(u_w, tmp2, P448, R448, z3, N448);
+        ModMul(AA, BB, P448, R448, x2, N448);
+        ModMul(a24, E1, P448, R448, tmp1, N448);
+        ModAdd(AA, tmp1, tmp2, P448, N448);
+        ModMul(E1, tmp2, P448, R448, z2, N448);
+    }
+
+    CSWAP(swap, x2, x3, N448);
+    CSWAP(swap, z2, z3, N448);
+    Cpy(p_minus_2, P448, N448);
+    p_minus_2[0] -= (WORD)2;
+    ModExp(z2, p_minus_2, P448, R448, z2_inv, N448);
+    ModMul(x2, z2_inv, P448, R448, result, N448);
+    encode_bytes448(result, out);
 }
 

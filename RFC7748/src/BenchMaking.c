@@ -4,24 +4,30 @@
 #include <stdio.h>
 
 
+#ifndef BENCH_LOOPS
 #define BENCH_LOOPS           100000       // Number of iterations per bench
+#endif
 
 void bench(int W)
 {
     int n;
+    int N = W;
+#if WORD_BITS == 32
+    N = 2 * W;
+#endif
     unsigned long long cycles, cycles1, cycles2;
-    WORD A[W], B[W], C[W+1];
-    WORD P[W], R[W], Red[W], Inv[W];
-    WORD Ab[2*W];
+    WORD A[N], B[N], C[2*N];
+    WORD P[N], R[N], Red[N], Inv[N];
+    WORD Ab[2*N];
     printf("\n--------------------------------------------------------------------------------------------------------\n\n"); 
     printf("Benchmarking Addition: \n\n"); 
     // Addition
     cycles = 0;
     for (n=0; n<BENCH_LOOPS; n++)
     {
-        Ran(A, B, W);
+        Ran(A, B, N);
         cycles1 = cpucycles(); 
-        Sum(A, B, C, W);
+        Sum(A, B, C, N);
         cycles2 = cpucycles();
         cycles = cycles+(cycles2-cycles1);
     }
@@ -33,9 +39,9 @@ void bench(int W)
     cycles = 0;
     for (n=0; n<BENCH_LOOPS; n++)
     {
-        Ran(A, B, W);
+        Ran(A, B, N);
         cycles1 = cpucycles(); 
-        Sub(A, B, C, W);
+        Sub(A, B, C, N);
         cycles2 = cpucycles();
         cycles = cycles+(cycles2-cycles1);
     }
@@ -45,11 +51,10 @@ void bench(int W)
     printf("Benchmarking Schoolbook multiplication: \n\n");
     // schoolbook multiplication
     cycles = 0;
-    C[2*W];
     for (n=0; n<BENCH_LOOPS; n++)
     {
         cycles1 = cpucycles(); 
-        Mul(A, B, C, W);
+        Mul(A, B, C, N);
         cycles2 = cpucycles();
         cycles = cycles+(cycles2-cycles1);
     }
@@ -62,7 +67,7 @@ void bench(int W)
     for (n=0; n<BENCH_LOOPS; n++)
     {
         cycles1 = cpucycles(); 
-        Kar(A, B, C, W);
+        Kar(A, B, C, N);
         cycles2 = cpucycles();
         cycles = cycles+(cycles2-cycles1);
     }
@@ -76,9 +81,9 @@ void bench(int W)
         case 4 :
             for (n=0; n<BENCH_LOOPS; n++)
             {
-                Ran(Ab, Ab, 2*W);
+                Ran(Ab, Ab, 2*N);
                 cycles1 = cpucycles();
-                Barr(Ab, P_4, R_4, Red, W);
+                Barr(Ab, P_4, R_4, Red, N);
                 cycles2 = cpucycles();
                 cycles = cycles+(cycles2-cycles1);
             }
@@ -86,9 +91,9 @@ void bench(int W)
         case 8 :
             for (n=0; n<BENCH_LOOPS; n++)
             {
-                Ran(Ab, Ab, 2*W);
+                Ran(Ab, Ab, 2*N);
                 cycles1 = cpucycles();
-                Barr(Ab, P_8, R_8, Red, W);
+                Barr(Ab, P_8, R_8, Red, N);
                 cycles2 = cpucycles();
                 cycles = cycles+(cycles2-cycles1);
             }
@@ -96,9 +101,9 @@ void bench(int W)
         case 16 :
             for (n=0; n<BENCH_LOOPS; n++)
             {
-                Ran(Ab, Ab, 2*W);
+                Ran(Ab, Ab, 2*N);
                 cycles1 = cpucycles();
-                Barr(Ab, P_16, R_16, Red, W);
+                Barr(Ab, P_16, R_16, Red, N);
                 cycles2 = cpucycles();
                 cycles = cycles+(cycles2-cycles1);
             }
@@ -106,9 +111,9 @@ void bench(int W)
         case 32 :
             for (n=0; n<BENCH_LOOPS; n++)
             {
-                Ran(Ab, Ab, 2*W);
+                Ran(Ab, Ab, 2*N);
                 cycles1 = cpucycles();
-                Barr(Ab, P_32, R_32, Red, W);
+                Barr(Ab, P_32, R_32, Red, N);
                 cycles2 = cpucycles();
                 cycles = cycles+(cycles2-cycles1);
             }
@@ -116,9 +121,9 @@ void bench(int W)
         case 64 :
             for (n=0; n<BENCH_LOOPS; n++)
             {
-                Ran(Ab, Ab, 2*W);
+                Ran(Ab, Ab, 2*N);
                 cycles1 = cpucycles();
-                Barr(Ab, P_64, R_64, Red, W);
+                Barr(Ab, P_64, R_64, Red, N);
                 cycles2 = cpucycles();
                 cycles = cycles+(cycles2-cycles1);
             }
@@ -138,9 +143,9 @@ void bench(int W)
         case 4 :
             for (n=0; n<BENCH_LOOPS; n++)
             {   
-                Ran(A,A,W);
+                Ran(A, A, N);
                 cycles1 = cpucycles(); 
-                XGCD(P_4, A, Inv, W); //prime p, number < p, inverse, size
+                XGCD(P_4, A, Inv, N); //prime p, number < p, inverse, size
                 cycles2 = cpucycles();
                 cycles = cycles+(cycles2-cycles1);
             }
@@ -148,9 +153,9 @@ void bench(int W)
         case 8 :
             for (n=0; n<BENCH_LOOPS; n++)
             {   
-                Ran(A,A,W);
+                Ran(A, A, N);
                 cycles1 = cpucycles(); 
-                XGCD(P_8, A, Inv, W); //prime p, number < p, inverse, size
+                XGCD(P_8, A, Inv, N); //prime p, number < p, inverse, size
                 cycles2 = cpucycles();
                 cycles = cycles+(cycles2-cycles1);
             }
@@ -158,9 +163,9 @@ void bench(int W)
         case 16 :
             for (n=0; n<BENCH_LOOPS; n++)
             {   
-                Ran(A,A,W);
+                Ran(A, A, N);
                 cycles1 = cpucycles(); 
-                XGCD(P_16, A, Inv, W); //prime p, number < p, inverse, size
+                XGCD(P_16, A, Inv, N); //prime p, number < p, inverse, size
                 cycles2 = cpucycles();
                 cycles = cycles+(cycles2-cycles1);
             }
@@ -168,9 +173,9 @@ void bench(int W)
         case 32 :
             for (n=0; n<BENCH_LOOPS; n++)
             {   
-                Ran(A,A,W);
+                Ran(A, A, N);
                 cycles1 = cpucycles(); 
-                XGCD(P_32, A, Inv, W); //prime p, number < p, inverse, size
+                XGCD(P_32, A, Inv, N); //prime p, number < p, inverse, size
                 cycles2 = cpucycles();
                 cycles = cycles+(cycles2-cycles1);
             }
@@ -178,9 +183,9 @@ void bench(int W)
         case 64 :
             for (n=0; n<BENCH_LOOPS; n++)
             {   
-                Ran(A,A,W);
+                Ran(A, A, N);
                 cycles1 = cpucycles(); 
-                XGCD(P_64, A, Inv, W); //prime p, number < p, inverse, size
+                XGCD(P_64, A, Inv, N); //prime p, number < p, inverse, size
                 cycles2 = cpucycles();
                 cycles = cycles+(cycles2-cycles1);
             }

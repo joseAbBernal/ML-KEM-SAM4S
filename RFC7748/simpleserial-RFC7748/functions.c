@@ -320,17 +320,23 @@ void DivTwo(WORD *U, WORD *V, int N){
 }
 
 void Barr(const WORD* A, const WORD* P, WORD* R, WORD* Red, int N){
+	int i;
 	WORD q[2*N+2];
 	WORD r2[2*N+1];
 	WORD rp[N+2];
-	WORD aux[N+1];
+	WORD borrow;
 
 	Mul(&A[N-1], R, q, N+1);
 	MulB(P, &q[N+1], r2, N, N+1);
 	Sub(A, r2, rp, N+1);//
-	while ( Cmp(rp, P, N) >= 0){
-		Sub(rp, P, aux, N);
-		Cpy(rp, aux, N);	
+	while (rp[N] != 0 || Cmp(rp, P, N) >= 0){
+		borrow = 0;
+		for (i = 0; i < N; i++) {
+			WORD value = rp[i];
+			rp[i] = value - P[i] - borrow;
+			borrow = borrow ? (value <= P[i]) : (value < P[i]);
+		}
+		rp[N] -= borrow;
 	}
 	Cpy(Red, rp, N);
 }

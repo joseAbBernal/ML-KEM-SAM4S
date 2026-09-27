@@ -97,5 +97,8 @@ void CSWAP(WORD swap, WORD* A, WORD* B, int N);
  * Uses P25519 / R25519 from Primes.h and the Montgomery ladder algorithm. */
 void X25519(const uint8_t k_in[32], const uint8_t u_in[32], uint8_t out[32]);
 
+/* RFC 7748 X448 Diffie-Hellman function. */
+void X448(const uint8_t k_in[56], const uint8_t u_in[56], uint8_t out[56]);
+
 
 #endif
